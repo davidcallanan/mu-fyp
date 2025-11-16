@@ -20,7 +20,17 @@
 \usepackage{setspace}
 \onehalfspacing
 
-\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist[enumerate]{label=(\arabic*)}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+    pdfnewwindow=true
+}
 
 \definecolor{headergray}{gray}{0.35}
 
@@ -78,13 +88,23 @@ The goal of this project is to develop a proof-of-concept programming language t
 
 \subsection{Use of GenAI and Tools}
 
+Two notable GenAI tools have been used to assist with the research and development of this project so far.
+
+\begin{enumerate}
+
+\item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand. Both research and programming tasks have benefited from the use of this tool. The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
+
+\item The second is the tab-complete feature of GitHub Copilot, which 
+
+\end{enumerate}
+
 
 \section{Future Work}
 
 
 
 \begin{thebibliography}{9}
-\bibitem{key1} Author, Title, Venue/Publisher, Year.
+\bibitem{t3chat} ``Meet T3 Chat AI: Your All-in-One, Super-Fast AI Assistant,'' DigiVirus. \url{https://digivirus.in/meet-t3-chat-ai-your-all-in-one-super-fast-ai-assistant/}
 \end{thebibliography}
 
 \appendix
