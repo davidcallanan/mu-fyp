@@ -51,7 +51,7 @@ create(:my_dependency Foo, :math Math) {
 ; ah what now about private functions within my shtuff! now i need a symbol for private too?
 
 ; also look now carefully how awful the typing syntax is...
-; maybe i do need to have type for returned instances, but god dammit i didn't want this.
+; maybe i do need to have type for returned instances, but damn i didn't want this.
 ; also note that i want want different factories for a type, but really the other factories should wrap a main internal factory kind of.
 
 ; also create_vector doesn't know any context about create_world unless the information of world is stored in vector's this... so it's kinda like not really appropriate to even have this create_world mentioned...
