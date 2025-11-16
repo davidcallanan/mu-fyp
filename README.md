@@ -19,3 +19,7 @@ Of course, this final year project is really just initial research and developme
 - `compiler` houses the actual compilation process which takes in language code and spits out a final executable.
 - `extension` houses the VS Code extension that offers syntax highlighting to the programmer.
 - `XXXX_syntax_ideas` contains some early syntax ideas ideas which have been significantly deviated from.
+
+## Git Submodules
+
+When cloning this repo, make sure git "submodules" are enabled and are recursively cloned.

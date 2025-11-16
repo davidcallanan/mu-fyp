@@ -7,8 +7,8 @@ const backend_process = () => { };
 
 const compile_module = async (config) => {
 	console.log("Compiling module located at:", config.src);
-
 	const result = await frontend_process(config);
+	console.dir(result, { depth: null });
 	await backend_process(result);
 };
 
