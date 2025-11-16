@@ -1,0 +1,101 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+\usepackage[a4paper,margin=1in]{geometry}
+
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{headergray}{gray}{0.35}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\newcommand{\HeaderCenterText}{%
+  {\color{headergray}\sffamily\bfseries FYP Interim Report 2025-2026}\\
+  {\color{headergray}\sffamily Department of Computer Science}%
+}
+
+\newcommand{\HeaderRightImage}{%
+  \raisebox{-0.2\height}{\includegraphics[height=1.2cm]{mu.png}}%
+}
+
+\fancyhead[C]{\HeaderCenterText}
+\fancyhead[R]{\HeaderRightImage}
+
+\fancyfoot[C]{\sffamily Page \thepage\ of \pageref{LastPage}}
+
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\headheight}{24pt}
+
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{table}[ht]
+  \small
+  \renewcommand{\arraystretch}{1.4}
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries}l X >{\bfseries}l X @{}}
+    \toprule
+    Student Name & David P. Callanan & Student Number & 21444104 \\
+    Supervisor & Dr. Phil Maguire & ECTS Credits & 5 \\
+    Project Title & \multicolumn{3}{p{0.75\textwidth}}{Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules.} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Project Objectives}
+
+
+\section{Description of Work Completed}
+
+
+\subsection{Evidence of Work Completed}
+
+
+\subsection{Literature Review}
+
+
+\subsection{Use of GenAI and Tools}
+
+
+\section{Future Work}
+
+
+
+\begin{thebibliography}{9}
+\bibitem{key1} Author, Title, Venue/Publisher, Year.
+\end{thebibliography}
+
+\appendix
+
+\newpage
+
+\section{Appendix: Source Code}
+
+
+\newpage
+
+\section{Appendix: LLM Prompts}
+
+
+\label{LastPage}
+\end{document}
