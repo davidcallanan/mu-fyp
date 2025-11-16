@@ -1,0 +1,152 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Essence C",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"name": "comment.line.content.essencec",
+			"match": "^\\s*;(.*)"
+		},
+		{
+			"match": "(;)(.*)",
+			"captures": {
+				"1": {
+					"name": "punctuation.separator.delimiter.essencec"
+				},
+				"2": {
+					"name": "comment.line.content.essencec"
+				}
+			}
+		},
+		{
+			"name": "entity.name.qualified.custom",
+			"begin": "\\b([a-z_][a-z0-9_]*)(::)",
+			"beginCaptures": {
+				"1": {
+					"name": "entity.name.namespace.component.custom"
+				},
+				"2": {
+					"name": "punctuation.separator.namespace.custom"
+				}
+			},
+			"end": "(?!::[A-Za-z_][a-zA-Z0-9_]*)",
+			"patterns": [
+				{
+					"match": "[a-z][a-zA-Z0-9_]*",
+					"name": "entity.name.namespace.component.custom"
+				},
+				{
+					"match": "[A-Z][a-zA-Z0-9_]*",
+					"name": "entity.name.namespace.component.custom"
+				},
+				{
+					"match": "::",
+					"name": "punctuation.separator.namespace.custom"
+				}
+			]
+		},
+		{
+			"name": "storage.type.object.array.java",
+			"match": "[A-Z]([a-z0-9_])*"
+		},
+		{
+			"name": "storage.type.object.array.java",
+			"match": "\\b(i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128)\\b"
+		},
+		{
+			"name": "entity.name.tag",
+			"match": "\\b(this|mod)\\b"
+		},
+		{
+			"name": "entity.name.function",
+			"match": ":[a-z0-9_]+"
+		},
+		{
+			"name": "entity.name.function",
+			"match": ":\\s"
+		},
+		{
+			"begin": "(\\/\\/)(([a-z0-9_\\.])+)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control"
+				},
+				"2": {
+					"name": "entity.name.function"
+				}
+			},
+			"end": "(?![a-z0-9_\\/\\.])",
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "[a-zA-Z0-9_\\.]+"
+				},
+				{
+					"name": "keyword.control",
+					"match": "\\/"
+				}
+			]
+		},
+		{
+			"begin": "(\\/)(([a-z0-9_\\.])+)",
+			"beginCaptures": {
+				"1": {
+					"name": "storage.type.object.array.java"
+				},
+				"2": {
+					"name": "entity.name.function"
+				}
+			},
+			"end": "(?![a-z0-9_\\/\\.])",
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "[a-zA-Z0-9_\\.]+"
+				},
+				{
+					"name": "storage.type.object.array.java",
+					"match": "\\/"
+				}
+			]
+		},
+		{
+			"name": "keyword.control",
+			"match": "\\/\\/"
+		},
+		{
+			"name": "entity.name.tag",
+			"match": "@"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.essencec",
+					"match": "\\b(in|if|for|return|import|forwarding|create)\\b"
+				},
+				{
+					"name": "keyword.modifier.essencec",
+					"match": "\\b(instantiate|reset|types|type|pub|map|enum|mut)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.essencec",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.essencec",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.essencec"
+}

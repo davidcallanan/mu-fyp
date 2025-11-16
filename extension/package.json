@@ -1,0 +1,37 @@
+{
+  "publisher": "blabidy",
+  "name": "essence-c",
+  "displayName": "essence-c",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.96.2"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "essencec",
+        "aliases": [
+          "Essence C",
+          "essencec"
+        ],
+        "extensions": [
+          ".ec",
+          ".eh"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "essencec",
+        "scopeName": "source.essencec",
+        "path": "./syntaxes/essencec.tmLanguage.json"
+      }
+    ]
+  },
+  "repository": "https://google.com/"
+}
