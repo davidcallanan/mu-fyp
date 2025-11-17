@@ -54,6 +54,7 @@
 
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\headheight}{24pt}
+\setlength{\headsep}{32pt}
 
 \setlength{\parskip}{0.6em}
 \setlength{\parindent}{0pt}
@@ -96,6 +97,8 @@ Success will be evidenced by the following deliverables:
 
 
 \subsection{Evidence of Work Completed}
+
+Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used, including a simple parsing library, justifying the decision to use JavaScript. Basic parse-tree generation has been implemented for a portion of the current syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system was tackled for the compiler backend using a Makefile within a Dockerized environment that is orchestrated by a Linux or WSL environment for best reproducibility.
 
 
 \subsection{Literature Review}
