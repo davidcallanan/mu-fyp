@@ -1,5 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 
+\usepackage{comment}
+
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
@@ -95,15 +97,17 @@ Success will be evidenced by the following deliverables:
 
 \section{Description of Work Completed}
 
+Preliminary work on syntax design and language parsing code has been completed, and background research into the LLVM toolchain has been conducted. AI assistance was also briefly assessed.
+
 
 \subsection{Evidence of Work Completed}
 
-Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used, including a simple parsing library, justifying the decision to use JavaScript. Basic parse-tree generation was implemented for a portion of the preliminary syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system for the compiler backend (written in C++) was arranged. A Makefile was used within a Dockerized environment, itself orchestrated by a Linux/WSL environment for best reproducibility. C++ was justified due to its first-class integration with the LLVM toolchain [insert reference].
+Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, which is written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used, including a simple parsing library, justifying the decision to use JavaScript. Basic parse-tree generation was implemented for a portion of the preliminary syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system for the compiler backend (written in C++) was arranged. A Makefile was used within a Dockerized environment, itself orchestrated by a Linux/WSL environment for best reproducibility. C++ was justified due to its first-class integration with the LLVM toolchain \cite{llvmcpp}.
 
 
 \subsection{Literature Review}
 
-Firstly, LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages due to ABI interoperability (including some recent improvements) \cite{llvminterop}. Furthermore, its extensive optimization passes shared by languages targetting LLVM \cite{llvmoptim} should make Essence C more comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (such as in kernel development \cite{inlinekern}).
+LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages thanks to ABI interoperability (including some recent improvements) \cite{llvminterop}. Furthermore, the extensive optimization passes shared amongst languages targetting LLVM \cite{llvmoptim} should make Essence C more comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (such as in kernel development \cite{inlinekern}). Additionally, LLVM benefits greatly from intermodular optimizations at link-time \cite{llvmlto}, because its intermediate representation (IR) preserves higher-level constructs. Critically, the LLVM API exposes a powerful interface to programatically manipulate existing LLVM IR files \cite{llvmtransformations} \cite{llvmpasses}. It follows that inlined compatibility wrappers can be generated to avoid optimization barriers between compilation units originating from other languages.
 
 \subsection{Use of GenAI and Tools}
 
@@ -111,7 +115,9 @@ Two notable GenAI tools have been used to assist with the research and developme
 
 \begin{enumerate}
 
-\item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand. Both research and programming tasks have benefited from the use of this tool. The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
+\item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand.
+% Both research and programming tasks have benefited from the use of this tool.
+The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
 
 \item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit the most from LLM assistance.
 
@@ -125,13 +131,17 @@ Some experimentation of GitHub Copilot agent mode is ongoing, with notable issue
 
 
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{}
+  \bibitem{llvmcpp} ``Frequently Asked Questions (FAQ) — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/FAQ.html#in-what-language-is-llvm-written}
   \bibitem{llvmcodegen} ``The LLVM Target-Independent Code Generator — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/CodeGenerator.html}
   \bibitem{llvminterop} ``GSoC 2025: Introducing an ABI Lowering Library - The LLVM Project Blog''. \url{https://blog.llvm.org/posts/2025-08-25-abi-library/}
   \bibitem{llvmoptim} ``(Inline Assembler Expressions) LLVM's Analysis and Transform Passes — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/Passes.html#domtree-dominator-tree-construction}
   \bibitem{llvmclang} ``Clang C Language Family Frontend for LLVM''. \url{https://clang.llvm.org/}
   \bibitem{llvmasm} ``LLVM Language Reference Manual — LLVM 22.0.0git documentation'' \url{https://llvm.org/docs/LangRef.html#inline-assembler-expressions}
   \bibitem{inlinekern} ``GCC Inline Assembly and Its Usage in the Linux Kernel''. \url{https://dl.acm.org/doi/fullHtml/10.5555/3024956.3024958}
+  \bibitem{llvmlto} ``LLVM Link Time Optimization: Design and Implementation — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/LinkTimeOptimization.html}
+  \bibitem{llvmtransformations} ``LLVM Programmer’s Manual — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/ProgrammersManual.html}
+  \bibitem{llvmpasses} ``Writing an LLVM Pass — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/WritingAnLLVMNewPMPass.html}
 \bibitem{t3chat} ``Meet T3 Chat AI: Your All-in-One, Super-Fast AI Assistant,'' DigiVirus. \url{https://digivirus.in/meet-t3-chat-ai-your-all-in-one-super-fast-ai-assistant/}
 \end{thebibliography}
 
