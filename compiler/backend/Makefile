@@ -1,17 +1,17 @@
-CXX ?= clang++
-AR ?= ar
+CXX                := clang++
+AR                 := ar
 
-CXXFLAGS   := -std=c++20 -O2 -Wall -Wextra -Wpedantic
-LDFLAGS    :=
+CXXFLAGS           := -std=c++20 -O2 -Wall -Wextra -Wpedantic
+LDFLAGS            :=
 
-LLVM_COMPONENTS := core support irreader
+LLVM_COMPONENTS    := core support irreader
 
-LLVM_CXXFLAGS := $(shell $(LLVM_CONFIG) --cxxflags)
-LLVM_LDFLAGS  := $(shell $(LLVM_CONFIG) --ldflags)
-LLVM_LIBS     := $(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
-SYSTEM_LIBS   := $(shell $(LLVM_CONFIG) --system-libs)
+LLVM_CXXFLAGS      := $(shell $(LLVM_CONFIG) --cxxflags)
+LLVM_LDFLAGS       := $(shell $(LLVM_CONFIG) --ldflags)
+LLVM_LIBS          := $(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
+SYSTEM_LIBS        := $(shell $(LLVM_CONFIG) --system-libs)
 
-BIN := bin/backend
+BIN                := bin/backend
 
 src_files := $(wildcard src/*.cpp)
 obj_files := $(patsubst src/%.cpp,build/%.o,$(src_files))

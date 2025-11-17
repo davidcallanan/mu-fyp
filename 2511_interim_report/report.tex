@@ -23,16 +23,17 @@
 \usepackage{enumitem}
 \setlist[enumerate]{label=(\arabic*)}
 
+\definecolor{linkblue}{HTML}{145680}
+\definecolor{headergray}{gray}{0.35}
+
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
-    urlcolor=blue,
-    citecolor=blue,
+    linkcolor=linkblue,
+    urlcolor=linkblue,
+    citecolor=linkblue,
     pdfnewwindow=true
 }
-
-\definecolor{headergray}{gray}{0.35}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -76,7 +77,7 @@
 
 The goal of this project is to develop a proof-of-concept programming language that facilitates bespoke optimization techniques via novel language constructs. The specific objective is to research the continuum of static and dynamic modules in low-level software development. A module system will be designed to promote dispatch flexibility by abstracting away the underlying dispatch mechanism, enabling aggressive link-time optimizations when circumstances allow. The development of a prototype compiler will demonstrate the efficacy of the proposed solution.
 
-Success will be evidenced by:
+Success will be evidenced by the following deliverables:
 
 \begin{enumerate}
 	\item A functional compiler that implements the designed module system;
@@ -108,9 +109,12 @@ Two notable GenAI tools have been used to assist with the research and developme
 
 \item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand. Both research and programming tasks have benefited from the use of this tool. The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
 
-\item The second is the tab-complete feature of GitHub Copilot, which 
+\item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit the most from LLM assistance.
 
 \end{enumerate}
+
+
+Some experimentation of GitHub Copilot agent mode is ongoing, with notable issues identified. Firstly, the development speed is impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there is a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, the usage of this tool has been temporarily suspended pending further assessment. 
 
 
 \section{Future Work}
@@ -127,6 +131,7 @@ Two notable GenAI tools have been used to assist with the research and developme
 
 \section{Appendix: Source Code}
 
+Included in this appendix is a snapshot of the project repository as of the date of submission of this interim report. The full repository, including the entire git history, is available upon request. Please request access to the private repository located at \href{https://github.com/davidcallanan/mu-fyp}{https://github.com/davidcallanan/mu-fyp}.
 
 \newpage
 

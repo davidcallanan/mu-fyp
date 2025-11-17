@@ -3,6 +3,7 @@ FROM ubuntu:24.04
 RUN apt-get update
 
 RUN apt-get install -y \
+	make \
 	# LLVM toolchain
 	llvm-17 \
 	llvm-17-dev \
