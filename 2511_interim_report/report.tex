@@ -102,12 +102,12 @@ Preliminary work on syntax design and language parsing code has been completed, 
 
 \subsection{Evidence of Work Completed}
 
-Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, which is written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used, including a simple parsing library, justifying the decision to use JavaScript. Basic parse-tree generation was implemented for a portion of the preliminary syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system for the compiler backend (written in C++) was arranged. A Makefile was used within a Dockerized environment, itself orchestrated by a Linux/WSL environment for best reproducibility. C++ was justified due to its first-class integration with the LLVM toolchain \cite{llvmcpp}.
+Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used (including a simple parsing library), justifying the decision to use JavaScript. Basic parse-tree generation was implemented for a portion of the preliminary syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system for the compiler backend (written in C++) was arranged. A Makefile was used within a Dockerized environment, itself orchestrated by a Linux/WSL environment for best reproducibility. C++ was justified due to its first-class integration with the LLVM toolchain \cite{llvmcpp}.
 
 
 \subsection{Literature Review}
 
-LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages thanks to ABI interoperability (including some recent improvements) \cite{llvminterop}. Furthermore, the extensive optimization passes shared amongst languages targetting LLVM \cite{llvmoptim} should make Essence C more comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (such as in kernel development \cite{inlinekern}). Additionally, LLVM benefits greatly from intermodular optimizations at link-time \cite{llvmlto}, because its intermediate representation (IR) preserves higher-level constructs. Critically, the LLVM API exposes a powerful interface to programatically manipulate existing LLVM IR files \cite{llvmtransformations} \cite{llvmpasses}. It follows that inlined compatibility wrappers can be generated to avoid optimization barriers between compilation units originating from other languages.
+LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages thanks to ABI interoperability (including some recent improvements) \cite{llvminterop}. Furthermore, the extensive optimization passes shared amongst languages targetting LLVM \cite{llvmoptim} should make \textit{Essence C} directly comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was also noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (such as in kernel development \cite{inlinekern}). Additionally, LLVM benefits greatly from intermodular optimizations at link-time \cite{llvmlto}, because its intermediate representation (IR) preserves the necessary higher-level constructs. Critically, the LLVM API exposes a powerful interface to programatically manipulate existing LLVM IR files \cite{llvmtransformations} \cite{llvmpasses}. It follows that inlined compatibility wrappers can be generated to avoid optimization barriers between compilation units originating from languages other than \textit{Essence C}.
 
 \subsection{Use of GenAI and Tools}
 
@@ -129,6 +129,8 @@ Some experimentation of GitHub Copilot agent mode is ongoing, with notable issue
 
 \section{Future Work}
 
+
+The core of the project revolves around the design of the module system. The accompanying research will be a significant undertaking, including static vs dynamic dispatch, instance tracking logic, and the feasibility of IR interoperability in the proposed optimization techniques. This will be tackled first, in parallel with the development of any necessary boilerplate code for the compiler backend. Some experimentation will be needed with LLVM IR generation, before starting on the final compiler. Everything except the final compiler is expected to be completed by the end of January, leaving a significant amount of time for implementation, testing and evaluation of performance.
 
 
 \begin{thebibliography}{}
@@ -157,6 +159,8 @@ Included in this appendix is a snapshot of the project repository as of the date
 
 \section{Appendix: LLM Prompts}
 
+
+\newpage
 
 \section{Appendix: Screenshots}
 
