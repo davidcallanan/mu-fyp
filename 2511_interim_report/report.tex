@@ -1,6 +1,10 @@
 \documentclass[12pt,a4paper]{article}
 
 \usepackage{comment}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{listingsutf8}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -89,11 +93,11 @@ Success will be evidenced by the following deliverables:
 	\item A body of research into the continuum of static and dynamic modules in software development, with kernel development as a case study;
 	\item An implementation of link-time optimization techniques that leverage the designed module system;
 	\item An evaluation of the effectiveness of these optimizations through the benchmarking of sample programs;
-	\item A monorepo containing extensive git history, demonstrating ongoing development progress.
+	\item A monorepo containing extensive git history, demonstrating ongoing development progress;
 	\item A final written report detailing the research, design, implementation and evaluation of the project.
 \end{enumerate}
 
-
+Some items will be out of scope for this project, such as detailed compilation errors, performant compilation and advanced type system features.
 
 \section{Description of Work Completed}
 
@@ -139,7 +143,7 @@ The core of the project revolves around the design of the module system. The acc
   \bibitem{llvminterop} ``GSoC 2025: Introducing an ABI Lowering Library - The LLVM Project Blog''. \url{https://blog.llvm.org/posts/2025-08-25-abi-library/}
   \bibitem{llvmoptim} ``(Inline Assembler Expressions) LLVM's Analysis and Transform Passes — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/Passes.html#domtree-dominator-tree-construction}
   \bibitem{llvmclang} ``Clang C Language Family Frontend for LLVM''. \url{https://clang.llvm.org/}
-  \bibitem{llvmasm} ``LLVM Language Reference Manual — LLVM 22.0.0git documentation'' \url{https://llvm.org/docs/LangRef.html#inline-assembler-expressions}
+  \bibitem{llvmasm} ``LLVM Language Reference Manual — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/LangRef.html#inline-assembler-expressions}
   \bibitem{inlinekern} ``GCC Inline Assembly and Its Usage in the Linux Kernel''. \url{https://dl.acm.org/doi/fullHtml/10.5555/3024956.3024958}
   \bibitem{llvmlto} ``LLVM Link Time Optimization: Design and Implementation — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/LinkTimeOptimization.html}
   \bibitem{llvmtransformations} ``LLVM Programmer’s Manual — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/ProgrammersManual.html}
@@ -154,6 +158,10 @@ The core of the project revolves around the design of the module system. The acc
 \section{Appendix: Source Code}
 
 Included in this appendix is a snapshot of the project repository as of the date of submission of this interim report. The full repository, including the entire git history, is available upon request. Please request access to the private repository located at \href{https://github.com/davidcallanan/mu-fyp}{https://github.com/davidcallanan/mu-fyp}.
+
+Build artifacts and other uninteresting files have been omitted from this appendix. This includes, but is not limited to, all files mentioned inside \lstinline{.gitignore}.
+
+\input{appendix_source_code.tex}
 
 \newpage
 
