@@ -80,6 +80,10 @@
   \end{tabularx}
 \end{table}
 
+\tableofcontents
+
+\newpage
+
 \section{Project Objectives}
 
 The goal of this project is to develop a proof-of-concept programming language (``Essence C'') that facilitates bespoke optimization techniques via novel language constructs. The specific objective is to research the continuum of static and dynamic modules in low-level software development. A module system will be designed to promote dispatch flexibility by abstracting away the underlying dispatch mechanism, enabling aggressive link-time optimizations when circumstances allow. The development of a prototype compiler will demonstrate the efficacy of the proposed solution.
@@ -123,12 +127,12 @@ Two notable GenAI tools have been used to assist with the research and developme
 % Both research and programming tasks have benefited from the use of this tool.
 The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
 
-\item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit the most from LLM assistance.
+\item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit directly from LLM assistance.
 
 \end{enumerate}
 
 
-Some experimentation of GitHub Copilot agent mode is ongoing, with notable issues identified. Firstly, the development speed is impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there is a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, the usage of this tool has been temporarily suspended pending further assessment. 
+Some experimentation with GitHub Copilot agent mode is ongoing, with notable issues identified. Firstly, the development speed is impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there is a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool is temporarily suspended pending further assessment. 
 
 
 \section{Future Work}
@@ -136,6 +140,7 @@ Some experimentation of GitHub Copilot agent mode is ongoing, with notable issue
 
 The core of the project revolves around the design of the module system. The accompanying research will be a significant undertaking, including static vs dynamic dispatch, instance tracking logic, and the feasibility of IR interoperability in the proposed optimization techniques. This will be tackled first, in parallel with the development of any necessary boilerplate code for the compiler backend. Some experimentation will be needed with LLVM IR generation, before starting on the final compiler. Everything except the final compiler is expected to be completed by the end of January, leaving a significant amount of time for implementation, testing and evaluation of performance.
 
+\newpage
 
 \begin{thebibliography}{}
   \bibitem{llvmcpp} ``Frequently Asked Questions (FAQ) — LLVM 22.0.0git documentation''. \url{https://llvm.org/docs/FAQ.html#in-what-language-is-llvm-written}
@@ -167,6 +172,7 @@ Build artifacts and other uninteresting files have been omitted from this append
 
 \section{Appendix: LLM Prompts}
 
+\input{appendix_llm_prompts.tex}
 
 \newpage
 
