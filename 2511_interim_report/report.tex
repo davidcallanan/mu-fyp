@@ -14,6 +14,8 @@
 
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{capt-of}
+\usepackage{float}
 
 \usepackage{array}
 \usepackage{booktabs}
@@ -56,7 +58,7 @@
 \fancyhead[C]{\HeaderCenterText}
 \fancyhead[R]{\HeaderRightImage}
 
-\fancyfoot[C]{\sffamily Page \thepage\ of \pageref{LastPage}}
+\fancyfoot[C]{\sffamily Page \thepage\ of \pageref*{LastPage}}
 
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\headheight}{24pt}
@@ -107,11 +109,9 @@ Some items will be out of scope for this project, such as detailed compilation e
 
 Preliminary work on syntax design and language parsing code has been completed, and background research into the LLVM toolchain has been conducted. AI assistance was also briefly assessed.
 
-
 \subsection{Evidence of Work Completed}
 
 Initially, a handful of pseudocode files were created to brainstorm syntax ideas for the language. Then, a simple VS Code extension was developed to provide syntax highlighting for these early syntax ideas to reduce eye strain. Next, work commenced on the compiler frontend, written in JavaScript. Some \href{https://github.com/davidcallanan/uoe}{previously written code} from personal projects was used (including a simple parsing library), justifying the decision to use JavaScript. Basic parse-tree generation was implemented for a portion of the preliminary syntax, and a custom "source scope" system was developed to handle the translation between filesystem resources and source references within the programming language. Next, the build system for the compiler backend (written in C++) was arranged. A Makefile was used within a Dockerized environment, itself orchestrated by a Linux/WSL environment for best reproducibility. C++ was justified due to its first-class integration with the LLVM toolchain \cite{llvmcpp}.
-
 
 \subsection{Literature Review}
 
@@ -125,18 +125,15 @@ Two notable GenAI tools have been used to assist with the research and developme
 
 \item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand.
 % Both research and programming tasks have benefited from the use of this tool.
-The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix B}.
+The tool was primarily used to steer the work in the right direction and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix C}.
 
 \item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit directly from LLM assistance.
 
 \end{enumerate}
 
-
 Some experimentation with GitHub Copilot agent mode is ongoing, with notable issues identified. Firstly, the development speed is impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there is a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool is temporarily suspended pending further assessment. 
 
-
 \section{Future Work}
-
 
 The core of the project revolves around the design of the module system. The accompanying research will be a significant undertaking, including static vs dynamic dispatch, instance tracking logic, and the feasibility of IR interoperability in the proposed optimization techniques. This will be tackled first, in parallel with the development of any necessary boilerplate code for the compiler backend. Some experimentation will be needed with LLVM IR generation, before starting on the final compiler. Everything except the final compiler is expected to be completed by the end of January, leaving a significant amount of time for implementation, testing and evaluation of performance.
 
@@ -160,6 +157,12 @@ The core of the project revolves around the design of the module system. The acc
 
 \newpage
 
+\section{Appendix: Screenshots}
+
+\input{appendix_screenshots.tex}
+
+\newpage
+
 \section{Appendix: Source Code}
 
 Included in this appendix is a snapshot of the project repository as of the date of submission of this interim report. The full repository, including the entire git history, is available upon request. Please request access to the private repository located at \href{https://github.com/davidcallanan/mu-fyp}{https://github.com/davidcallanan/mu-fyp}.
@@ -173,11 +176,6 @@ Build artifacts and other uninteresting files have been omitted from this append
 \section{Appendix: LLM Prompts}
 
 \input{appendix_llm_prompts.tex}
-
-\newpage
-
-\section{Appendix: Screenshots}
-
 
 \label{LastPage}
 \end{document}
