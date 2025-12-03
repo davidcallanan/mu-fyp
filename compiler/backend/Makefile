@@ -1,10 +1,10 @@
 CXX                := clang++
 AR                 := ar
 
-CXXFLAGS           := -std=c++20 -O2 -Wall -Wextra -Wpedantic
+CXXFLAGS           := -std=c++20 -O2 -Wall -Wextra -Wpedantic -Wno-unused-parameter
 LDFLAGS            :=
 
-LLVM_COMPONENTS    := core support irreader
+LLVM_COMPONENTS    := core support irreader target mc
 
 LLVM_CXXFLAGS      := $(shell $(LLVM_CONFIG) --cxxflags)
 LLVM_LDFLAGS       := $(shell $(LLVM_CONFIG) --ldflags)
