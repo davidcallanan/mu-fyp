@@ -17,7 +17,7 @@ src_files := $(wildcard src/*.cpp)
 obj_files := $(patsubst src/%.cpp,build/%.o,$(src_files))
 
 build/%.o: src/%.cpp | build
-	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) -fexceptions -c $< -o $@
 
 $(BIN): $(obj_files) | bin
 	$(CXX) -o $@ $^ $(LDFLAGS) $(LLVM_LDFLAGS) $(LLVM_LIBS) $(SYSTEM_LIBS)

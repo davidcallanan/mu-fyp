@@ -501,5 +501,9 @@ export const process = async (config) => {
 
 	const final = await augment(structured, create_source_scope);
 
-	return final;
+	return {
+		parse_output: final,
+		dir_node_translations: await dir_node_translator.dump_translations(),
+		module_path: actual_path,
+	};
 };
