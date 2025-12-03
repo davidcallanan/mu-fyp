@@ -7,29 +7,8 @@ class FsSourceScope {
 	}
 
 	async resolve(path) {
-		// todo: add lru cache of like 1000 entries here.
 		const directory = this._dependencies.path.join(this._base_path, path);
-
-		try {
-			var files = await this._dependencies.fs.readdir(directory);
-		} catch (e) {
-			console.warn(e);
-			return undefined;
-		}
-
-		if (files.some(file => file.endsWith(".ec"))) {
-			return {
-				type: "SOURCE MODULE",
-				files: files.filter(file => file.endsWith(".ec")),
-			};
-		} else if (files.some(file => file.endsWith(".eh"))) {
-			return {
-				type: "INTERFACE MODULE",
-				files: files.filter(file => file.endsWith(".eh")),
-			};
-		}
-
-		return undefined;
+		return await this._dependencies.dir_node_translator.add(directory);
 	}
 }
 

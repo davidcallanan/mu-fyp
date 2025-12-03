@@ -2,8 +2,13 @@ import { mapData, join, opt, multi, opt_multi, or, declare } from "./uoe/ec/blur
 
 import * as fs from "fs/promises";
 import * as node__path from "path";
+import { randomUUID } from "crypto";
 import { create_fs_source_scope } from "./create_fs_source_scope.js";
-import { create_source_scope } from "./create_source_scope.js";
+import { create_source_scope as orig_create_source_scope } from "./create_source_scope.js";
+import { create_source_extractor } from "./create_source_extractor.js";
+import { create_dir_node_translator } from "./create_dir_node_translator.js";
+import { throw_error } from "./uoe/throw_error.js";
+import { error_internal } from "./uoe/error_internal.js";
 
 // LEXICAL TOKENS
 
@@ -104,6 +109,7 @@ const forwarding = mapData(
 		opt_multi(
 			or(
 				mapData(
+					// for now, only makes sense to reset a path in the outer root.
 					join(KW_RESET, or(PATH_OUTER_ROOT, OUTER_ROOT), SEMI),
 					(data) => ({ type: "reset", source: data[0] }),
 				),
@@ -351,6 +357,8 @@ const make_structured = (entries) => {
 	const structured = {
 		structure: entries,
 		forwarding: [],
+		mod_list: [],
+		types_list: [],
 	};
 
 	for (const entry of entries) {
@@ -360,14 +368,29 @@ const make_structured = (entries) => {
 				...entry.entries,
 			];
 		}
+
+		if (entry.type === "top_mod") {
+			structured.mod_list.push({
+				...entry,
+			});
+		}
+
+		if (entry.type === "top_types") {
+			structured.types_list.push({
+				...entry,
+			});
+		}
 	}
 
 	return structured;
 };
 
-const augment = (data) => {
+const augment = async (data, create_source_scope) => {
+	console.log("scop", data.source_scopes, data);
 	const module_source_scope = create_source_scope([
-		["//", data.source_scopes.external, "//"],
+		// ["//", data.source_scopes.external, "//"],
+		// Todo: i need to add the above back in. It would normally steal this from parent module, or if root then match internal scope. So we need to just pass relevant data through the system to know what mode we are in.
+		["//", data.source_scopes.internal, "/"], // temp solution
 		["/", data.source_scopes.internal, "/"],
 	]);
 
@@ -379,10 +402,10 @@ const augment = (data) => {
 		}
 
 		console.warn("Entry:", entry);
-		throw new Error("Unhandled case.");
+		throw_error(error_internal("Assertion error: Unhandled case."));
 	}));
 
-	return {
+	const result = {
 		...data,
 		source_scopes: {
 			...data.source_scopes ?? [],
@@ -390,6 +413,20 @@ const augment = (data) => {
 			forwarding: forwarding_source_scope,
 		},
 	};
+
+	for (const mod_entry of result.mod_list) {
+		if (mod_entry.definition.mode === "anon_import") {
+			mod_entry.definition.uuid = await module_source_scope.resolve(mod_entry.definition.path);
+		}
+	}
+
+	for (const types_entry of result.types_list) {
+		if (types_entry.definition.mode === "anon_import") {
+			types_entry.definition.uuid = await module_source_scope.resolve(types_entry.definition.path);
+		}
+	}
+
+	return result;
 };
 
 export const process = async (config) => {
@@ -397,17 +434,36 @@ export const process = async (config) => {
 	const actual_path = node__path.resolve(path);
 	console.log("[FE] Processing module located at path:", actual_path);
 
+	const dir_node_translator = create_dir_node_translator({
+		fs,
+		path: node__path,
+		randomUUID,
+	});
+
+	const root_uuid = await dir_node_translator.add(actual_path);
+
+	const create_source_scope = (redirects) => orig_create_source_scope({
+		dir_node_translator,
+	}, redirects);
+
 	const file_system_source_scope = create_fs_source_scope({
 		fs,
-		path: node__path
+		path: node__path,
+		dir_node_translator,
 	}, actual_path);
 
 	const internal_source_scope = create_source_scope([
-		["//"],
+		["//", file_system_source_scope, "./"], // todo: this will be made more exhaustive at a later stage.
 		["/", file_system_source_scope, "./"],
 	]);
 
-	const result = await internal_source_scope.resolve("/");
+	const source_extractor = create_source_extractor({
+		fs,
+		dir_node_translator,
+	});
+
+	const module_uuid = await internal_source_scope.resolve("/");
+	const result = await source_extractor.extract(module_uuid);
 
 	console.log(result);
 
@@ -437,12 +493,13 @@ export const process = async (config) => {
 	const structured = make_structured(combined);
 
 	structured.module_path = actual_path;
+	structured.module_uuid = root_uuid;
 
 	structured.source_scopes = {
 		internal: internal_source_scope,
 	};
 
-	const final = augment(structured);
+	const final = await augment(structured, create_source_scope);
 
 	return final;
 };

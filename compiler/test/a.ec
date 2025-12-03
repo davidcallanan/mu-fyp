@@ -5,7 +5,7 @@ forwarding {
 forwarding {
 	reset //;
 	reset //foo/bar/baz;
-	//banana/slop /wanana/bop;
+	//banana/slop /foo/bop;
 }
 
 type foo::Bar f32;
@@ -23,10 +23,10 @@ types orange import /foo/bar forwarding {
 	//banana/slop /wanana/bop;
 }
 
-mod eggplant import //egg/plant;
+mod eggplant import //foo/plant;
 
-mod eggplant import //egg/plant forwarding {
-	//pear /pear;
+mod eggplant import //foo/plant forwarding {
+	//pear /foo;
 }
 
 ; todo why is eggplant2 not working?

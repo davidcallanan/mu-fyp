@@ -1,7 +1,7 @@
 
 forwarding {
-	//banana/slop /wanana/bop;
-	//banana/vegetable /wanana/gravy;
+	//banana/slop /foo/bop;
+	//banana/vegetable /foo/gravy;
 }
 
 @Bar:test:blah27 f32;
