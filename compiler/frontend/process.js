@@ -31,6 +31,7 @@ const KW_IMPORT = withCarefulSkippers("import");
 const KW_MOD = withCarefulSkippers("mod");
 const LBRACE = withCarefulSkippers("{");
 const RBRACE = withCarefulSkippers("}");
+const ASTERISK = withCarefulSkippers("*");
 const PATH_OUTER_ROOT = withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all));
 const PATH_MODULE_ROOT = withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all));
 const PATH = or(PATH_OUTER_ROOT, PATH_MODULE_ROOT);
@@ -135,15 +136,9 @@ const top_forwarding = mapData(
 	}),
 );
 
-const type_reference = or(
-	mapData(
-		TYPE_IDENT,
-		(data) => ({
-			type: "type_reference",
-			mode: "type_ident",
-			trail: data.split("::"),
-		}),
-	),
+const type_reference = declare();
+
+type_reference.define(or(
 	mapData(
 		KW_MAP,
 		(_data) => ({
@@ -154,7 +149,23 @@ const type_reference = or(
 			call_output_type: undefined,
 		}),
 	),
-);
+	mapData(
+		TYPE_IDENT,
+		(data) => ({
+			type: "type_reference",
+			mode: "type_ident",
+			trail: data.split("::"),
+		}),
+	),
+	mapData(
+		join(ASTERISK, type_reference),
+		(data) => ({
+			type: "type_reference",
+			mode: "pointer",
+			uly: data[1],
+		}),
+	),
+));
 
 const top_type = or(
 	mapData(

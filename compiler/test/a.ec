@@ -9,6 +9,8 @@ forwarding {
 }
 
 type foo::Bar f32;
+
+types foo::bar foo::bar;
 type foo::bar::Baz Banana;
 type foo::bar::Bink foo::Bar;
 type foo::Coconut map;
@@ -30,3 +32,16 @@ mod eggplant import //foo/plant forwarding {
 }
 
 ; todo why is eggplant2 not working?
+
+; "Compiler" will be in-built type to make life easier
+
+; type testing_pointers *u8;
+; type testing_pointers_more **u8;
+
+; types compiler import //std/compiler;
+
+; @Mod:ct compiler::CompTime;
+
+; create(:ct compiler::CompTime, :argc usize, :argv **u8) -> {
+; 	:ct ct;
+; }
