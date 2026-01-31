@@ -106,8 +106,12 @@ void gen_module_binary(const json& create_data) {
 	llvm::Value* message_str = builder.CreateGlobalStringPtr(message);
 	builder.CreateCall(puts_func, { message_str });
 	
-	if (!create_data.is_null() && create_data.contains("body")) {
-		process_map_body(builder, puts_func, create_data["body"]);
+	if (true
+		&& !create_data.is_null()
+		&& create_data.contains("description")
+		&& create_data["description"].contains("call_output_constraint")
+	) {
+		process_map_body(builder, puts_func, create_data["description"]["call_output_constraint"]);
 	}
 	
 	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));

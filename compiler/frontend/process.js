@@ -245,6 +245,47 @@ type_reference.define(or(
 	),
 ));
 
+const type_map_body_braced = mapData(
+	join(
+		LBRACE,
+		RBRACE,
+	),
+	(_data) => ({
+		type: "type_map_body",
+	}),
+);
+
+const type_map_body_tupled = mapData(
+	join(
+		LPAREN,
+		RPAREN,
+	),
+	(_data) => ({
+		type: "type_map_body",
+	}),
+);
+
+const type_map_body = or(
+	type_map_body_braced,
+	type_map_body_tupled,
+);
+
+const type_map_callable = mapData(
+	join(
+		type_map_body,
+		ARROW,
+		opt(type_reference),
+		// note: no need for third part for mixing type reference and map type, as map type can incorporate type reference leaf in future.
+		constraint_map,
+	),
+	(data) => ({
+		type: "type_map_callable",
+		call_input_type: data[0],
+		call_output_type: data[2],
+		call_output_constraint: data[3],
+	}),
+);
+
 const top_type = or(
 	mapData(
 		join(
@@ -404,15 +445,11 @@ const top_extension = mapData(
 
 const constraint_braced = constraint_map_braced;
 
-const map = constraint_braced;
-
 const top_create = mapData(
-	join(KW_CREATE, LPAREN, RPAREN, ARROW, map),
+	join(KW_CREATE, type_map_callable),
 	(data) => ({
 		type: "top_create",
-		call_input_type: undefined,
-		call_output_type: undefined,
-		body: data[4],
+		description: data[1],
 	}),
 );
 
