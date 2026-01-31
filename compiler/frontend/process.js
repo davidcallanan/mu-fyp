@@ -13,9 +13,11 @@ import { error_internal } from "./uoe/error_internal.js";
 // LEXICAL TOKENS
 
 const WHITESPACE = /^\s+/;
+const REALSPACE = /^[ \t]+/;
 const SINGLELINE_COMMENT = mapData(/^\s*;(.*?)(\n|$)\s*/, data => data.groups[0]);
 const SKIPPERS = opt(multi(or(SINGLELINE_COMMENT, WHITESPACE)));
-const CORE_SKIPPERS = opt(multi(WHITESPACE));
+const CORE_SKIPPERS = opt(multi(REALSPACE));
+const NEWLINE = /^\n/;
 
 const withSkippers = (p) => mapData(join(SKIPPERS, p, SKIPPERS), data => data[1]);
 const withCarefulSkippers = (p) => mapData(join(SKIPPERS, p, CORE_SKIPPERS), data => data[1]);
@@ -30,12 +32,14 @@ const KW_MAP = withCarefulSkippers("map");
 const KW_IMPORT = withCarefulSkippers("import");
 const KW_MOD = withCarefulSkippers("mod");
 const KW_CREATE = withCarefulSkippers("create");
+const KW_LOG = withCarefulSkippers("log");
 const LBRACE = withCarefulSkippers("{");
 const RBRACE = withCarefulSkippers("}");
 const LPAREN = withCarefulSkippers("(");
 const RPAREN = withCarefulSkippers(")");
 const ARROW = withCarefulSkippers("->");
 const ASTERISK = withCarefulSkippers("*");
+const COMMA = withCarefulSkippers(",");
 const PATH_OUTER_ROOT = withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all));
 const PATH_MODULE_ROOT = withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all));
 const PATH = or(PATH_OUTER_ROOT, PATH_MODULE_ROOT);
@@ -328,19 +332,76 @@ const top_extension = mapData(
 	})
 );
 
-const top_create = mapData(
+const map_entry_log = mapData(
+	join(KW_LOG, LPAREN, RPAREN),
+	(_data) => ({
+		type: "map_entry_log",
+	}),
+);
+
+const map_entry = or(
+	map_entry_log,
+);
+
+const map_multiline = mapData(
 	join(
-		KW_CREATE,
-		LPAREN,
-		RPAREN,
-		ARROW,
 		LBRACE,
+		NEWLINE,
+		opt_multi(
+			join(
+				map_entry,
+				SEMI,
+			),
+		),
 		RBRACE,
 	),
-	(_data) => ({
+	(data) => ({
+		type: "map",
+		entries: data[2].map(entry => entry[0]),
+	}),
+);
+
+const map_singleline = mapData(
+	join(
+		LBRACE,
+		opt(
+			join(
+				map_entry,
+				opt_multi(join(COMMA, map_entry)),
+			),
+		),
+		RBRACE,
+	),
+	(data) => {
+		const entries = [];
+
+		if (data[1] !== undefined) {
+			entries.push(data[1][0]);
+
+			for (const entry of data[1][1]) {
+				entries.push(entry[1]);
+			}
+		}
+
+		return {
+			type: "map",
+			entries,
+		};
+	},
+);
+
+const map = or(
+	map_multiline,
+	map_singleline,
+);
+
+const top_create = mapData(
+	join(KW_CREATE, LPAREN, RPAREN, ARROW, map),
+	(data) => ({
 		type: "top_create",
 		input_type: undefined,
 		output_type: undefined,
+		body: data[4],
 	}),
 );
 
@@ -357,7 +418,7 @@ const top_entry = or(
 // i wonder if values and maps could be combined?
 // but for now, value_map will just be optional after type.
 
-const file_root = opt_multi(top_entry);
+const file_root = mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0]);
 
 // SEMANTIC ANALYSIS
 

@@ -18,10 +18,46 @@
 
 using json = nlohmann::json;
 
-void gen_test_binary(const char* message) {
-	// the amount of boilerplate is crazy lol
+void process_map_entry(
+	llvm::IRBuilder<>& builder,
+	llvm::FunctionCallee& puts_func,
+	const json& entry,
+	int& log_counter
+) {
+	if (entry.contains("type") && entry["type"] == "map_entry_log") {
+		std::string log_message = "Log call,, no. " + std::to_string(++log_counter);
+		llvm::Value* log_str = builder.CreateGlobalStringPtr(log_message);
+		builder.CreateCall(puts_func, { log_str });
+	}
+}
+
+void process_map_body(
+	llvm::IRBuilder<>& builder,
+	llvm::FunctionCallee& puts_func,
+	const json& body
+) {
+	if (!body.contains("type") || body["type"] != "map") {
+		fprintf(stderr, "Expected .type == \"map\"\n");
+		exit(1);
+	}
 	
-	printf("Generating test binary using llvm which prints some message.\n");
+	if (!body.contains("entries")) {
+		fprintf(stderr, "Expected .entries\n");
+		exit(1);
+	}
+	
+	auto& entries = body["entries"];
+	
+	int log_counter = 0;
+	
+	for (auto& entry : entries) {
+		process_map_entry(builder, puts_func, entry, log_counter);
+	}
+}
+
+void gen_module_binary(const json& create_data) {
+	// the amount of boilerplate is crazy lol
+	printf("Generating module binary!!\n");
 	
 	llvm::LLVMContext context;
 	llvm::Module module("foobar", context);
@@ -55,9 +91,20 @@ void gen_test_binary(const char* message) {
 	llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", main_func);
 	builder.SetInsertPoint(entry);
 	
-	llvm::Value* hello_str = builder.CreateGlobalStringPtr(message);
+	const char* message;
 	
-	builder.CreateCall(puts_func, { hello_str });
+	if (create_data.is_null()) {
+		message = "No module entrypoint";
+	} else {
+		message = "Module entrypoint found";
+	}
+	
+	llvm::Value* message_str = builder.CreateGlobalStringPtr(message);
+	builder.CreateCall(puts_func, { message_str });
+	
+	if (!create_data.is_null() && create_data.contains("body")) {
+		process_map_body(builder, puts_func, create_data["body"]);
+	}
 	
 	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
 	
@@ -66,7 +113,7 @@ void gen_test_binary(const char* message) {
 	
 	if (llvm::verifyModule(module, &verify_stream)) {
 		fprintf(stderr, "Verification of generated module did not go smoothly, because:%s\n", verify_error.c_str());
-		return;
+		exit(1);
 	}
 	
 	printf("Module generation went fantastically.\n");
@@ -76,7 +123,7 @@ void gen_test_binary(const char* message) {
 	
 	if (error_code) {
 		fprintf(stderr, "Opening file error: %s\n", error_code.message().c_str());
-		return;
+		exit(1);
 	}
 	
 	module.print(ir_file, nullptr);
@@ -93,7 +140,7 @@ void gen_test_binary(const char* message) {
 	
 	if (!target) {
 		fprintf(stderr, "Couldn't locate desired target because %s\n", error.c_str());
-		return;
+		exit(1);
 	}
 	
 	llvm::TargetOptions opt;
@@ -113,7 +160,7 @@ void gen_test_binary(const char* message) {
 	if (error_code) {
 		fprintf(stderr, "Opening file error because %s\n", error_code.message().c_str());
 		delete target_machine;
-		return;
+		exit(1);
 	}
 	
 	llvm::legacy::PassManager pass_manager;
@@ -121,7 +168,7 @@ void gen_test_binary(const char* message) {
 	if (target_machine->addPassesToEmitFile(pass_manager, obj_file, nullptr, llvm::CodeGenFileType::CGFT_ObjectFile)) {
 		fprintf(stderr, "Object file emission not supported for some reason.\n");
 		delete target_machine;
-		return;
+		exit(1);
 	}
 	
 	pass_manager.run(module);
@@ -159,14 +206,12 @@ int main(int argc, char* argv[]) {
 
 	auto& parse_output = frontend_data["parse_output"];
 	
-	const char* message;
+	json create_block = nullptr;
 	if (parse_output.contains("create") && !parse_output["create"].is_null()) {
-		message = "Module entrypoint found";
-	} else {
-		message = "No module entrypoint";
+		create_block = parse_output["create"];
 	}
 	
-	gen_test_binary(message);
+	gen_module_binary(create_block);
 
 	auto& dir_node_translations = frontend_data["dir_node_translations"];
 	

@@ -53,4 +53,7 @@ type TestingPointersMore **u8;
 
 
 create() -> {
+	log();
+	log();
+	log();
 }
