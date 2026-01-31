@@ -21,11 +21,17 @@ using json = nlohmann::json;
 void process_map_entry(
 	llvm::IRBuilder<>& builder,
 	llvm::FunctionCallee& puts_func,
-	const json& entry,
-	int& log_counter
+	const json& entry
 ) {
 	if (entry.contains("type") && entry["type"] == "map_entry_log") {
-		std::string log_message = "Log call,, no. " + std::to_string(++log_counter);
+		std::string log_message;
+		
+		if (entry.contains("message") && !entry["message"].is_null()) {
+			log_message = entry["message"].get<std::string>();
+		} else {
+			log_message = "";
+		}
+		
 		llvm::Value* log_str = builder.CreateGlobalStringPtr(log_message);
 		builder.CreateCall(puts_func, { log_str });
 	}
@@ -48,10 +54,8 @@ void process_map_body(
 	
 	auto& entries = body["entries"];
 	
-	int log_counter = 0;
-	
 	for (auto& entry : entries) {
-		process_map_entry(builder, puts_func, entry, log_counter);
+		process_map_entry(builder, puts_func, entry);
 	}
 }
 

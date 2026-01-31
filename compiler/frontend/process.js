@@ -53,6 +53,7 @@ const SYMBOL = withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data =>
 const EXTAT = withLeftSkippers("@");
 const INTEGER = withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all)));
 const FLOAT = withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all));
+const STRING = withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0]));
 
 // PARSER RULES
 
@@ -333,9 +334,10 @@ const top_extension = mapData(
 );
 
 const map_entry_log = mapData(
-	join(KW_LOG, LPAREN, RPAREN),
-	(_data) => ({
+	join(KW_LOG, LPAREN, opt(STRING), RPAREN),
+	(data) => ({
 		type: "map_entry_log",
+		message: data[2],
 	}),
 );
 

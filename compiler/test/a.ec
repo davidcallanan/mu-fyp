@@ -53,7 +53,7 @@ type TestingPointersMore **u8;
 
 
 create() -> {
+	log("Hello, World!");
 	log();
-	log();
-	log();
+	log("This log statement can only handle hardcoded strings.");
 }
