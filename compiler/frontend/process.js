@@ -29,8 +29,12 @@ const KW_TYPES = withCarefulSkippers("types");
 const KW_MAP = withCarefulSkippers("map");
 const KW_IMPORT = withCarefulSkippers("import");
 const KW_MOD = withCarefulSkippers("mod");
+const KW_CREATE = withCarefulSkippers("create");
 const LBRACE = withCarefulSkippers("{");
 const RBRACE = withCarefulSkippers("}");
+const LPAREN = withCarefulSkippers("(");
+const RPAREN = withCarefulSkippers(")");
+const ARROW = withCarefulSkippers("->");
 const ASTERISK = withCarefulSkippers("*");
 const PATH_OUTER_ROOT = withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all));
 const PATH_MODULE_ROOT = withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all));
@@ -324,12 +328,29 @@ const top_extension = mapData(
 	})
 );
 
+const top_create = mapData(
+	join(
+		KW_CREATE,
+		LPAREN,
+		RPAREN,
+		ARROW,
+		LBRACE,
+		RBRACE,
+	),
+	(_data) => ({
+		type: "top_create",
+		input_type: undefined,
+		output_type: undefined,
+	}),
+);
+
 const top_entry = or(
 	top_forwarding,
 	top_type,
 	top_types,
 	top_mod,
 	top_extension,
+	top_create,
 	SEMI,
 );
 
@@ -370,6 +391,7 @@ const make_structured = (entries) => {
 		forwarding: [],
 		mod_list: [],
 		types_list: [],
+		create: undefined,
 	};
 
 	for (const entry of entries) {
@@ -390,6 +412,14 @@ const make_structured = (entries) => {
 			structured.types_list.push({
 				...entry,
 			});
+		}
+
+		if (entry.type === "top_create") {
+			if (structured.create !== undefined) {
+				throw_error(error_internal("Only one create block permitted per module."));
+			}
+
+			structured.create = entry;
 		}
 	}
 

@@ -50,3 +50,7 @@ type TestingPointersMore **u8;
 ; create(:ct compiler::CompTime, :argc usize, :argv **u8) -> {
 ; 	:ct ct;
 ; }
+
+
+create() -> {
+}
