@@ -18,10 +18,10 @@
 
 using json = nlohmann::json;
 
-void gen_test_binary() {
+void gen_test_binary(const char* message) {
 	// the amount of boilerplate is crazy lol
 	
-	printf("Generating test binary using llvm which prints hello world.\n");
+	printf("Generating test binary using llvm which prints some message.\n");
 	
 	llvm::LLVMContext context;
 	llvm::Module module("foobar", context);
@@ -55,7 +55,7 @@ void gen_test_binary() {
 	llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", main_func);
 	builder.SetInsertPoint(entry);
 	
-	llvm::Value* hello_str = builder.CreateGlobalStringPtr("Hello, World!");
+	llvm::Value* hello_str = builder.CreateGlobalStringPtr(message);
 	
 	builder.CreateCall(puts_func, { hello_str });
 	
@@ -133,8 +133,6 @@ void gen_test_binary() {
 }
 
 int main(int argc, char* argv[]) {
-	gen_test_binary();
-	
 	std::string json_path = "/volume/in/frontend.out.json";
 
 	printf("Obtaining json frontend result from %s\n", json_path.c_str());
@@ -158,6 +156,17 @@ int main(int argc, char* argv[]) {
 	json_file.close();
 
 	printf("json has been smoothly parsed.\n");
+
+	auto& parse_output = frontend_data["parse_output"];
+	
+	const char* message;
+	if (parse_output.contains("create") && !parse_output["create"].is_null()) {
+		message = "Module entrypoint found";
+	} else {
+		message = "No module entrypoint";
+	}
+	
+	gen_test_binary(message);
 
 	auto& dir_node_translations = frontend_data["dir_node_translations"];
 	
