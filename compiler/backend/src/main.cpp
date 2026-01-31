@@ -42,8 +42,8 @@ void process_map_body(
 	llvm::FunctionCallee& puts_func,
 	const json& body
 ) {
-	if (!body.contains("type") || body["type"] != "map") {
-		fprintf(stderr, "Expected .type == \"map\"\n");
+	if (!body.contains("type") || body["type"] != "constraint_map") {
+		fprintf(stderr, "Expected .type == \"constraint_map\"\n");
 		exit(1);
 	}
 	

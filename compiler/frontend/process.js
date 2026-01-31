@@ -67,14 +67,83 @@ const symbol_path = mapData(
 	}),
 );
 
-const constraint_map = mapData(
+const map_entry_log = mapData(
+	join(KW_LOG, LPAREN, opt(STRING), RPAREN),
+	(data) => ({
+		type: "map_entry_log",
+		message: data[2],
+	}),
+);
+
+const map_entry = or(
+	map_entry_log,
+);
+
+const constraint_map_braced_multiline = mapData(
 	join(
 		LBRACE,
+		NEWLINE,
+		opt_multi(
+			join(
+				map_entry,
+				SEMI,
+			),
+		),
 		RBRACE,
 	),
 	(data) => ({
 		type: "constraint_map",
+		entries: data[2].map(entry => entry[0]),
 	}),
+);
+
+const constraint_map_braced_singleline = mapData(
+	join(
+		LBRACE,
+		opt(
+			join(
+				map_entry,
+				opt_multi(join(COMMA, map_entry)),
+			),
+		),
+		RBRACE,
+	),
+	(data) => {
+		const entries = [];
+
+		if (data[1] !== undefined) {
+			entries.push(data[1][0]);
+
+			for (const entry of data[1][1]) {
+				entries.push(entry[1]);
+			}
+		}
+
+		return {
+			type: "constraint_map",
+			entries,
+		};
+	},
+);
+
+const constraint_map_braced = or(
+	constraint_map_braced_multiline,
+	constraint_map_braced_singleline,
+);
+
+const constraint_map_tupled = mapData(
+	join(
+		LPAREN,
+		RPAREN,
+	),
+	(data) => ({
+		type: "constraint_map",
+	}),
+);
+
+const constraint_map = or(
+	constraint_map_braced,
+	constraint_map_tupled,
 );
 
 const constraint_integer = mapData(
@@ -333,76 +402,16 @@ const top_extension = mapData(
 	})
 );
 
-const map_entry_log = mapData(
-	join(KW_LOG, LPAREN, opt(STRING), RPAREN),
-	(data) => ({
-		type: "map_entry_log",
-		message: data[2],
-	}),
-);
+const constraint_braced = constraint_map_braced;
 
-const map_entry = or(
-	map_entry_log,
-);
-
-const map_multiline = mapData(
-	join(
-		LBRACE,
-		NEWLINE,
-		opt_multi(
-			join(
-				map_entry,
-				SEMI,
-			),
-		),
-		RBRACE,
-	),
-	(data) => ({
-		type: "map",
-		entries: data[2].map(entry => entry[0]),
-	}),
-);
-
-const map_singleline = mapData(
-	join(
-		LBRACE,
-		opt(
-			join(
-				map_entry,
-				opt_multi(join(COMMA, map_entry)),
-			),
-		),
-		RBRACE,
-	),
-	(data) => {
-		const entries = [];
-
-		if (data[1] !== undefined) {
-			entries.push(data[1][0]);
-
-			for (const entry of data[1][1]) {
-				entries.push(entry[1]);
-			}
-		}
-
-		return {
-			type: "map",
-			entries,
-		};
-	},
-);
-
-const map = or(
-	map_multiline,
-	map_singleline,
-);
+const map = constraint_braced;
 
 const top_create = mapData(
 	join(KW_CREATE, LPAREN, RPAREN, ARROW, map),
 	(data) => ({
 		type: "top_create",
-		input_type: undefined,
-		output_type: undefined,
+		call_input_type: undefined,
+		call_output_type: undefined,
 		body: data[4],
 	}),
 );
