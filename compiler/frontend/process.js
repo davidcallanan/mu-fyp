@@ -470,6 +470,83 @@ const file_root = mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0])
 
 // SEMANTIC ANALYSIS
 
+const create_type_symbol_table = () => {
+	const table = new Map();
+
+	const set = (trail, value) => {
+		trail = trail.split("::");
+
+		let curr_table = table;
+
+		for (let i = 0; i < trail.length - 1; i++) {
+			const segment = trail[i];
+
+			if (!curr_table.has(segment)) {
+				curr_table.set(segment, new Map());
+			}
+
+			curr_table = curr_table.get(segment);
+		}
+
+		curr_table.set(trail[trail.length - 1], value);
+	};
+
+	const get = (trail) => {
+		trail = trail.split("::");
+
+		let curr_table = table;
+
+		for (let i = 0; i < trail.length - 1; i++) {
+			const segment = trail[i];
+
+			if (!curr_table.has(segment)) {
+				return undefined;
+			}
+
+			curr_table = curr_table.get(segment);
+		}
+
+		const key = trail[trail.length - 1];
+
+		if (curr_table.has(key)) {
+			return curr_table.get(key);
+		}
+
+		const intish_match = key.match(/^i([1-9][0-9]*)|u([1-9][0-9]*)$/);
+
+		if (intish_match) {
+			const value = {
+				type: "map",
+				leaf_type: key,
+				call_input_type: undefined,
+				call_output_type: undefined,
+				sym_inputs: new Map(),
+			};
+
+			curr_table.set(key, value);
+
+			return value;
+		}
+	};
+
+	const float_types = ["f16", "f32", "f64", "f128"];
+
+	for (const leaf_type of float_types) {
+		set(leaf_type, {
+			type: "map",
+			leaf_type,
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: new Map(),
+		});
+	}
+
+	return {
+		set,
+		get,
+	};
+};
+
 // COMPILER
 
 // OUTER INTERFACE
@@ -495,12 +572,15 @@ const file_root = mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0])
 // ]);
 
 const make_structured = (entries) => {
+	const type_symbol_table = create_type_symbol_table();
+
 	const structured = {
 		structure: entries,
 		forwarding: [],
 		mod_list: [],
 		types_list: [],
 		create: undefined,
+		type_symbol_table,
 	};
 
 	for (const entry of entries) {
