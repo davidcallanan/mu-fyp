@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include "dependencies/json.hpp"
+#include "create_type_symbol_table.hpp"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -18,48 +19,137 @@
 
 using json = nlohmann::json;
 
-void process_map_entry(
-	llvm::IRBuilder<>& builder,
-	llvm::FunctionCallee& puts_func,
-	const json& entry
+TypeMap normalize_to_map(
+	const json& typeval,
+	TypeSymbolTable& symbol_table
 ) {
-	if (entry.contains("type") && entry["type"] == "map_entry_log") {
-		std::string log_message;
-		
-		if (entry.contains("message") && !entry["message"].is_null()) {
-			log_message = entry["message"].get<std::string>();
-		} else {
-			log_message = "";
+	if (typeval.is_null()) {
+		fprintf(stderr, "Got null for .type\n");
+		exit(1);
+	}
+	
+	if (!typeval.contains("type")) {
+		fprintf(stderr, "Where is the .type field\n");
+		exit(1);
+	}
+	
+	std::string type = typeval["type"];
+	
+	if (type == "type_named") {
+		if (!typeval.contains("trail")) {
+			fprintf(stderr, "Expected .trail");
+			exit(1);
 		}
 		
-		llvm::Value* log_str = builder.CreateGlobalStringPtr(log_message);
-		builder.CreateCall(puts_func, { log_str });
+		std::string trail = typeval["trail"];
+		TypeMap* found = symbol_table.get(trail);
+		
+		if (found == nullptr) {
+			fprintf(stderr, "No type pre-given for this %s\n", trail.c_str());
+			exit(1);
+		}
+		
+		return *found;
 	}
+	
+	if (type == "type_map") {
+		TypeMap result;
+		result.leaf_type = "";
+		result.call_input_type = (false
+			|| !typeval.contains("call_input_type")
+			|| typeval["call_input_type"].is_null()
+		) ? nullptr : std::make_unique<TypeMap>(normalize_to_map(typeval["call_input_type"], symbol_table));
+		result.call_output_type = (false
+			|| !typeval.contains("call_output_type")
+			|| typeval["call_output_type"].is_null()
+		) ? nullptr : std::make_unique<TypeMap>(normalize_to_map(typeval["call_output_type"], symbol_table));
+			
+		if (typeval.contains("sym_inputs")) {
+			if (!typeval["sym_inputs"].is_object()) {
+				fprintf(stderr, "Expected .sym_inputs as object\n");
+				exit(1);
+			}
+			
+			for (auto& [key, value] : typeval["sym_inputs"].items()) { // don't really care about this for now
+				result.sym_inputs[key] = std::make_shared<Type>(normalize_to_map(value, symbol_table));
+			}
+		}
+	
+		if (typeval.contains("instructions")) {
+			if (!typeval["instructions"].is_array()) {
+				fprintf(stderr, "Expected .instructions as array\n");
+				exit(1);
+			}
+			
+			for (const auto& instruction_data : typeval["instructions"]) {
+				if (!instruction_data.contains("type")) {
+					fprintf(stderr, "expected .type");
+					exit(1);
+				}
+				
+				std::string instruction_type = instruction_data["type"];
+				
+				if (instruction_type == "map_entry_log") {
+					InstructionLog v_log;
+					
+					v_log.message = (false
+						|| !instruction_data.contains("message")
+						|| instruction_data["message"].is_null()
+					) ? "" : instruction_data["message"].get<std::string>();
+					
+					result.execution_sequence.push_back(v_log);
+					
+					continue;
+				}
+				
+				fprintf(stderr, "Not recognized instructoin type: %s\n", instruction_type.c_str());
+				exit(1);
+			}
+		}
+		
+		return result;
+	}
+	
+	if (type == "type_constrained") {
+		if (false
+			|| !typeval.contains("constraints")
+			|| !typeval["constraints"].is_array()
+		) {
+			fprintf(stderr, "bad type_constrained, expected .constraints\n");
+			exit(1);
+		}
+		
+		const auto& constraints = typeval["constraints"];
+		
+		// for now just return the second constraint, need to eventually implement merge process
+		
+		if (constraints.size() >= 2) {
+			return normalize_to_map(constraints[1], symbol_table);
+		} else {
+			fprintf(stderr, "useless constraints, only one or less given\n");
+			exit(1);
+		}
+	}
+	
+	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
+	exit(1);
 }
 
 void process_map_body(
 	llvm::IRBuilder<>& builder,
 	llvm::FunctionCallee& puts_func,
-	const json& body
+	const TypeMap& body
 ) {
-	if (!body.contains("type") || body["type"] != "constraint_map") {
-		fprintf(stderr, "Expected .type == \"constraint_map\"\n");
-		exit(1);
-	}
-	
-	if (!body.contains("entries")) {
-		fprintf(stderr, "Expected .entries\n");
-		exit(1);
-	}
-	
-	auto& entries = body["entries"];
-	
-	for (auto& entry : entries) {
-		process_map_entry(builder, puts_func, entry);
+	for (const auto& instruction : body.execution_sequence) {
+		if (std::holds_alternative<InstructionLog>(instruction)) {
+			const InstructionLog& v_log = std::get<InstructionLog>(instruction);
+			llvm::Value* log_str = builder.CreateGlobalStringPtr(v_log.message);
+			builder.CreateCall(puts_func, { log_str });
+		}
 	}
 }
 
-void gen_module_binary(const json& create_data) {
+void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 	// the amount of boilerplate is crazy lol
 	printf("Generating module binary!!\n");
 	
@@ -106,12 +196,22 @@ void gen_module_binary(const json& create_data) {
 	llvm::Value* message_str = builder.CreateGlobalStringPtr(message);
 	builder.CreateCall(puts_func, { message_str });
 	
-	if (true
-		&& !create_data.is_null()
-		&& create_data.contains("description")
-		&& create_data["description"].contains("call_output_constraint")
-	) {
-		process_map_body(builder, puts_func, create_data["description"]["call_output_constraint"]);
+	if (!create_data.is_null()) {
+		if (!create_data.contains("description")) {
+			fprintf(stderr, "Where is .description gone\n");
+			exit(1);
+		}
+		
+		const json& description = create_data["description"];
+		
+		TypeMap normalized = normalize_to_map(description, symbol_table);
+		
+		if (normalized.call_output_type == nullptr) {
+			fprintf(stderr, "at the moment we need an output which I suppose makes sense for a create block\n");
+			exit(1);
+		}
+		
+		process_map_body(builder, puts_func, *normalized.call_output_type);
 	}
 	
 	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
@@ -214,12 +314,14 @@ int main(int argc, char* argv[]) {
 
 	auto& parse_output = frontend_data["parse_output"];
 	
+	TypeSymbolTable symbol_table = create_type_symbol_table();
+	
 	json create_block = nullptr;
 	if (parse_output.contains("create") && !parse_output["create"].is_null()) {
 		create_block = parse_output["create"];
 	}
 	
-	gen_module_binary(create_block);
+	gen_module_binary(create_block, symbol_table);
 
 	auto& dir_node_translations = frontend_data["dir_node_translations"];
 	

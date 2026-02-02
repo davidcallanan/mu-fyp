@@ -56,4 +56,5 @@ create() -> {
 	log("Hello, World!");
 	log();
 	log("This log statement can only handle hardcoded strings.");
+	log("New test message.");
 }

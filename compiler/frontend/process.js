@@ -76,7 +76,10 @@ const map_entry_log = mapData(
 );
 
 const map_entry = or(
-	map_entry_log,
+	mapData(map_entry_log, (data) => ({
+		type: "instruction",
+		data,
+	})),
 );
 
 const constraint_map_braced_multiline = mapData(
@@ -91,10 +94,27 @@ const constraint_map_braced_multiline = mapData(
 		),
 		RBRACE,
 	),
-	(data) => ({
-		type: "constraint_map",
-		entries: data[2].map(entry => entry[0]),
-	}),
+	(data) => {
+		const entries = data[2].map(entry => entry[0]);
+		
+		const sym_inputs = Object.fromEntries(
+			(entries
+				.filter(entry => entry.type === "sym_input")
+				.map(entry => [entry.name, entry.data])
+			),
+		);
+		
+		const instructions = (entries
+			.filter(entry => entry.type === "instruction")
+			.map(entry => entry.data)
+		);
+			
+		return {
+			type: "type_map",
+			sym_inputs,
+			instructions,
+		}
+	},
 );
 
 const constraint_map_braced_singleline = mapData(
@@ -118,10 +138,24 @@ const constraint_map_braced_singleline = mapData(
 				entries.push(entry[1]);
 			}
 		}
+		
+		const sym_inputs = Object.fromEntries(
+			(entries
+				.filter(entry => entry.type === "sym_input")
+				.map(entry => [entry.name, entry.data])
+			),
+		);
+		
+		const instructions = (entries
+			.filter(entry => entry.type === "instruction")
+			.map(entry => entry.data)
+		);
+			
 
 		return {
-			type: "constraint_map",
-			entries,
+			type: "type_map",
+			sym_inputs,
+			instructions,
 		};
 	},
 );
@@ -137,7 +171,7 @@ const constraint_map_tupled = mapData(
 		RPAREN,
 	),
 	(data) => ({
-		type: "constraint_map",
+		type: "type_map",
 	}),
 );
 
@@ -215,6 +249,8 @@ const top_forwarding = mapData(
 );
 
 const type_reference = declare();
+const typeval = declare();
+const typeval_atom = declare();
 
 type_reference.define(or(
 	mapData(
@@ -245,6 +281,49 @@ type_reference.define(or(
 	),
 ));
 
+const type_named = mapData(
+	TYPE_IDENT,
+	(data) => ({
+		type: "type_named",
+		trail: data,
+	}),
+);
+
+typeval_atom.define(or(
+	mapData(
+		join(type_named, constraint_map),
+		(data) => ({
+			type: "type_constrained",
+			constraints: [
+				data[0],
+				data[1],
+			],
+		}),
+	),
+	type_named,
+	constraint_map,
+	mapData( // have no idea if grammar can accept this consistently
+		join(LPAREN, typeval, RPAREN),
+		(data) => data[1],
+	),
+));
+
+const type_callable = mapData(
+	join(typeval_atom, ARROW, typeval_atom),
+	(data) => ({
+		type: "type_map",
+		leaf_type: undefined,
+		call_input_type: data[0],
+		call_output_type: data[2],
+		sym_inputs: new Map(),
+	}),
+);
+
+typeval.define(or(
+	type_callable,
+	typeval_atom,
+));
+
 const type_map_body_braced = mapData(
 	join(
 		LBRACE,
@@ -270,7 +349,7 @@ const type_map_body = or(
 	type_map_body_tupled,
 );
 
-const type_map_callable = mapData(
+const type_map_callable = mapData( // outdated not using anymore probably.
 	join(
 		type_map_body,
 		ARROW,
@@ -443,10 +522,8 @@ const top_extension = mapData(
 	})
 );
 
-const constraint_braced = constraint_map_braced;
-
 const top_create = mapData(
-	join(KW_CREATE, type_map_callable),
+	join(KW_CREATE, type_callable),
 	(data) => ({
 		type: "top_create",
 		description: data[1],
@@ -469,83 +546,6 @@ const top_entry = or(
 const file_root = mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0]);
 
 // SEMANTIC ANALYSIS
-
-const create_type_symbol_table = () => {
-	const table = new Map();
-
-	const set = (trail, value) => {
-		trail = trail.split("::");
-
-		let curr_table = table;
-
-		for (let i = 0; i < trail.length - 1; i++) {
-			const segment = trail[i];
-
-			if (!curr_table.has(segment)) {
-				curr_table.set(segment, new Map());
-			}
-
-			curr_table = curr_table.get(segment);
-		}
-
-		curr_table.set(trail[trail.length - 1], value);
-	};
-
-	const get = (trail) => {
-		trail = trail.split("::");
-
-		let curr_table = table;
-
-		for (let i = 0; i < trail.length - 1; i++) {
-			const segment = trail[i];
-
-			if (!curr_table.has(segment)) {
-				return undefined;
-			}
-
-			curr_table = curr_table.get(segment);
-		}
-
-		const key = trail[trail.length - 1];
-
-		if (curr_table.has(key)) {
-			return curr_table.get(key);
-		}
-
-		const intish_match = key.match(/^i([1-9][0-9]*)|u([1-9][0-9]*)$/);
-
-		if (intish_match) {
-			const value = {
-				type: "map",
-				leaf_type: key,
-				call_input_type: undefined,
-				call_output_type: undefined,
-				sym_inputs: new Map(),
-			};
-
-			curr_table.set(key, value);
-
-			return value;
-		}
-	};
-
-	const float_types = ["f16", "f32", "f64", "f128"];
-
-	for (const leaf_type of float_types) {
-		set(leaf_type, {
-			type: "map",
-			leaf_type,
-			call_input_type: undefined,
-			call_output_type: undefined,
-			sym_inputs: new Map(),
-		});
-	}
-
-	return {
-		set,
-		get,
-	};
-};
 
 // COMPILER
 
@@ -572,15 +572,12 @@ const create_type_symbol_table = () => {
 // ]);
 
 const make_structured = (entries) => {
-	const type_symbol_table = create_type_symbol_table();
-
 	const structured = {
 		structure: entries,
 		forwarding: [],
 		mod_list: [],
 		types_list: [],
 		create: undefined,
-		type_symbol_table,
 	};
 
 	for (const entry of entries) {
