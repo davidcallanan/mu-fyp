@@ -50,6 +50,8 @@ const TYPE_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*[A
 const TYPES_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all));
 const MOD_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)); // identical to TYPES_IDENT for now.
 const SYMBOL = withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
+const IDENT = withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
+const WALRUS = withCarefulSkippers(":=");
 const EXTAT = withLeftSkippers("@");
 const INTEGER = withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all)));
 const FLOAT = withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all));
@@ -75,8 +77,58 @@ const map_entry_log = mapData(
 	}),
 );
 
+const hardval = declare();
+const typeval = declare();
+const typeval_atom = declare();
+
+hardval.define(or(
+	mapData(
+		INTEGER,
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_integer",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+	mapData(
+		FLOAT,
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_float",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+));
+
+const map_entry_assign = mapData(
+	join(IDENT, WALRUS, typeval),
+	(data) => ({
+		type: "map_entry_assign",
+		name: data[0],
+		typeval: data[2],
+	}),
+);
+
 const map_entry = or(
 	mapData(map_entry_log, (data) => ({
+		type: "instruction",
+		data,
+	})),
+	mapData(map_entry_assign, (data) => ({
 		type: "instruction",
 		data,
 	})),
@@ -249,8 +301,7 @@ const top_forwarding = mapData(
 );
 
 const type_reference = declare();
-const typeval = declare();
-const typeval_atom = declare();
+// todo: probably just declare everything at the top to avoid stress.
 
 type_reference.define(or(
 	mapData(
@@ -291,6 +342,18 @@ const type_named = mapData(
 
 typeval_atom.define(or(
 	mapData(
+		join(type_named, hardval),
+		(data) => ({
+			type: "type_map",
+			leaf_type: data[0],
+			leaf_hardval: data[1],
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+	mapData(
 		join(type_named, constraint_map),
 		(data) => ({
 			type: "type_constrained",
@@ -301,6 +364,7 @@ typeval_atom.define(or(
 		}),
 	),
 	type_named,
+	hardval,
 	constraint_map,
 	mapData( // have no idea if grammar can accept this consistently
 		join(LPAREN, typeval, RPAREN),
@@ -315,7 +379,7 @@ const type_callable = mapData(
 		leaf_type: undefined,
 		call_input_type: data[0],
 		call_output_type: data[2],
-		sym_inputs: new Map(),
+		sym_inputs: new Map(), // todo: do i want to switch from object to Map everywhere?
 	}),
 );
 
