@@ -242,19 +242,48 @@ void process_map_body(
 			const auto& v_assign = std::get<std::shared_ptr<InstructionAssign>>(instruction);
 			const auto& typeval_map = *std::get<std::shared_ptr<TypeMap>>(*v_assign->typeval);
 			
-			if (typeval_map.leaf_type.empty()) {
-				fprintf(stderr, "Missing .leaf_type\n");
-				exit(1);
-			}
-			
 			if (typeval_map.leaf_hardval == nullptr) {
 				fprintf(stderr, "Missing expected .leaf_hardval\n");
 				exit(1);
 			}
 			
+			std::string type_str = typeval_map.leaf_type;
+			
+			if (type_str.empty()) {
+				const Hardval& hardval = *typeval_map.leaf_hardval;
+				
+				if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
+					const auto& h_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
+					const std::string& value_str = h_int->value;
+					
+					int bits_needed;
+					char sign_prefix;
+					
+					bool is_negative = (!value_str.empty() && value_str[0] == '-');
+					std::string digits = is_negative ? value_str.substr(1) : value_str;
+					
+					if (is_negative) {
+						sign_prefix = 'i';
+						llvm::APInt ap_value(128, digits, 10);
+						bits_needed = ap_value.getActiveBits() + 1;
+					} else {
+						sign_prefix = 'u';
+						llvm::APInt ap_value(128, digits, 10);
+						bits_needed = ap_value.getActiveBits();
+						if (bits_needed == 0) bits_needed = 1;
+					}
+					
+					type_str = sign_prefix + std::to_string(bits_needed);
+				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
+					type_str = "f64";
+				} else {
+					fprintf(stderr, "Bizarre hardval without a type - no inference implemented.\n");
+					exit(1);
+				}
+			}
+			
 			llvm::Type* llvm_type = nullptr;
 			bool is_float_type = false;
-			const std::string& type_str = typeval_map.leaf_type;
 			
 			if (type_str[0] == 'i' || type_str[0] == 'u') {
 				int bit_width = std::stoi(type_str.substr(1));
