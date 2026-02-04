@@ -24,6 +24,8 @@ const withCarefulSkippers = (p) => mapData(join(SKIPPERS, p, CORE_SKIPPERS), dat
 const withLeftSkippers = (p) => mapData(join(SKIPPERS, p), data => data[1]);
 const withRightSkippers = (p) => mapData(join(p, SKIPPERS), data => data[0]);
 
+const MANDATORY_NEWLINE = join(CORE_SKIPPERS, or(SINGLELINE_COMMENT, NEWLINE));
+
 const KW_FORWARDING = withCarefulSkippers("forwarding");
 const KW_RESET = withCarefulSkippers("reset");
 const KW_TYPE = withCarefulSkippers("type");
@@ -137,7 +139,7 @@ const map_entry = or(
 const constraint_map_braced_multiline = mapData(
 	join(
 		LBRACE,
-		NEWLINE,
+		MANDATORY_NEWLINE,
 		opt_multi(
 			join(
 				map_entry,

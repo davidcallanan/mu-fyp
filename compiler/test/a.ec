@@ -51,14 +51,7 @@ type TestingPointersMore **u8;
 ; 	:ct ct;
 ; }
 
-create() -> {
-	x := 10;
-	y := 67;
-	z := 3.14;
-	; x := u64 10;
-	; y := i32 67;
-	; z := f64 3.14;
-	
+create() -> { ; this comment doesn't work
 	log("Hello, World!");
 	log();
 	log("This log statement can only handle hardcoded strings.");
