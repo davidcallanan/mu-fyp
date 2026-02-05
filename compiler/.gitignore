@@ -1,2 +1,4 @@
 /node_modules/
 frontend.out.json
+frontend.trace.json
+frontend.trace.txt

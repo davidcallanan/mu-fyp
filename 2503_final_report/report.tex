@@ -1,0 +1,114 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{comment}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{listingsutf8}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+\usepackage[a4paper,margin=1in]{geometry}
+
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{capt-of}
+\usepackage{float}
+
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{enumitem}
+\setlist[enumerate]{label=(\arabic*)}
+
+\usepackage{csquotes}
+\usepackage[style=ieee,backend=bibtex]{biblatex}
+\addbibresource{references.bib}
+
+\definecolor{linkblue}{HTML}{145680}
+\definecolor{headergray}{gray}{0.35}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=linkblue,
+    urlcolor=linkblue,
+    citecolor=linkblue,
+    pdfnewwindow=true
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+\newcommand{\HeaderCenterText}{%
+  {\color{headergray}\sffamily\bfseries FYP Final Report 2025-2026}\\
+  {\color{headergray}\sffamily Department of Computer Science}%
+}
+
+\newcommand{\HeaderRightImage}{%
+  \raisebox{-0.2\height}{\includegraphics[height=1.2cm]{mu.png}}%
+}
+
+\fancyhead[C]{\HeaderCenterText}
+\fancyhead[R]{\HeaderRightImage}
+
+\fancyfoot[C]{\sffamily Page \thepage\ of \pageref*{LastPage}}
+
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\headheight}{24pt}
+\setlength{\headsep}{32pt}
+
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{table}[ht]
+  \small
+  \renewcommand{\arraystretch}{1.4}
+  \setlength{\tabcolsep}{8pt}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries}l X >{\bfseries}l X @{}}
+    \toprule
+    Student Name & David P. Callanan & Student Number & 21444104 \\
+    Supervisor & Dr. Phil Maguire & ECTS Credits & 5 \\
+    Project Title & \multicolumn{3}{p{0.75\textwidth}}{Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules.} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\tableofcontents
+
+\newpage
+
+\section{Parsing Library}
+
+Prior to this project I had already developed a simple parsing library in JavaScript, which allows for:
+
+\begin{enumerate}
+	\item Parsing terminal rules using regular expressions.
+	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{enumerate}
+	\item ``or'' making rule optional
+	\item ``join'' sequencing rules
+	\item ``multi'' repeating rules zero or more times
+	\item ``opt'' making rule optional
+	\end{enumerate}
+	\item Map parsed data to custom structures using the ``mapData'' function.
+\end{enumerate}
+
+In addition it was necessary to implement a trace system to debug issues with parse rules.
+
+
+
+
+\label{LastPage}
+\end{document}

@@ -51,7 +51,10 @@ type TestingPointersMore **u8;
 ; 	:ct ct;
 ; }
 
-create() -> { ; this comment doesn't work
+create() -> { ; this comment works
+	; this comment works
+	; sdsf u64
+	
 	log("Hello, World!");
 	log();
 	log("This log statement can only handle hardcoded strings.");

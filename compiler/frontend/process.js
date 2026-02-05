@@ -1,4 +1,4 @@
-import { mapData, join, opt, multi, opt_multi, or, declare } from "./uoe/ec/blurp.js";
+import { mapData, join, opt, multi, opt_multi, or, declare, trace_print, trace_dump, rule } from "./uoe/ec/blurp.js";
 
 import * as fs from "fs/promises";
 import * as node__path from "path";
@@ -12,56 +12,56 @@ import { error_internal } from "./uoe/error_internal.js";
 
 // LEXICAL TOKENS
 
-const WHITESPACE = /^\s+/;
-const REALSPACE = /^[ \t]+/;
-const SINGLELINE_COMMENT = mapData(/^\s*;(.*?)(\n|$)\s*/, data => data.groups[0]);
-const SKIPPERS = opt(multi(or(SINGLELINE_COMMENT, WHITESPACE)));
-const CORE_SKIPPERS = opt(multi(REALSPACE));
-const NEWLINE = /^\n/;
+const WHITESPACE = rule("WHITESPACE", /^\s+/);
+const REALSPACE = rule("REALSPACE", /^[ \t]+/);
+const SINGLELINE_COMMENT = rule("SINGLELINE_COMMENT", mapData(/^\s*;(.*?)(\n|$)\s*/, data => data.groups[0]));
+const SKIPPERS = rule("SKIPPERS", opt(multi(or(SINGLELINE_COMMENT, WHITESPACE))));
+const CORE_SKIPPERS = rule("CORE_SKIPPERS", opt(multi(REALSPACE)));
+const NEWLINE = rule("NEWLINE", /^\n/);
 
 const withSkippers = (p) => mapData(join(SKIPPERS, p, SKIPPERS), data => data[1]);
 const withCarefulSkippers = (p) => mapData(join(SKIPPERS, p, CORE_SKIPPERS), data => data[1]);
 const withLeftSkippers = (p) => mapData(join(SKIPPERS, p), data => data[1]);
 const withRightSkippers = (p) => mapData(join(p, SKIPPERS), data => data[0]);
 
-const MANDATORY_NEWLINE = join(CORE_SKIPPERS, or(SINGLELINE_COMMENT, NEWLINE));
+const MANDATORY_NEWLINE = rule("MANDATORY_NEWLINE", join(CORE_SKIPPERS, or(SINGLELINE_COMMENT, NEWLINE)));
 
-const KW_FORWARDING = withCarefulSkippers("forwarding");
-const KW_RESET = withCarefulSkippers("reset");
-const KW_TYPE = withCarefulSkippers("type");
-const KW_TYPES = withCarefulSkippers("types");
-const KW_MAP = withCarefulSkippers("map");
-const KW_IMPORT = withCarefulSkippers("import");
-const KW_MOD = withCarefulSkippers("mod");
-const KW_CREATE = withCarefulSkippers("create");
-const KW_LOG = withCarefulSkippers("log");
-const LBRACE = withCarefulSkippers("{");
-const RBRACE = withCarefulSkippers("}");
-const LPAREN = withCarefulSkippers("(");
-const RPAREN = withCarefulSkippers(")");
-const ARROW = withCarefulSkippers("->");
-const ASTERISK = withCarefulSkippers("*");
-const COMMA = withCarefulSkippers(",");
-const PATH_OUTER_ROOT = withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all));
-const PATH_MODULE_ROOT = withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all));
-const PATH = or(PATH_OUTER_ROOT, PATH_MODULE_ROOT);
-const OUTER_ROOT = withCarefulSkippers("//");
-const SEMI = withRightSkippers(SINGLELINE_COMMENT);
+const KW_FORWARDING = rule("KW_FORWARDING", withCarefulSkippers("forwarding"));
+const KW_RESET = rule("KW_RESET", withCarefulSkippers("reset"));
+const KW_TYPE = rule("KW_TYPE", withCarefulSkippers("type"));
+const KW_TYPES = rule("KW_TYPES", withCarefulSkippers("types"));
+const KW_MAP = rule("KW_MAP", withCarefulSkippers("map"));
+const KW_IMPORT = rule("KW_IMPORT", withCarefulSkippers("import"));
+const KW_MOD = rule("KW_MOD", withCarefulSkippers("mod"));
+const KW_CREATE = rule("KW_CREATE", withCarefulSkippers("create"));
+const KW_LOG = rule("KW_LOG", withCarefulSkippers("log"));
+const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
+const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
+const LPAREN = rule("LPAREN", withCarefulSkippers("("));
+const RPAREN = rule("RPAREN", withCarefulSkippers(")"));
+const ARROW = rule("ARROW", withCarefulSkippers("->"));
+const ASTERISK = rule("ASTERISK", withCarefulSkippers("*"));
+const COMMA = rule("COMMA", withCarefulSkippers(","));
+const PATH_OUTER_ROOT = rule("PATH_OUTER_ROOT", withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all)));
+const PATH_MODULE_ROOT = rule("PATH_MODULE_ROOT", withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all)));
+const PATH = rule("PATH", or(PATH_OUTER_ROOT, PATH_MODULE_ROOT));
+const OUTER_ROOT = rule("OUTER_ROOT", withCarefulSkippers("//"));
+const SEMI = rule("SEMI", withRightSkippers(SINGLELINE_COMMENT));
 // i need to go through all these again. why did I put "_" outside the []. why is underscore and numbers not matched in the first part?
-const TYPE_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*[A-Z][a-zA-Z0-9]*)|i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128/, data => data.groups.all));
-const TYPES_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all));
-const MOD_IDENT = withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)); // identical to TYPES_IDENT for now.
-const SYMBOL = withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
-const IDENT = withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
-const WALRUS = withCarefulSkippers(":=");
-const EXTAT = withLeftSkippers("@");
-const INTEGER = withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all)));
-const FLOAT = withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all));
-const STRING = withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0]));
+const TYPE_IDENT = rule("TYPE_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*[A-Z][a-zA-Z0-9]*)|i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128/, data => data.groups.all)));
+const TYPES_IDENT = rule("TYPES_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)));
+const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all))); // identical to TYPES_IDENT for now.
+const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const IDENT = rule("IDENT", withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
+const EXTAT = rule("EXTAT", withLeftSkippers("@"));
+const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
+const FLOAT = rule("FLOAT", withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
+const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0])));
 
 // PARSER RULES
 
-const symbol_path = mapData(
+const symbol_path = rule("symbol_path", mapData(
 	multi(
 		SYMBOL,
 	),
@@ -69,21 +69,21 @@ const symbol_path = mapData(
 		type: "symbol_path",
 		trail: data.map(entry => entry.substring(1)),
 	}),
-);
+));
 
-const map_entry_log = mapData(
+const map_entry_log = rule("map_entry_log", mapData(
 	join(KW_LOG, LPAREN, opt(STRING), RPAREN),
 	(data) => ({
 		type: "map_entry_log",
 		message: data[2],
 	}),
-);
+));
 
 const hardval = declare();
 const typeval = declare();
 const typeval_atom = declare();
 
-hardval.define(or(
+hardval.define(rule("hardval", or(
 	mapData(
 		INTEGER,
 		(data) => ({
@@ -114,18 +114,18 @@ hardval.define(or(
 			instructions: [],
 		}),
 	),
-));
+)));
 
-const map_entry_assign = mapData(
+const map_entry_assign = rule("map_entry_assign", mapData(
 	join(IDENT, WALRUS, typeval),
 	(data) => ({
 		type: "map_entry_assign",
 		name: data[0],
 		typeval: data[2],
 	}),
-);
+));
 
-const map_entry = or(
+const map_entry = rule("map_entry", or(
 	mapData(map_entry_log, (data) => ({
 		type: "instruction",
 		data,
@@ -134,9 +134,9 @@ const map_entry = or(
 		type: "instruction",
 		data,
 	})),
-);
+));
 
-const constraint_map_braced_multiline = mapData(
+const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", mapData(
 	join(
 		LBRACE,
 		MANDATORY_NEWLINE,
@@ -169,9 +169,9 @@ const constraint_map_braced_multiline = mapData(
 			instructions,
 		}
 	},
-);
+));
 
-const constraint_map_braced_singleline = mapData(
+const constraint_map_braced_singleline = rule("constraint_map_braced_singleline", mapData(
 	join(
 		LBRACE,
 		opt(
@@ -212,14 +212,14 @@ const constraint_map_braced_singleline = mapData(
 			instructions,
 		};
 	},
-);
+));
 
-const constraint_map_braced = or(
+const constraint_map_braced = rule("constraint_map_braced", or(
 	constraint_map_braced_multiline,
 	constraint_map_braced_singleline,
-);
+));
 
-const constraint_map_tupled = mapData(
+const constraint_map_tupled = rule("constraint_map_tupled", mapData(
 	join(
 		LPAREN,
 		RPAREN,
@@ -227,49 +227,49 @@ const constraint_map_tupled = mapData(
 	(data) => ({
 		type: "type_map",
 	}),
-);
+));
 
-const constraint_map = or(
+const constraint_map = rule("constraint_map", or(
 	constraint_map_braced,
 	constraint_map_tupled,
-);
+));
 
-const constraint_integer = mapData(
+const constraint_integer = rule("constraint_integer", mapData(
 	INTEGER,
 	(data) => ({
 		type: "constraint",
 		mode: "constraint_integer",
 		value: data,
 	}),
-);
+));
 
-const constraint_float = mapData(
+const constraint_float = rule("constraint_float", mapData(
 	FLOAT,
 	(data) => ({
 		type: "constraint",
 		mode: "constraint_float",
 		value: data,
 	}),
-);
+));
 
-const constraint_semiless = or(
+const constraint_semiless = rule("constraint_semiless", or(
 	constraint_map,
-);
+));
 
-const constraint_semiful = or(
+const constraint_semiful = rule("constraint_semiful", or(
 	constraint_float,
 	constraint_integer,
-);
+));
 
-const constraint_maybesemi = or(
+const constraint_maybesemi = rule("constraint_maybesemi", or(
 	constraint_semiless,
 	mapData(
 		join(constraint_semiful, SEMI),
 		(data) => data[0],
 	),
-);
+));
 
-const forwarding = mapData(
+const forwarding = rule("forwarding", mapData(
 	join(
 		KW_FORWARDING,
 		LBRACE,
@@ -292,20 +292,20 @@ const forwarding = mapData(
 		type: "forwarding",
 		entries: data[2],
 	}),
-);
+));
 
-const top_forwarding = mapData(
+const top_forwarding = rule("top_forwarding", mapData(
 	forwarding,
 	(data) => ({
 		...data,
 		type: "top_forwarding",
 	}),
-);
+));
 
 const type_reference = declare();
 // todo: probably just declare everything at the top to avoid stress.
 
-type_reference.define(or(
+type_reference.define(rule("type_reference", or(
 	mapData(
 		KW_MAP,
 		(_data) => ({
@@ -332,17 +332,17 @@ type_reference.define(or(
 			uly: data[1],
 		}),
 	),
-));
+)));
 
-const type_named = mapData(
+const type_named = rule("type_named", mapData(
 	TYPE_IDENT,
 	(data) => ({
 		type: "type_named",
 		trail: data,
 	}),
-);
+));
 
-typeval_atom.define(or(
+typeval_atom.define(rule("typeval_atom", or(
 	mapData(
 		join(type_named, hardval),
 		(data) => ({
@@ -368,13 +368,13 @@ typeval_atom.define(or(
 	type_named,
 	hardval,
 	constraint_map,
-	mapData( // have no idea if grammar can accept this consistently
-		join(LPAREN, typeval, RPAREN),
-		(data) => data[1],
-	),
-));
+	// mapData( // have no idea if grammar can accept this consistently
+	// 	join(LPAREN, typeval, RPAREN),
+	// 	(data) => data[1],
+	// ),
+)));
 
-const type_callable = mapData(
+const type_callable = rule("type_callable", mapData(
 	join(typeval_atom, ARROW, typeval_atom),
 	(data) => ({
 		type: "type_map",
@@ -383,14 +383,14 @@ const type_callable = mapData(
 		call_output_type: data[2],
 		sym_inputs: new Map(), // todo: do i want to switch from object to Map everywhere?
 	}),
-);
-
-typeval.define(or(
-	type_callable,
-	typeval_atom,
 ));
 
-const type_map_body_braced = mapData(
+typeval.define(rule("typeval", or(
+	type_callable,
+	typeval_atom,
+)));
+
+const type_map_body_braced = rule("type_map_body_braced", mapData(
 	join(
 		LBRACE,
 		RBRACE,
@@ -398,9 +398,9 @@ const type_map_body_braced = mapData(
 	(_data) => ({
 		type: "type_map_body",
 	}),
-);
+));
 
-const type_map_body_tupled = mapData(
+const type_map_body_tupled = rule("type_map_body_tupled", mapData(
 	join(
 		LPAREN,
 		RPAREN,
@@ -408,14 +408,14 @@ const type_map_body_tupled = mapData(
 	(_data) => ({
 		type: "type_map_body",
 	}),
-);
+));
 
-const type_map_body = or(
+const type_map_body = rule("type_map_body", or(
 	type_map_body_braced,
 	type_map_body_tupled,
-);
+));
 
-const type_map_callable = mapData( // outdated not using anymore probably.
+const type_map_callable = rule("type_map_callable", mapData( // outdated not using anymore probably.
 	join(
 		type_map_body,
 		ARROW,
@@ -429,9 +429,9 @@ const type_map_callable = mapData( // outdated not using anymore probably.
 		call_output_type: data[2],
 		call_output_constraint: data[3],
 	}),
-);
+));
 
-const top_type = or(
+const top_type = rule("top_type", or(
 	mapData(
 		join(
 			KW_TYPE,
@@ -471,11 +471,11 @@ const top_type = or(
 			constraint: data[2],
 		}),
 	),
-);
+));
 
 // a value is just a stricter version of a type, but it's still a type from the compiler's perspective. (value constraint perhaps i'll call it constraint instead of value).
 
-const top_types = mapData(
+const top_types = rule("top_types", mapData(
 	join(
 		KW_TYPES,
 		TYPES_IDENT,
@@ -513,9 +513,9 @@ const top_types = mapData(
 		trail: data[1],
 		definition: data[2],
 	}),
-);
+));
 
-const top_mod = mapData(
+const top_mod = rule("top_mod", mapData(
 	join(
 		KW_MOD,
 		MOD_IDENT,
@@ -545,9 +545,9 @@ const top_mod = mapData(
 		trail: data[1],
 		definition: data[2],
 	}),
-);
+));
 
-const case_ = or(
+const case_ = rule("case", or(
 	mapData(
 		join(
 			symbol_path,
@@ -573,9 +573,9 @@ const case_ = or(
 			constraint: data[2],
 		}),
 	),
-);
+));
 
-const top_extension = mapData(
+const top_extension = rule("top_extension", mapData(
 	join(
 		EXTAT,
 		TYPE_IDENT,
@@ -586,17 +586,17 @@ const top_extension = mapData(
 		target_type: data[1],
 		case: data[2],
 	})
-);
+));
 
-const top_create = mapData(
+const top_create = rule("top_create", mapData(
 	join(KW_CREATE, type_callable),
 	(data) => ({
 		type: "top_create",
 		description: data[1],
 	}),
-);
+));
 
-const top_entry = or(
+const top_entry = rule("top_entry", or(
 	top_forwarding,
 	top_type,
 	top_types,
@@ -604,12 +604,12 @@ const top_entry = or(
 	top_extension,
 	top_create,
 	SEMI,
-);
+));
 
 // i wonder if values and maps could be combined?
 // but for now, value_map will just be optional after type.
 
-const file_root = mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0]);
+const file_root = rule("file_root", mapData(join(opt_multi(top_entry), SKIPPERS), data => data[0]));
 
 // SEMANTIC ANALYSIS
 
@@ -773,6 +773,16 @@ export const process = async (config) => {
 			|| result.input !== ""
 		) {
 			console.error(result);
+			console.log("<start of trace>");
+			trace_print(console.log);
+			console.log("<end of trace>");
+			
+			const json_path = node__path.join(actual_path, "frontend.trace.json");
+			const text_path = node__path.join(actual_path, "frontend.trace.txt");
+			
+			await trace_dump(async (content) => await fs.writeFile(json_path, content, "utf-8"));
+			await trace_print(async (line) => await fs.appendFile(text_path, line + "\n", "utf-8"))
+			
 			throw new Error(`Failed to parse.`);
 		}
 
