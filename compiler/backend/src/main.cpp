@@ -210,14 +210,33 @@ TypeMap normalize_to_map(
 		
 		const auto& constraints = typeval["constraints"];
 		
-		// for now just return the second constraint, need to eventually implement merge process
-		
-		if (constraints.size() >= 2) {
-			return normalize_to_map(constraints[1], symbol_table);
+		if (constraints.size() < 2) {
+			fprintf(stderr, "useless constraints, only one or less given\n");
+			exit(1);
 		}
 		
-		fprintf(stderr, "useless constraints, only one or less given\n");
-		exit(1);
+		if (constraints.size() > 2) {
+			fprintf(stderr, "useful constraints, but more than 2 not handled yet\n");
+			exit(1);
+		}
+		
+		TypeMap constraint_1 = normalize_to_map(constraints[0], symbol_table);
+		TypeMap constraint_2 = normalize_to_map(constraints[1], symbol_table);
+		
+		TypeMap result = constraint_2; // for now take most data from the second constraint, need to eventually improve merge process
+		
+		if (!constraint_1.leaf_type.empty() && !constraint_2.leaf_type.empty()) {
+			if (constraint_1.leaf_type != constraint_2.leaf_type) {
+				fprintf(stderr, "Cannot deal with two conflicting constraints like this: %s -vs- %s\n", 
+					constraint_1.leaf_type.c_str(), constraint_2.leaf_type.c_str());
+				exit(1);
+			}
+			result.leaf_type = constraint_1.leaf_type;
+		} else if (!constraint_1.leaf_type.empty()) {
+			result.leaf_type = constraint_1.leaf_type;
+		}
+		
+		return result;
 	}
 	
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());

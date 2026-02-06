@@ -346,13 +346,11 @@ typeval_atom.define(rule("typeval_atom", or(
 	mapData(
 		join(type_named, hardval),
 		(data) => ({
-			type: "type_map",
-			leaf_type: data[0],
-			leaf_hardval: data[1],
-			call_input_type: undefined,
-			call_output_type: undefined,
-			sym_inputs: {},
-			instructions: [],
+			type: "type_constrained",
+			constraints: [
+				data[0],
+				data[1],
+			],
 		}),
 	),
 	mapData(
