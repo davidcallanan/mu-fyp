@@ -48,7 +48,7 @@ const PATH = rule("PATH", or(PATH_OUTER_ROOT, PATH_MODULE_ROOT));
 const OUTER_ROOT = rule("OUTER_ROOT", withCarefulSkippers("//"));
 const SEMI = rule("SEMI", withRightSkippers(SINGLELINE_COMMENT));
 // i need to go through all these again. why did I put "_" outside the []. why is underscore and numbers not matched in the first part?
-const TYPE_IDENT = rule("TYPE_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*[A-Z][a-zA-Z0-9]*)|i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128/, data => data.groups.all)));
+const TYPE_IDENT = rule("TYPE_IDENT", withCarefulSkippers(mapData(/^(?:(?:([a-z]+(?:_[a-z0-9]+)*::)*[A-Z][a-zA-Z0-9]*)|i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128)/, data => data.groups.all)));
 const TYPES_IDENT = rule("TYPES_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)));
 const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all))); // identical to TYPES_IDENT for now.
 const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
