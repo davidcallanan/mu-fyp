@@ -1,6 +1,6 @@
 shopt -s nullglob
 
-/app/bin/backend
+/app/bin/backend || exit 1
 
 if [ -f /app/out/hello.o ]; then
   echo "Shell script is linking..."

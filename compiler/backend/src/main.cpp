@@ -182,8 +182,15 @@ TypeMap normalize_to_map(
 						exit(1);
 					}
 					
+					TypeMap normalized = normalize_to_map(instruction_data["typeval"], symbol_table);
+					
+					if (normalized.leaf_hardval == nullptr) {
+						fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value, %s\n", v_assign->name.c_str());
+						exit(1);
+					}
+					
 					v_assign->typeval = std::make_shared<Type>(
-						std::make_shared<TypeMap>(normalize_to_map(instruction_data["typeval"], symbol_table))
+						std::make_shared<TypeMap>(normalized)
 					);
 					
 					result.execution_sequence.push_back(v_assign);
