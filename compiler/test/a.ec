@@ -52,8 +52,7 @@ type TestingPointersMore **u8;
 ; }
 
 create() -> { ; this comment works
-	; this comment works
-	; sdsf u64
+	test := 10;
 	
 	log("Hello, World!");
 	log();

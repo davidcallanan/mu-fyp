@@ -103,7 +103,7 @@ TypeMap normalize_to_map(
 				}
 				
 				auto h_int = std::make_shared<HardvalInteger>();
-				h_int->value = hardval_data["value"].dump();
+				h_int->value = hardval_data["value"].get<std::string>();
 				result.leaf_hardval = std::make_shared<Hardval>(h_int);
 			} else if (hardval_type == "hardval_float") {
 				if (!hardval_data.contains("value")) {
@@ -259,22 +259,22 @@ void process_map_body(
 					int bits_needed;
 					char sign_prefix;
 					
-					bool is_negative = (!value_str.empty() && value_str[0] == '-');
-					std::string digits = is_negative ? value_str.substr(1) : value_str;
-					
-					if (is_negative) {
-						sign_prefix = 'i';
-						llvm::APInt ap_value(128, digits, 10);
-						bits_needed = ap_value.getActiveBits() + 1;
-					} else {
-						sign_prefix = 'u';
-						llvm::APInt ap_value(128, digits, 10);
-						bits_needed = ap_value.getActiveBits();
-						if (bits_needed == 0) bits_needed = 1;
-					}
-					
-					type_str = sign_prefix + std::to_string(bits_needed);
-				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
+				bool is_negative = (!value_str.empty() && value_str[0] == '-');
+				std::string digits = is_negative ? value_str.substr(1) : value_str;
+				
+				if (is_negative) {
+					sign_prefix = 'i';
+					llvm::APInt ap_value(128, digits.c_str(), 10);
+					bits_needed = ap_value.getActiveBits() + 1;
+				} else {
+					sign_prefix = 'u';
+					llvm::APInt ap_value(128, digits.c_str(), 10);
+					bits_needed = ap_value.getActiveBits();
+					if (bits_needed == 0) bits_needed = 1;
+				}
+				
+				type_str = sign_prefix + std::to_string(bits_needed);
+			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 					type_str = "f64";
 				} else {
 					fprintf(stderr, "Bizarre hardval without a type - no inference implemented.\n");
@@ -316,7 +316,7 @@ void process_map_body(
 			if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
 				const auto& h_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
 				int bit_width = std::stoi(type_str.substr(1));
-				llvm::APInt ap_int(bit_width, h_int->value, 10);
+				llvm::APInt ap_int(bit_width, h_int->value.c_str(), 10);
 				const_value = llvm::ConstantInt::get(context, ap_int);
 			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 				const auto& h_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
