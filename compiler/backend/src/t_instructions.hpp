@@ -7,7 +7,7 @@
 #include "t_types_fwd.hpp"
 
 struct InstructionLog {
-	std::string message;
+	std::shared_ptr<Type> message;
 };
 
 struct InstructionAssign {

@@ -208,7 +208,7 @@ Type normalize_type(
 					v_log->message = (false
 						|| !instruction_data.contains("message")
 						|| instruction_data["message"].is_null()
-					) ? "" : instruction_data["message"].get<std::string>();
+					) ? nullptr : std::make_shared<Type>(normalize_type(instruction_data["message"], symbol_table));
 					
 					result.execution_sequence.push_back(v_log);
 					
@@ -341,6 +341,38 @@ Type normalize_type(
 	exit(1);
 }
 
+llvm::Value* evaluate_hardval( // for now just string evaluatoin, will refactor everything into this at a later stage.
+	llvm::LLVMContext& context,
+	llvm::IRBuilder<>& builder,
+	const Hardval& hardval,
+	ValueSymbolTable& value_table
+) {
+	if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
+		const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
+		llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
+		return str_const;
+	}
+	
+	if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
+		const auto& p_v_var_access = std::get<std::shared_ptr<HardvalVarAccess>>(hardval);
+		std::optional<llvm::Value*> o_source_alloca = value_table.get(p_v_var_access->target_name);
+		
+		if (!o_source_alloca.has_value()) {
+			fprintf(stderr, "This variable %s was not actually present in our value table\n", p_v_var_access->target_name.c_str());
+			exit(1);
+		}
+		
+		llvm::Value* source_alloca = o_source_alloca.value();
+		llvm::Type* desired_type = llvm::cast<llvm::AllocaInst>(source_alloca)->getAllocatedType();
+		llvm::Value* loaded_value = builder.CreateLoad(desired_type, source_alloca);
+		
+		return loaded_value;
+	}
+	
+	fprintf(stderr, "Unhandled evaluation logic for hardval\n");
+	exit(1);
+}
+
 void process_map_body(
 	llvm::LLVMContext& context,
 	llvm::IRBuilder<>& builder,
@@ -351,8 +383,21 @@ void process_map_body(
 	for (const auto& instruction : body.execution_sequence) {
 		if (std::holds_alternative<std::shared_ptr<InstructionLog>>(instruction)) {
 			const auto& v_log = std::get<std::shared_ptr<InstructionLog>>(instruction);
-			llvm::Value* log_str = builder.CreateGlobalStringPtr(v_log->message);
-			builder.CreateCall(puts_func, { log_str });
+			
+			if (v_log->message == nullptr) {
+				llvm::Value* log_str = builder.CreateGlobalStringPtr("");
+				builder.CreateCall(puts_func, { log_str });
+			} else {
+				auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(v_log->message.get());
+				
+				if (!p_v_map || (*p_v_map)->leaf_hardval == nullptr) {
+					fprintf(stderr, "Not good circumstances.\n");
+					exit(1);
+				}
+				
+				llvm::Value* value = evaluate_hardval(context, builder, *(*p_v_map)->leaf_hardval, value_table);
+				builder.CreateCall(puts_func, { value });
+			}
 		}
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionAssign>>(instruction)) {
@@ -429,8 +474,7 @@ void process_map_body(
 				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 					type_str = "f64";
 				} else if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
-					const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
-					llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
+					llvm::Value* str_const = evaluate_hardval(context, builder, hardval, value_table);
 					
 					llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(context);
 					llvm::Value* alloca = builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
@@ -439,17 +483,7 @@ void process_map_body(
 					
 					continue;
 				} else if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
-					const auto& p_v_var_access = std::get<std::shared_ptr<HardvalVarAccess>>(hardval);
-					std::optional<llvm::Value*> o_source_alloca = value_table.get(p_v_var_access->target_name);
-					
-					if (!o_source_alloca.has_value()) {
-						fprintf(stderr, "This variable %s was not actually present in our value table\n", p_v_var_access->target_name.c_str());
-						exit(1);
-					}
-					
-					llvm::Value* source_alloca = o_source_alloca.value();
-					llvm::Type* desired_type = llvm::cast<llvm::AllocaInst>(source_alloca)->getAllocatedType();
-					llvm::Value* loaded_value = builder.CreateLoad(desired_type, source_alloca);
+					llvm::Value* loaded_value = evaluate_hardval(context, builder, hardval, value_table);
 					llvm::Value* alloca = builder.CreateAlloca(loaded_value->getType(), nullptr, v_assign->name);
 					builder.CreateStore(loaded_value, alloca);
 					value_table.set(v_assign->name, alloca);

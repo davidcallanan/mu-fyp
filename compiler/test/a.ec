@@ -60,6 +60,6 @@ create() -> { ; this comment works
 	
 	log("Hello, World!");
 	log();
-	log("This log statement can only handle hardcoded strings.");
-	log("New test message.");
+	log("This log statement can now handle strings coming from variables.");
+	log(str3);
 }

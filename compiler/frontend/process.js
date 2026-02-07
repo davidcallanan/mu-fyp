@@ -61,6 +61,10 @@ const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)
 
 // PARSER RULES
 
+const hardval = declare();
+const typeval = declare();
+const typeval_atom = declare();
+
 const symbol_path = rule("symbol_path", mapData(
 	multi(
 		SYMBOL,
@@ -72,16 +76,12 @@ const symbol_path = rule("symbol_path", mapData(
 ));
 
 const map_entry_log = rule("map_entry_log", mapData(
-	join(KW_LOG, LPAREN, opt(STRING), RPAREN),
+	join(KW_LOG, LPAREN, opt(typeval), RPAREN),
 	(data) => ({
 		type: "map_entry_log",
 		message: data[2],
 	}),
 ));
-
-const hardval = declare();
-const typeval = declare();
-const typeval_atom = declare();
 
 hardval.define(rule("hardval", or(
 	mapData(
