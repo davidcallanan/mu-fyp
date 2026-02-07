@@ -462,55 +462,9 @@ void process_map_body(
 				}
 			}
 			
-			llvm::Type* llvm_type = nullptr;
-			bool is_float_type = false;
-			
-			if (type_str[0] == 'i' || type_str[0] == 'u') {
-				int bit_width = std::stoi(type_str.substr(1));
-				llvm_type = llvm::Type::getIntNTy(igc.context, bit_width);
-			} else if (type_str[0] == 'f') {
-				is_float_type = true;
-				int bit_width = std::stoi(type_str.substr(1));
-				
-				if (bit_width == 16) {
-					llvm_type = llvm::Type::getHalfTy(igc.context);
-				} else if (bit_width == 32) {
-					llvm_type = llvm::Type::getFloatTy(igc.context);
-				} else if (bit_width == 64) {
-					llvm_type = llvm::Type::getDoubleTy(igc.context);
-				} else if (bit_width == 128) {
-					llvm_type = llvm::Type::getFP128Ty(igc.context);
-				} else {
-					fprintf(stderr, "The float size is not supported, got %d\n", bit_width);
-					exit(1);
-				}
-			} else {
-				fprintf(stderr, "This received .type is not currently implemented, got %s\n", v_map->leaf_type.c_str());
-				exit(1);
-			}
-			
-			llvm::Value* alloca = igc.builder.CreateAlloca(llvm_type, nullptr, v_assign->name);
-			llvm::Value* const_value = nullptr;
 			const Hardval& hardval = *v_map->leaf_hardval;
-			
-			if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
-				const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
-				int bit_width = std::stoi(type_str.substr(1));
-				llvm::APInt ap_int(bit_width, p_v_int->value.c_str(), 10);
-				const_value = llvm::ConstantInt::get(igc.context, ap_int);
-			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
-				const auto& p_v_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
-				llvm::APFloat ap_float(llvm_type->getFltSemantics(), p_v_float->value);
-				const_value = llvm::ConstantFP::get(igc.context, ap_float);
-			} else {
-				fprintf(stderr, "Unhandled case here.");
-				exit(1);
-			}
-			
-			if (const_value == nullptr) {
-				fprintf(stderr, "Some bizarre error has occurred.\n");
-				exit(1);
-			}
+			llvm::Value* const_value = evaluate_hardval(igc, hardval, type_str);
+			llvm::Value* alloca = igc.builder.CreateAlloca(const_value->getType(), nullptr, v_assign->name);
 			
 			igc.builder.CreateStore(const_value, alloca);
 			igc.value_table.set(v_assign->name, alloca);
