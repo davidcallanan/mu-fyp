@@ -56,6 +56,7 @@ create() -> { ; this comment works
 	banana := u64 10;
 	str := "Hello, Universe!";
 	str2 := *u8 "Hello, Kingdom!";
+	str3 := str2;
 	
 	log("Hello, World!");
 	log();

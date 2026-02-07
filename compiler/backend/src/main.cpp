@@ -68,6 +68,7 @@ Type normalize_type(
 		
 		return std::make_shared<TypePointer>(TypePointer{
 			std::make_shared<Type>(target_type),
+			nullptr,
 		});
 	}
 	
@@ -136,6 +137,15 @@ Type normalize_type(
 				auto v_string = std::make_shared<HardvalString>();
 				v_string->value = hardval_data["value"].get<std::string>();
 				result.leaf_hardval = std::make_shared<Hardval>(v_string);
+			} else if (hardval_type == "hardval_var_access") {
+				if (!hardval_data.contains("target_name")) {
+					fprintf(stderr, "Expected .target_name\n");
+					exit(1);
+				}
+				
+				auto v_var_access = std::make_shared<HardvalVarAccess>();
+				v_var_access->target_name = hardval_data["target_name"].get<std::string>();
+				result.leaf_hardval = std::make_shared<Hardval>(v_var_access);
 			} else {
 				fprintf(stderr, "Unhandled situation %s\n", hardval_type.c_str());
 				exit(1);
@@ -428,6 +438,23 @@ void process_map_body(
 					value_table.set(v_assign->name, alloca);
 					
 					continue;
+				} else if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
+					const auto& p_v_var_access = std::get<std::shared_ptr<HardvalVarAccess>>(hardval);
+					std::optional<llvm::Value*> o_source_alloca = value_table.get(p_v_var_access->target_name);
+					
+					if (!o_source_alloca.has_value()) {
+						fprintf(stderr, "This variable %s was not actually present in our value table\n", p_v_var_access->target_name.c_str());
+						exit(1);
+					}
+					
+					llvm::Value* source_alloca = o_source_alloca.value();
+					llvm::Type* desired_type = llvm::cast<llvm::AllocaInst>(source_alloca)->getAllocatedType();
+					llvm::Value* loaded_value = builder.CreateLoad(desired_type, source_alloca);
+					llvm::Value* alloca = builder.CreateAlloca(loaded_value->getType(), nullptr, v_assign->name);
+					builder.CreateStore(loaded_value, alloca);
+					value_table.set(v_assign->name, alloca);
+					
+					continue;
 				} else {
 					fprintf(stderr, "Bizarre hardval without a type - no inference implemented.\n");
 					exit(1);
@@ -474,6 +501,9 @@ void process_map_body(
 				const auto& p_v_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
 				llvm::APFloat ap_float(llvm_type->getFltSemantics(), p_v_float->value);
 				const_value = llvm::ConstantFP::get(context, ap_float);
+			} else {
+				fprintf(stderr, "Unhandled case here.");
+				exit(1);
 			}
 			
 			if (const_value == nullptr) {

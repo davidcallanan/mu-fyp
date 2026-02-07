@@ -14,3 +14,7 @@ struct HardvalFloat {
 struct HardvalString {
 	std::string value;
 };
+
+struct HardvalVarAccess {
+	std::string target_name;
+};
