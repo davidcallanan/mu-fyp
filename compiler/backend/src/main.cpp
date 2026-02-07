@@ -4,8 +4,10 @@
 #include "dependencies/json.hpp"
 #include "create_type_symbol_table.hpp"
 #include "create_value_symbol_table.hpp"
+#include "evaluate_hardval.hpp"
 #include "t_hardval.hpp"
 #include "t_instructions.hpp"
+#include "t_ctx.hpp"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -341,52 +343,17 @@ Type normalize_type(
 	exit(1);
 }
 
-llvm::Value* evaluate_hardval( // for now just string evaluatoin, will refactor everything into this at a later stage.
-	llvm::LLVMContext& context,
-	llvm::IRBuilder<>& builder,
-	const Hardval& hardval,
-	ValueSymbolTable& value_table
-) {
-	if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
-		const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
-		llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
-		return str_const;
-	}
-	
-	if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
-		const auto& p_v_var_access = std::get<std::shared_ptr<HardvalVarAccess>>(hardval);
-		std::optional<llvm::Value*> o_source_alloca = value_table.get(p_v_var_access->target_name);
-		
-		if (!o_source_alloca.has_value()) {
-			fprintf(stderr, "This variable %s was not actually present in our value table\n", p_v_var_access->target_name.c_str());
-			exit(1);
-		}
-		
-		llvm::Value* source_alloca = o_source_alloca.value();
-		llvm::Type* desired_type = llvm::cast<llvm::AllocaInst>(source_alloca)->getAllocatedType();
-		llvm::Value* loaded_value = builder.CreateLoad(desired_type, source_alloca);
-		
-		return loaded_value;
-	}
-	
-	fprintf(stderr, "Unhandled evaluation logic for hardval\n");
-	exit(1);
-}
-
 void process_map_body(
-	llvm::LLVMContext& context,
-	llvm::IRBuilder<>& builder,
-	llvm::FunctionCallee& puts_func,
-	const TypeMap& body,
-	ValueSymbolTable& value_table
+	IrGenCtx& igc,
+	const TypeMap& body
 ) {
 	for (const auto& instruction : body.execution_sequence) {
 		if (std::holds_alternative<std::shared_ptr<InstructionLog>>(instruction)) {
 			const auto& v_log = std::get<std::shared_ptr<InstructionLog>>(instruction);
 			
 			if (v_log->message == nullptr) {
-				llvm::Value* log_str = builder.CreateGlobalStringPtr("");
-				builder.CreateCall(puts_func, { log_str });
+				llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
+				igc.builder.CreateCall(igc.puts_func, { log_str });
 			} else {
 				auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(v_log->message.get());
 				
@@ -395,8 +362,8 @@ void process_map_body(
 					exit(1);
 				}
 				
-				llvm::Value* value = evaluate_hardval(context, builder, *(*p_v_map)->leaf_hardval, value_table);
-				builder.CreateCall(puts_func, { value });
+				llvm::Value* value = evaluate_hardval(igc, *(*p_v_map)->leaf_hardval);
+				igc.builder.CreateCall(igc.puts_func, { value });
 			}
 		}
 		
@@ -422,12 +389,12 @@ void process_map_body(
 				}
 				
 				const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
-				llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
+				llvm::Value* str_const = igc.builder.CreateGlobalStringPtr(p_v_string->value);
 				
-				llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(context);
-				llvm::Value* alloca = builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
-				builder.CreateStore(str_const, alloca);
-				value_table.set(v_assign->name, alloca);
+				llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(igc.context);
+				llvm::Value* alloca = igc.builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
+				igc.builder.CreateStore(str_const, alloca);
+				igc.value_table.set(v_assign->name, alloca);
 				
 				continue;
 			}
@@ -474,19 +441,19 @@ void process_map_body(
 				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 					type_str = "f64";
 				} else if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
-					llvm::Value* str_const = evaluate_hardval(context, builder, hardval, value_table);
+					llvm::Value* str_const = evaluate_hardval(igc, hardval);
 					
-					llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(context);
-					llvm::Value* alloca = builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
-					builder.CreateStore(str_const, alloca);
-					value_table.set(v_assign->name, alloca);
+					llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(igc.context);
+					llvm::Value* alloca = igc.builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
+					igc.builder.CreateStore(str_const, alloca);
+					igc.value_table.set(v_assign->name, alloca);
 					
 					continue;
 				} else if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
-					llvm::Value* loaded_value = evaluate_hardval(context, builder, hardval, value_table);
-					llvm::Value* alloca = builder.CreateAlloca(loaded_value->getType(), nullptr, v_assign->name);
-					builder.CreateStore(loaded_value, alloca);
-					value_table.set(v_assign->name, alloca);
+					llvm::Value* loaded_value = evaluate_hardval(igc, hardval);
+					llvm::Value* alloca = igc.builder.CreateAlloca(loaded_value->getType(), nullptr, v_assign->name);
+					igc.builder.CreateStore(loaded_value, alloca);
+					igc.value_table.set(v_assign->name, alloca);
 					
 					continue;
 				} else {
@@ -500,19 +467,19 @@ void process_map_body(
 			
 			if (type_str[0] == 'i' || type_str[0] == 'u') {
 				int bit_width = std::stoi(type_str.substr(1));
-				llvm_type = llvm::Type::getIntNTy(context, bit_width);
+				llvm_type = llvm::Type::getIntNTy(igc.context, bit_width);
 			} else if (type_str[0] == 'f') {
 				is_float_type = true;
 				int bit_width = std::stoi(type_str.substr(1));
 				
 				if (bit_width == 16) {
-					llvm_type = llvm::Type::getHalfTy(context);
+					llvm_type = llvm::Type::getHalfTy(igc.context);
 				} else if (bit_width == 32) {
-					llvm_type = llvm::Type::getFloatTy(context);
+					llvm_type = llvm::Type::getFloatTy(igc.context);
 				} else if (bit_width == 64) {
-					llvm_type = llvm::Type::getDoubleTy(context);
+					llvm_type = llvm::Type::getDoubleTy(igc.context);
 				} else if (bit_width == 128) {
-					llvm_type = llvm::Type::getFP128Ty(context);
+					llvm_type = llvm::Type::getFP128Ty(igc.context);
 				} else {
 					fprintf(stderr, "The float size is not supported, got %d\n", bit_width);
 					exit(1);
@@ -522,7 +489,7 @@ void process_map_body(
 				exit(1);
 			}
 			
-			llvm::Value* alloca = builder.CreateAlloca(llvm_type, nullptr, v_assign->name);
+			llvm::Value* alloca = igc.builder.CreateAlloca(llvm_type, nullptr, v_assign->name);
 			llvm::Value* const_value = nullptr;
 			const Hardval& hardval = *v_map->leaf_hardval;
 			
@@ -530,11 +497,11 @@ void process_map_body(
 				const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
 				int bit_width = std::stoi(type_str.substr(1));
 				llvm::APInt ap_int(bit_width, p_v_int->value.c_str(), 10);
-				const_value = llvm::ConstantInt::get(context, ap_int);
+				const_value = llvm::ConstantInt::get(igc.context, ap_int);
 			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 				const auto& p_v_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
 				llvm::APFloat ap_float(llvm_type->getFltSemantics(), p_v_float->value);
-				const_value = llvm::ConstantFP::get(context, ap_float);
+				const_value = llvm::ConstantFP::get(igc.context, ap_float);
 			} else {
 				fprintf(stderr, "Unhandled case here.");
 				exit(1);
@@ -545,8 +512,8 @@ void process_map_body(
 				exit(1);
 			}
 			
-			builder.CreateStore(const_value, alloca);
-			value_table.set(v_assign->name, alloca);
+			igc.builder.CreateStore(const_value, alloca);
+			igc.value_table.set(v_assign->name, alloca);
 		}
 	}
 }
@@ -621,7 +588,16 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		
 		ValueSymbolTable value_table = create_value_symbol_table();
 		
-		process_map_body(context, builder, puts_func, *v_map.call_output_type, value_table);
+		IrGenCtx igc = {
+			context,
+			module,
+			builder,
+			symbol_table,
+			value_table,
+			puts_func,
+		};
+		
+		process_map_body(igc, *v_map.call_output_type);
 	}
 	
 	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
