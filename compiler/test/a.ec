@@ -54,7 +54,8 @@ type TestingPointersMore **u8;
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;
-	error := u64;
+	str := "Hello, Universe!";
+	str2 := *u8 "Hello, Kingdom!";
 	
 	log("Hello, World!");
 	log();

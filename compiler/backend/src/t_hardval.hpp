@@ -10,3 +10,7 @@ struct HardvalInteger {
 struct HardvalFloat {
 	std::string value;
 };
+
+struct HardvalString {
+	std::string value;
+};

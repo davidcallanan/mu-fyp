@@ -5,10 +5,12 @@
 
 struct HardvalInteger;
 struct HardvalFloat;
+struct HardvalString;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
 using Hardval = std::variant<
 	std::shared_ptr<HardvalInteger>,
-	std::shared_ptr<HardvalFloat>
+	std::shared_ptr<HardvalFloat>,
+	std::shared_ptr<HardvalString>
 >;

@@ -114,6 +114,21 @@ hardval.define(rule("hardval", or(
 			instructions: [],
 		}),
 	),
+	mapData(
+		STRING,
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_string",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
 )));
 
 const map_entry_assign = rule("map_entry_assign", mapData(
@@ -342,9 +357,22 @@ const type_named = rule("type_named", mapData(
 	}),
 ));
 
+const type_ptr_named = rule("type_ptr_named", mapData(
+	join(ASTERISK, type_named),
+	(data) => ({
+		type: "type_ptr",
+		target: data[1],
+	}),
+));
+
+const type_first = rule("type_first", or(
+	type_ptr_named,
+	type_named,
+));
+
 typeval_atom.define(rule("typeval_atom", or(
 	mapData(
-		join(type_named, hardval),
+		join(type_first, hardval),
 		(data) => ({
 			type: "type_constrained",
 			constraints: [
@@ -354,7 +382,7 @@ typeval_atom.define(rule("typeval_atom", or(
 		}),
 	),
 	mapData(
-		join(type_named, constraint_map),
+		join(type_first, constraint_map),
 		(data) => ({
 			type: "type_constrained",
 			constraints: [
@@ -363,7 +391,7 @@ typeval_atom.define(rule("typeval_atom", or(
 			],
 		}),
 	),
-	type_named,
+	type_first,
 	hardval,
 	constraint_map,
 	// mapData( // have no idea if grammar can accept this consistently

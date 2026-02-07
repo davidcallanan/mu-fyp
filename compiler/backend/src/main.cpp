@@ -25,7 +25,7 @@
 
 using json = nlohmann::json;
 
-TypeMap normalize_to_map(
+Type normalize_type(
 	const json& typeval,
 	TypeSymbolTable& symbol_table
 ) {
@@ -55,7 +55,20 @@ TypeMap normalize_to_map(
 			exit(1);
 		}
 		
-		return *found;
+		return std::make_shared<TypeMap>(*found);
+	}
+	
+	if (type == "type_ptr") {
+		if (!typeval.contains("target")) {
+			fprintf(stderr, "Expected to see .target\n");
+			exit(1);
+		}
+		
+		Type target_type = normalize_type(typeval["target"], symbol_table);
+		
+		return std::make_shared<TypePointer>(TypePointer{
+			std::make_shared<Type>(target_type),
+		});
 	}
 	
 	if (type == "type_map") {
@@ -95,39 +108,66 @@ TypeMap normalize_to_map(
 			}
 			
 			std::string hardval_type = hardval_data["type"];
-			
+				
 			if (hardval_type == "hardval_integer") {
 				if (!hardval_data.contains("value")) {
 					fprintf(stderr, "Expected .value\n");
 					exit(1);
 				}
 				
-				auto h_int = std::make_shared<HardvalInteger>();
-				h_int->value = hardval_data["value"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(h_int);
+				auto v_int = std::make_shared<HardvalInteger>();
+				v_int->value = hardval_data["value"].get<std::string>();
+				result.leaf_hardval = std::make_shared<Hardval>(v_int);
 			} else if (hardval_type == "hardval_float") {
 				if (!hardval_data.contains("value")) {
 					fprintf(stderr, "Expected .value\n");
 					exit(1);
 				}
 				
-				auto h_float = std::make_shared<HardvalFloat>();
-				h_float->value = hardval_data["value"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(h_float);
+				auto v_float = std::make_shared<HardvalFloat>();
+				v_float->value = hardval_data["value"].get<std::string>();
+				result.leaf_hardval = std::make_shared<Hardval>(v_float);
+			} else if (hardval_type == "hardval_string") {
+				if (!hardval_data.contains("value")) {
+					fprintf(stderr, "Expected .value\n");
+					exit(1);
+				}
+				
+				auto v_string = std::make_shared<HardvalString>();
+				v_string->value = hardval_data["value"].get<std::string>();
+				result.leaf_hardval = std::make_shared<Hardval>(v_string);
 			} else {
 				fprintf(stderr, "Unhandled situation %s\n", hardval_type.c_str());
 				exit(1);
 			}
 		}
-		
+
 		result.call_input_type = (false
 			|| !typeval.contains("call_input_type")
 			|| typeval["call_input_type"].is_null()
-		) ? nullptr : std::make_unique<TypeMap>(normalize_to_map(typeval["call_input_type"], symbol_table));
+		) ? nullptr : [&]() {
+			Type t = normalize_type(typeval["call_input_type"], symbol_table);
+			auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
+			
+			if (!p_map) {
+				fprintf(stderr, "the input of a callable map must itself be a map\n");
+				exit(1);
+			}
+			
+			return std::make_unique<TypeMap>(**p_map);
+		}();
 		result.call_output_type = (false
 			|| !typeval.contains("call_output_type")
 			|| typeval["call_output_type"].is_null()
-		) ? nullptr : std::make_unique<TypeMap>(normalize_to_map(typeval["call_output_type"], symbol_table));
+		) ? nullptr : [&]() {
+			Type t = normalize_type(typeval["call_output_type"], symbol_table);
+			auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
+			if (!p_map) {
+				fprintf(stderr, "the output of a callable map must itself be a map\n");
+				exit(1);
+			}
+			return std::make_unique<TypeMap>(**p_map);
+		}();
 			
 		if (typeval.contains("sym_inputs")) {
 			if (!typeval["sym_inputs"].is_object()) {
@@ -136,16 +176,14 @@ TypeMap normalize_to_map(
 			}
 			
 			for (auto& [key, value] : typeval["sym_inputs"].items()) { // don't really care about this for now
-				result.sym_inputs[key] = std::make_shared<Type>(std::make_shared<TypeMap>(normalize_to_map(value, symbol_table)));
+				result.sym_inputs[key] = std::make_shared<Type>(normalize_type(value, symbol_table));
 			}
 		}
-	
 		if (typeval.contains("instructions")) {
 			if (!typeval["instructions"].is_array()) {
 				fprintf(stderr, "Expected .instructions as array\n");
 				exit(1);
 			}
-			
 			for (const auto& instruction_data : typeval["instructions"]) {
 				if (!instruction_data.contains("type")) {
 					fprintf(stderr, "expected .type");
@@ -175,6 +213,7 @@ TypeMap normalize_to_map(
 						exit(1);
 					}
 					
+					
 					v_assign->name = instruction_data["name"].get<std::string>();
 					
 					if (!instruction_data.contains("typeval")) {
@@ -182,30 +221,40 @@ TypeMap normalize_to_map(
 						exit(1);
 					}
 					
-					TypeMap normalized = normalize_to_map(instruction_data["typeval"], symbol_table);
+					Type normalized_type = normalize_type(instruction_data["typeval"], symbol_table);
+					auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized_type);
+					auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&normalized_type);
 					
-					if (normalized.leaf_hardval == nullptr) {
-						fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value, %s\n", v_assign->name.c_str());
+					if (p_v_map) {
+						if ((*p_v_map)->leaf_hardval == nullptr) {
+							fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value: %s\n", v_assign->name.c_str());
+							exit(1);
+						}
+					}
+					else if (p_v_pointer) {
+						if ((*p_v_pointer)->hardval == nullptr) {
+							fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value, %s\n", v_assign->name.c_str());
+							exit(1);
+						}
+					}
+					else {
+						fprintf(stderr, "Unhandled assignment situation, currently only assignment to a map or a pointer is supported.\n");
 						exit(1);
 					}
 					
-					v_assign->typeval = std::make_shared<Type>(
-						std::make_shared<TypeMap>(normalized)
-					);
+					v_assign->typeval = std::make_shared<Type>(normalized_type);
 					
 					result.execution_sequence.push_back(v_assign);
-					
 					continue;
 				}
-				
+			
 				fprintf(stderr, "Not recognized instructoin type: %s\n", instruction_type.c_str());
 				exit(1);
 			}
 		}
 		
-		return result;
+		return std::make_shared<TypeMap>(result);
 	}
-	
 	if (type == "type_constrained") {
 		if (false
 			|| !typeval.contains("constraints")
@@ -227,23 +276,55 @@ TypeMap normalize_to_map(
 			exit(1);
 		}
 		
-		TypeMap constraint_1 = normalize_to_map(constraints[0], symbol_table);
-		TypeMap constraint_2 = normalize_to_map(constraints[1], symbol_table);
+		Type constraint_1 = normalize_type(constraints[0], symbol_table);
+		Type constraint_2 = normalize_type(constraints[1], symbol_table);
 		
-		TypeMap result = constraint_2; // for now take most data from the second constraint, need to eventually improve merge process
-		
-		if (!constraint_1.leaf_type.empty() && !constraint_2.leaf_type.empty()) {
-			if (constraint_1.leaf_type != constraint_2.leaf_type) {
-				fprintf(stderr, "Cannot deal with two conflicting constraints like this: %s -vs- %s\n", 
-					constraint_1.leaf_type.c_str(), constraint_2.leaf_type.c_str());
+		if (auto p_v_1 = std::get_if<std::shared_ptr<TypePointer>>(&constraint_1)) {
+			auto p_v_2 = std::get_if<std::shared_ptr<TypeMap>>(&constraint_2);
+			
+			if (!p_v_2) {
+				fprintf(stderr, "In case that first constraint is pointer, for now only second constraint as map is supported.\n");
 				exit(1);
 			}
-			result.leaf_type = constraint_1.leaf_type;
-		} else if (!constraint_1.leaf_type.empty()) {
-			result.leaf_type = constraint_1.leaf_type;
+			
+			TypeMap& v_2 = **p_v_2;
+			
+			if (v_2.leaf_hardval == nullptr) {
+				fprintf(stderr, "For now constrained pointers must have definitive value associated with them\n");
+				exit(1);
+			}
+			
+			auto p_pointer = std::make_shared<TypePointer>();
+			p_pointer->target = (*p_v_1)->target;
+			p_pointer->hardval = v_2.leaf_hardval;
+			
+			return p_pointer;
 		}
 		
-		return result;
+		auto p_v_1 = std::get_if<std::shared_ptr<TypeMap>>(&constraint_1);
+		auto p_v_2 = std::get_if<std::shared_ptr<TypeMap>>(&constraint_2);
+		
+		if (!p_v_1 || !p_v_2) {
+			fprintf(stderr, "In case that first constraint is not a pointer, expected both constrained types to be maps, for now.\n");
+			exit(1);
+		}
+		
+		TypeMap v_constraint_1 = **p_v_1;
+		TypeMap v_constraint_2 = **p_v_2;
+		TypeMap result = v_constraint_2; // for now take most data from the second constraint, need to eventually improve merge process
+		
+		if (!v_constraint_1.leaf_type.empty() && !v_constraint_2.leaf_type.empty()) {
+			if (v_constraint_1.leaf_type != v_constraint_2.leaf_type) {
+				fprintf(stderr, "Cannot deal with two conflicting constraints like this: %s -vs- %s\n", 
+					v_constraint_1.leaf_type.c_str(), v_constraint_2.leaf_type.c_str());
+				exit(1);
+			}
+			result.leaf_type = v_constraint_1.leaf_type;
+		} else if (!v_constraint_1.leaf_type.empty()) {
+			result.leaf_type = v_constraint_1.leaf_type;
+		}
+		
+		return std::make_shared<TypeMap>(result);
 	}
 	
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
@@ -266,42 +347,87 @@ void process_map_body(
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionAssign>>(instruction)) {
 			const auto& v_assign = std::get<std::shared_ptr<InstructionAssign>>(instruction);
-			const auto& typeval_map = *std::get<std::shared_ptr<TypeMap>>(*v_assign->typeval);
 			
-			if (typeval_map.leaf_hardval == nullptr) {
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(v_assign->typeval.get());
+			auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(v_assign->typeval.get());
+			
+			if (p_v_pointer) {
+				const auto& typeval_pointer = *p_v_pointer;
+				
+				if (typeval_pointer->hardval == nullptr) {
+					fprintf(stderr, "Pointer expects .hardval for assignment.\n");
+					exit(1);
+				}
+				
+				const Hardval& hardval = *typeval_pointer->hardval;
+				
+				if (!std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
+					fprintf(stderr, "At this moment, only string assignments are supported when using pointers\n");
+					exit(1);
+				}
+				
+				const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
+				llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
+				
+				llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(context);
+				llvm::Value* alloca = builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
+				builder.CreateStore(str_const, alloca);
+				value_table.set(v_assign->name, alloca);
+				
+				continue;
+			}
+			
+			if (!p_v_map) {
+				fprintf(stderr, "Unhanlded situation for assignment.\n");
+				exit(1);
+			}
+			
+			const auto& v_map = *p_v_map;
+			
+			if (v_map->leaf_hardval == nullptr) {
 				fprintf(stderr, "Missing expected .leaf_hardval\n");
 				exit(1);
 			}
 			
-			std::string type_str = typeval_map.leaf_type;
+			std::string type_str = v_map->leaf_type;
 			
 			if (type_str.empty()) {
-				const Hardval& hardval = *typeval_map.leaf_hardval;
+				const Hardval& hardval = *v_map->leaf_hardval;
 				
 				if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
-					const auto& h_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
-					const std::string& value_str = h_int->value;
+					const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
+					const std::string& value_str = p_v_int->value;
 					
 					int bits_needed;
 					char sign_prefix;
 					
-				bool is_negative = (!value_str.empty() && value_str[0] == '-');
-				std::string digits = is_negative ? value_str.substr(1) : value_str;
-				
-				if (is_negative) {
-					sign_prefix = 'i';
-					llvm::APInt ap_value(128, digits.c_str(), 10);
-					bits_needed = ap_value.getActiveBits() + 1;
-				} else {
-					sign_prefix = 'u';
-					llvm::APInt ap_value(128, digits.c_str(), 10);
-					bits_needed = ap_value.getActiveBits();
-					if (bits_needed == 0) bits_needed = 1;
-				}
-				
-				type_str = sign_prefix + std::to_string(bits_needed);
-			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
+					bool is_negative = (!value_str.empty() && value_str[0] == '-');
+					std::string digits = is_negative ? value_str.substr(1) : value_str;
+					
+					if (is_negative) {
+						sign_prefix = 'i';
+						llvm::APInt ap_value(128, digits.c_str(), 10);
+						bits_needed = ap_value.getActiveBits() + 1;
+					} else {
+						sign_prefix = 'u';
+						llvm::APInt ap_value(128, digits.c_str(), 10);
+						bits_needed = ap_value.getActiveBits();
+						if (bits_needed == 0) bits_needed = 1;
+					}
+					
+					type_str = sign_prefix + std::to_string(bits_needed);
+				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
 					type_str = "f64";
+				} else if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
+					const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
+					llvm::Value* str_const = builder.CreateGlobalStringPtr(p_v_string->value);
+					
+					llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(context);
+					llvm::Value* alloca = builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
+					builder.CreateStore(str_const, alloca);
+					value_table.set(v_assign->name, alloca);
+					
+					continue;
 				} else {
 					fprintf(stderr, "Bizarre hardval without a type - no inference implemented.\n");
 					exit(1);
@@ -331,22 +457,22 @@ void process_map_body(
 					exit(1);
 				}
 			} else {
-				fprintf(stderr, "This received .type is not currently implemented, got %s\n", typeval_map.leaf_type.c_str());
+				fprintf(stderr, "This received .type is not currently implemented, got %s\n", v_map->leaf_type.c_str());
 				exit(1);
 			}
 			
 			llvm::Value* alloca = builder.CreateAlloca(llvm_type, nullptr, v_assign->name);
 			llvm::Value* const_value = nullptr;
-			const Hardval& hardval = *typeval_map.leaf_hardval;
+			const Hardval& hardval = *v_map->leaf_hardval;
 			
 			if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
-				const auto& h_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
+				const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
 				int bit_width = std::stoi(type_str.substr(1));
-				llvm::APInt ap_int(bit_width, h_int->value.c_str(), 10);
+				llvm::APInt ap_int(bit_width, p_v_int->value.c_str(), 10);
 				const_value = llvm::ConstantInt::get(context, ap_int);
 			} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
-				const auto& h_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
-				llvm::APFloat ap_float(llvm_type->getFltSemantics(), h_float->value);
+				const auto& p_v_float = std::get<std::shared_ptr<HardvalFloat>>(hardval);
+				llvm::APFloat ap_float(llvm_type->getFltSemantics(), p_v_float->value);
 				const_value = llvm::ConstantFP::get(context, ap_float);
 			}
 			
@@ -415,17 +541,23 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		}
 		
 		const json& description = create_data["description"];
-		
-		TypeMap normalized = normalize_to_map(description, symbol_table);
-		
-		if (normalized.call_output_type == nullptr) {
+
+		Type normalized = normalize_type(description, symbol_table);
+		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized);
+		if (!p_v_map) {
+			fprintf(stderr, "description of create must be map, not something else.\n");
+			exit(1);
+		}
+		TypeMap v_map = **p_v_map;
+
+		if (v_map.call_output_type == nullptr) {
 			fprintf(stderr, "at the moment we need an output which I suppose makes sense for a create block\n");
 			exit(1);
 		}
 		
 		ValueSymbolTable value_table = create_value_symbol_table();
 		
-		process_map_body(context, builder, puts_func, *normalized.call_output_type, value_table);
+		process_map_body(context, builder, puts_func, *v_map.call_output_type, value_table);
 	}
 	
 	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));

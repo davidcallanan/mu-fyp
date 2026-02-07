@@ -17,3 +17,8 @@ struct TypeMap {
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;
 	std::vector<Instruction> execution_sequence;
 };
+
+struct TypePointer {
+	std::shared_ptr<Type> target;
+	std::shared_ptr<Hardval> hardval; // eventually this may need to be organized better, not sure how to best approach it.
+};
