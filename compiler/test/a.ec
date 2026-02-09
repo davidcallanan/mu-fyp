@@ -58,6 +58,11 @@ create() -> { ; this comment works
 	str2 := *u8 "Hello, Kingdom!";
 	str3 := str2;
 	
+	object := {
+		name := "David";
+		age := 23;	
+	};
+	
 	log("Hello, World!");
 	log();
 	log("This log statement can now handle strings coming from variables.");

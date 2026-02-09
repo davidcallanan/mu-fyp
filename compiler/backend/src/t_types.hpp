@@ -10,7 +10,7 @@
 #include "t_hardval_fwd.hpp"
 
 struct TypeMap {
-	std::string leaf_type;
+	std::shared_ptr<Type> leaf_type;
 	std::shared_ptr<Hardval> leaf_hardval;
 	std::shared_ptr<TypeMap> call_input_type;
 	std::shared_ptr<TypeMap> call_output_type;
@@ -21,4 +21,16 @@ struct TypeMap {
 struct TypePointer {
 	std::shared_ptr<Type> target;
 	std::shared_ptr<Hardval> hardval; // eventually this may need to be organized better, not sure how to best approach it.
+};
+
+struct TypeVarAccess {
+	std::string target_name;
+};
+
+struct TypeMerged {
+	std::vector<Type> types;
+};
+
+struct TypeRotten {
+	std::string type_str;
 };

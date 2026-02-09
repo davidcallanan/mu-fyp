@@ -132,16 +132,8 @@ hardval.define(rule("hardval", or(
 	mapData( // to be honest i'm not sure if variable access should be a hardval, it makes me reconsider whether pointers should also be normalized to maps.
 		IDENT,
 		(data) => ({
-			type: "type_map",
-			leaf_type: undefined,
-			leaf_hardval: {
-				type: "hardval_var_access",
-				target_name: data,
-			},
-			call_input_type: undefined,
-			call_output_type: undefined,
-			sym_inputs: {},
-			instructions: [],
+			type: "type_var_access",
+			target_name: data,
 		}),
 	),
 )));

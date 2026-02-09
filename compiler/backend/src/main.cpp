@@ -5,6 +5,7 @@
 #include "create_type_symbol_table.hpp"
 #include "create_value_symbol_table.hpp"
 #include "evaluate_hardval.hpp"
+#include "evaluate_structval.hpp"
 #include "t_hardval.hpp"
 #include "t_instructions.hpp"
 #include "t_ctx.hpp"
@@ -14,6 +15,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,7 +78,7 @@ Type normalize_type(
 	
 	if (type == "type_map") {
 		TypeMap result;
-		result.leaf_type = "";
+		result.leaf_type = nullptr;
 		result.leaf_hardval = nullptr;
 		
 		if (typeval.contains("leaf_type") && !typeval["leaf_type"].is_null()) {
@@ -95,7 +97,9 @@ Type normalize_type(
 					exit(1);
 				}
 				
-				result.leaf_type = leaf_type_data["trail"];
+				auto v_rotten = std::make_shared<TypeRotten>();
+				v_rotten->type_str = leaf_type_data["trail"];
+				result.leaf_type = std::make_shared<Type>(v_rotten);
 			} else {
 				fprintf(stderr, "Type given was not handled, got %s\n", leaf_type_type.c_str());
 				exit(1);
@@ -139,15 +143,6 @@ Type normalize_type(
 				auto v_string = std::make_shared<HardvalString>();
 				v_string->value = hardval_data["value"].get<std::string>();
 				result.leaf_hardval = std::make_shared<Hardval>(v_string);
-			} else if (hardval_type == "hardval_var_access") {
-				if (!hardval_data.contains("target_name")) {
-					fprintf(stderr, "Expected .target_name\n");
-					exit(1);
-				}
-				
-				auto v_var_access = std::make_shared<HardvalVarAccess>();
-				v_var_access->target_name = hardval_data["target_name"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(v_var_access);
 			} else {
 				fprintf(stderr, "Unhandled situation %s\n", hardval_type.c_str());
 				exit(1);
@@ -234,26 +229,6 @@ Type normalize_type(
 					}
 					
 					Type normalized_type = normalize_type(instruction_data["typeval"], symbol_table);
-					auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized_type);
-					auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&normalized_type);
-					
-					if (p_v_map) {
-						if ((*p_v_map)->leaf_hardval == nullptr) {
-							fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value: %s\n", v_assign->name.c_str());
-							exit(1);
-						}
-					}
-					else if (p_v_pointer) {
-						if ((*p_v_pointer)->hardval == nullptr) {
-							fprintf(stderr, "Immutable assignment cannot consist of a type that has no definitive value, %s\n", v_assign->name.c_str());
-							exit(1);
-						}
-					}
-					else {
-						fprintf(stderr, "Unhandled assignment situation, currently only assignment to a map or a pointer is supported.\n");
-						exit(1);
-					}
-					
 					v_assign->typeval = std::make_shared<Type>(normalized_type);
 					
 					result.execution_sequence.push_back(v_assign);
@@ -267,6 +242,20 @@ Type normalize_type(
 		
 		return std::make_shared<TypeMap>(result);
 	}
+	
+	if (type == "type_var_access") {
+		if (!typeval.contains("target_name")) {
+			fprintf(stderr, "Expected .target_name\n");
+			exit(1);
+		}
+		
+		std::string target_name = typeval["target_name"];
+		
+		return std::make_shared<TypeVarAccess>(TypeVarAccess{
+			target_name,
+		});
+	}
+	
 	if (type == "type_constrained") {
 		if (false
 			|| !typeval.contains("constraints")
@@ -307,6 +296,7 @@ Type normalize_type(
 			}
 			
 			auto p_pointer = std::make_shared<TypePointer>();
+			
 			p_pointer->target = (*p_v_1)->target;
 			p_pointer->hardval = v_2.leaf_hardval;
 			
@@ -317,26 +307,25 @@ Type normalize_type(
 		auto p_v_2 = std::get_if<std::shared_ptr<TypeMap>>(&constraint_2);
 		
 		if (!p_v_1 || !p_v_2) {
-			fprintf(stderr, "In case that first constraint is not a pointer, expected both constrained types to be maps, for now.\n");
-			exit(1);
+			// fprintf(stderr, "In case that first constraint is not a pointer, expected both constrained types to be maps, for now.\n");
+			// exit(1);
 		}
 		
-		TypeMap v_constraint_1 = **p_v_1;
-		TypeMap v_constraint_2 = **p_v_2;
-		TypeMap result = v_constraint_2; // for now take most data from the second constraint, need to eventually improve merge process
-		
-		if (!v_constraint_1.leaf_type.empty() && !v_constraint_2.leaf_type.empty()) {
-			if (v_constraint_1.leaf_type != v_constraint_2.leaf_type) {
-				fprintf(stderr, "Cannot deal with two conflicting constraints like this: %s -vs- %s\n", 
-					v_constraint_1.leaf_type.c_str(), v_constraint_2.leaf_type.c_str());
-				exit(1);
-			}
-			result.leaf_type = v_constraint_1.leaf_type;
-		} else if (!v_constraint_1.leaf_type.empty()) {
-			result.leaf_type = v_constraint_1.leaf_type;
+		if (p_v_1 && p_v_2) {
+			auto v_merged = std::make_shared<TypeMerged>();
+			
+			v_merged->types.push_back(constraint_1);
+			v_merged->types.push_back(constraint_2);
+			
+			return v_merged;
 		}
 		
-		return std::make_shared<TypeMap>(result);
+		auto v_merged = std::make_shared<TypeMerged>();
+		
+		v_merged->types.push_back(constraint_1);
+		v_merged->types.push_back(constraint_2);
+		
+		return v_merged;
 	}
 	
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
@@ -355,119 +344,35 @@ void process_map_body(
 				llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
 				igc.builder.CreateCall(igc.puts_func, { log_str });
 			} else {
-				auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(v_log->message.get());
+				SmoothValue smooth = evaluate_structval(igc, *v_log->message);
 				
-				if (!p_v_map || (*p_v_map)->leaf_hardval == nullptr) {
-					fprintf(stderr, "Not good circumstances.\n");
+				if (!smooth.has_leaf) {
+					fprintf(stderr, "Not good circumstances - no leaf.\n");
 					exit(1);
 				}
 				
-				llvm::Value* value = evaluate_hardval(igc, *(*p_v_map)->leaf_hardval);
-				igc.builder.CreateCall(igc.puts_func, { value });
+				llvm::Value* leaf = smooth.extract_leaf(igc.builder);
+				igc.builder.CreateCall(igc.puts_func, { leaf });
 			}
 		}
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionAssign>>(instruction)) {
 			const auto& v_assign = std::get<std::shared_ptr<InstructionAssign>>(instruction);
 			
-			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(v_assign->typeval.get());
-			auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(v_assign->typeval.get());
+			std::string map_var_name = "m_" + v_assign->name;
 			
-			if (p_v_pointer) {
-				const auto& typeval_pointer = *p_v_pointer;
-				
-				if (typeval_pointer->hardval == nullptr) {
-					fprintf(stderr, "Pointer expects .hardval for assignment.\n");
-					exit(1);
-				}
-				
-				const Hardval& hardval = *typeval_pointer->hardval;
-				
-				if (!std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
-					fprintf(stderr, "At this moment, only string assignments are supported when using pointers\n");
-					exit(1);
-				}
-				
-				const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
-				llvm::Value* str_const = igc.builder.CreateGlobalStringPtr(p_v_string->value);
-				
-				llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(igc.context);
-				llvm::Value* alloca = igc.builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
-				igc.builder.CreateStore(str_const, alloca);
-				igc.value_table.set(v_assign->name, alloca);
-				
-				continue;
-			}
+			SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
+			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, map_var_name);
+			igc.builder.CreateStore(smooth.struct_value, alloca);
 			
-			if (!p_v_map) {
-				fprintf(stderr, "Unhanlded situation for assignment.\n");
-				exit(1);
-			}
+			ValueSymbolTableEntry entry{
+				alloca,
+				smooth.struct_value->getType(),
+				smooth.type,
+				smooth.has_leaf,
+			};
 			
-			const auto& v_map = *p_v_map;
-			
-			if (v_map->leaf_hardval == nullptr) {
-				fprintf(stderr, "Missing expected .leaf_hardval\n");
-				exit(1);
-			}
-			
-			std::string type_str = v_map->leaf_type;
-			
-			if (type_str.empty()) {
-				const Hardval& hardval = *v_map->leaf_hardval;
-				
-				if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
-					const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
-					const std::string& value_str = p_v_int->value;
-					
-					int bits_needed;
-					char sign_prefix;
-					
-					bool is_negative = (!value_str.empty() && value_str[0] == '-');
-					std::string digits = is_negative ? value_str.substr(1) : value_str;
-					
-					if (is_negative) {
-						sign_prefix = 'i';
-						llvm::APInt ap_value(128, digits.c_str(), 10);
-						bits_needed = ap_value.getActiveBits() + 1;
-					} else {
-						sign_prefix = 'u';
-						llvm::APInt ap_value(128, digits.c_str(), 10);
-						bits_needed = ap_value.getActiveBits();
-						if (bits_needed == 0) bits_needed = 1;
-					}
-					
-					type_str = sign_prefix + std::to_string(bits_needed);
-				} else if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
-					type_str = "f64";
-				} else if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
-					llvm::Value* str_const = evaluate_hardval(igc, hardval);
-					
-					llvm::Type* desired_ptr = llvm::Type::getInt8PtrTy(igc.context);
-					llvm::Value* alloca = igc.builder.CreateAlloca(desired_ptr, nullptr, v_assign->name);
-					igc.builder.CreateStore(str_const, alloca);
-					igc.value_table.set(v_assign->name, alloca);
-					
-					continue;
-				} else if (std::holds_alternative<std::shared_ptr<HardvalVarAccess>>(hardval)) {
-					llvm::Value* loaded_value = evaluate_hardval(igc, hardval);
-					llvm::Value* alloca = igc.builder.CreateAlloca(loaded_value->getType(), nullptr, v_assign->name);
-					igc.builder.CreateStore(loaded_value, alloca);
-					igc.value_table.set(v_assign->name, alloca);
-					
-					continue;
-				} else {
-					fprintf(stderr, "Bizarre hardval without a type - no inference implemented.\n");
-					exit(1);
-				}
-			}
-			
-			const Hardval& hardval = *v_map->leaf_hardval;
-			llvm::Value* const_value = evaluate_hardval(igc, hardval, type_str);
-			llvm::Value* alloca = igc.builder.CreateAlloca(const_value->getType(), nullptr, v_assign->name);
-			
-			igc.builder.CreateStore(const_value, alloca);
-			igc.value_table.set(v_assign->name, alloca);
+			igc.value_table.set(map_var_name, entry);
 		}
 	}
 }

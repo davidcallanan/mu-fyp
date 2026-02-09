@@ -25,7 +25,11 @@ TypeSymbolTable::TypeSymbolTable() {
 
 	for (const auto &leaf_type : float_types) {
 		auto map = std::make_unique<TypeMap>();
-		map->leaf_type = leaf_type;
+		
+		auto rotten = std::make_shared<TypeRotten>();
+		rotten->type_str = leaf_type;
+		map->leaf_type = std::make_shared<Type>(rotten);
+		
 		map->call_input_type = nullptr;
 		map->call_output_type = nullptr;
 
@@ -104,7 +108,11 @@ TypeMap *TypeSymbolTable::get(const std::string &trail) {
 
 		if (is_valid_intish) {
 			auto map = std::make_unique<TypeMap>();
-			map->leaf_type = key;
+			
+			auto rotten = std::make_shared<TypeRotten>();
+			rotten->type_str = key;
+			map->leaf_type = std::make_shared<Type>(rotten);
+			
 			map->call_input_type = nullptr;
 			map->call_output_type = nullptr;
 

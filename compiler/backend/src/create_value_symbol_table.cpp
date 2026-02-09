@@ -4,11 +4,11 @@
 ValueSymbolTable::ValueSymbolTable() {
 }
 
-void ValueSymbolTable::set(const std::string& name, llvm::Value* value) {
-	_values[name] = value;
+void ValueSymbolTable::set(const std::string& name, const ValueSymbolTableEntry& entry) {
+	_values[name] = entry;
 }
 
-std::optional<llvm::Value*> ValueSymbolTable::get(const std::string& name) {
+std::optional<ValueSymbolTableEntry> ValueSymbolTable::get(const std::string& name) {
 	auto it = _values.find(name);
 	
 	if (it == _values.end()) {
