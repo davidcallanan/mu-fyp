@@ -23,8 +23,13 @@ SmoothValue evaluate_structval(
 		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
 		
 		if (!o_entry.has_value()) {
-			fprintf(stderr, "This variable %s was not actually present in our value table\n", var_access.target_name.c_str());
-			exit(1);
+			std::string sym_var_name = "ms_:" + var_access.target_name;
+			o_entry = igc.value_table->get(sym_var_name);
+			
+			if (!o_entry.has_value()) {
+				fprintf(stderr, "This variable %s was not actually present in our value table\n", var_access.target_name.c_str());
+				exit(1);
+			}
 		}
 		
 		ValueSymbolTableEntry entry = o_entry.value();

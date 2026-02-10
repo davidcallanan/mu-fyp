@@ -63,6 +63,8 @@ create() -> { ; this comment works
 		age := 23;
 		:octopus "Test";
 		:another_variable 23;
+		:name2 name;
+		name3 := name2;
 	};
 	
 	log("Hello, World!");
