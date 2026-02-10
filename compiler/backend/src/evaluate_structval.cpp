@@ -11,6 +11,7 @@
 #include "t_smooth_value.hpp"
 #include "merge_smooth_value.hpp"
 #include "create_value_symbol_table.hpp"
+#include "process_map_body.hpp"
 
 SmoothValue evaluate_structval(
 	IrGenCtx& igc,
@@ -60,6 +61,12 @@ SmoothValue evaluate_structval(
 	
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
 		const TypeMap& map = **p_v_map;
+		process_map_body(igc, map);
+		
+		std::vector<llvm::Type*> member_types;
+		std::vector<llvm::Value*> member_values;
+		
+		bool has_leaf = false;
 		
 		if (map.leaf_hardval != nullptr) {
 			const Hardval& hardval = *map.leaf_hardval;
@@ -75,28 +82,42 @@ SmoothValue evaluate_structval(
 			}
 			
 			llvm::Value* leaf_value = evaluate_hardval(igc, hardval, type_str);
-			
-			std::vector<llvm::Type*> member_types;
 			member_types.push_back(leaf_value->getType());
-			
-			llvm::StructType* struct_type = llvm::StructType::get(igc.context, member_types);
-			llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-			struct_value = igc.builder.CreateInsertValue(struct_value, leaf_value, 0);
-			
-			return SmoothValue{
-				struct_value,
-				type,
-				true,
-			};
+			member_values.push_back(leaf_value);
+			has_leaf = true;
 		}
 		
-		llvm::StructType* empty_struct_type = llvm::StructType::get(igc.context, {});
-		llvm::Value* struct_value = llvm::UndefValue::get(empty_struct_type);
+		for (const auto& [sym_name, sym_type] : map.sym_inputs) {
+			std::string map_sym_var_name = "ms_" + sym_name;
+			std::optional<ValueSymbolTableEntry> o_entry = igc.value_table.get(map_sym_var_name);
+			
+			if (!o_entry.has_value()) {
+				fprintf(stderr, "Symbol as a variable %s was not really present in the value table\n", sym_name.c_str());
+				exit(1);
+			}
+			
+			ValueSymbolTableEntry entry = o_entry.value();
+			
+			llvm::Value* loaded = igc.builder.CreateLoad(
+				entry.ir_type,
+				entry.alloca_ptr
+			);
+			
+			member_types.push_back(loaded->getType());
+			member_values.push_back(loaded);
+		}
+		
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, member_types);
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		
+		for (size_t i = 0; i < member_values.size(); i++) {
+			struct_value = igc.builder.CreateInsertValue(struct_value, member_values[i], i);
+		}
 		
 		return SmoothValue{
 			struct_value,
 			type,
-			false,
+			has_leaf,
 		};
 	}
 	

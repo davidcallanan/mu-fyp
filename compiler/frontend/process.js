@@ -147,12 +147,25 @@ const map_entry_assign = rule("map_entry_assign", mapData(
 	}),
 ));
 
+const map_entry_sym = rule("map_entry_sym", mapData(
+	join(SYMBOL, typeval),
+	(data) => ({
+		type: "map_entry_sym",
+		name: data[0],
+		typeval: data[1],
+	}),
+));
+
 const map_entry = rule("map_entry", or(
 	mapData(map_entry_log, (data) => ({
 		type: "instruction",
 		data,
 	})),
 	mapData(map_entry_assign, (data) => ({
+		type: "instruction",
+		data,
+	})),
+	mapData(map_entry_sym, (data) => ({
 		type: "instruction",
 		data,
 	})),
@@ -173,16 +186,15 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 	(data) => {
 		const entries = data[2].map(entry => entry[0]);
 		
-		const sym_inputs = Object.fromEntries(
-			(entries
-				.filter(entry => entry.type === "sym_input")
-				.map(entry => [entry.name, entry.data])
-			),
-		);
-		
 		const instructions = (entries
 			.filter(entry => entry.type === "instruction")
 			.map(entry => entry.data)
+		);
+		
+		const sym_inputs = Object.fromEntries(
+			instructions
+				.filter(instr => instr.type === "map_entry_sym")
+				.map(instr => [instr.name, {}])
 		);
 			
 		return {
@@ -215,18 +227,16 @@ const constraint_map_braced_singleline = rule("constraint_map_braced_singleline"
 			}
 		}
 		
-		const sym_inputs = Object.fromEntries(
-			(entries
-				.filter(entry => entry.type === "sym_input")
-				.map(entry => [entry.name, entry.data])
-			),
-		);
-		
 		const instructions = (entries
 			.filter(entry => entry.type === "instruction")
 			.map(entry => entry.data)
 		);
-			
+		
+		const sym_inputs = Object.fromEntries(
+			instructions
+				.filter(instr => instr.type === "map_entry_sym")
+				.map(instr => [instr.name, {}])
+		);
 
 		return {
 			type: "type_map",

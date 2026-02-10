@@ -15,3 +15,8 @@ struct InstructionAssign {
 	std::shared_ptr<Type> typeval;
 };
 
+struct InstructionSym {
+	std::string name;
+	std::shared_ptr<Type> typeval;
+};
+

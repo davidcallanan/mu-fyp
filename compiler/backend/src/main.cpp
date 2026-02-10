@@ -6,6 +6,7 @@
 #include "create_value_symbol_table.hpp"
 #include "evaluate_hardval.hpp"
 #include "evaluate_structval.hpp"
+#include "process_map_body.hpp"
 #include "t_hardval.hpp"
 #include "t_instructions.hpp"
 #include "t_ctx.hpp"
@@ -182,9 +183,10 @@ Type normalize_type(
 				exit(1);
 			}
 			
-			for (auto& [key, value] : typeval["sym_inputs"].items()) { // don't really care about this for now
-				result.sym_inputs[key] = std::make_shared<Type>(normalize_type(value, symbol_table));
-			}
+			// i think populating this later is ok.
+			// for (auto& [key, value] : typeval["sym_inputs"].items()) { // don't really care about this for now
+			// 	result.sym_inputs[key] = std::make_shared<Type>(normalize_type(value, symbol_table));
+			// }
 		}
 		if (typeval.contains("instructions")) {
 			if (!typeval["instructions"].is_array()) {
@@ -232,6 +234,30 @@ Type normalize_type(
 					v_assign->typeval = std::make_shared<Type>(normalized_type);
 					
 					result.execution_sequence.push_back(v_assign);
+					continue;
+				}
+				
+				if (instruction_type == "map_entry_sym") {
+					auto v_sym = std::make_shared<InstructionSym>();
+					
+					if (!instruction_data.contains("name")) {
+						fprintf(stderr, "Expected .name\n");
+						exit(1);
+					}
+					
+					v_sym->name = instruction_data["name"].get<std::string>();
+					
+					if (!instruction_data.contains("typeval")) {
+						fprintf(stderr, "Expected .typeval\n");
+						exit(1);
+					}
+					
+					Type normalized_type = normalize_type(instruction_data["typeval"], symbol_table);
+					v_sym->typeval = std::make_shared<Type>(normalized_type);
+					
+					result.sym_inputs[v_sym->name] = v_sym->typeval;
+					
+					result.execution_sequence.push_back(v_sym);
 					continue;
 				}
 			
@@ -330,51 +356,6 @@ Type normalize_type(
 	
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
 	exit(1);
-}
-
-void process_map_body(
-	IrGenCtx& igc,
-	const TypeMap& body
-) {
-	for (const auto& instruction : body.execution_sequence) {
-		if (std::holds_alternative<std::shared_ptr<InstructionLog>>(instruction)) {
-			const auto& v_log = std::get<std::shared_ptr<InstructionLog>>(instruction);
-			
-			if (v_log->message == nullptr) {
-				llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
-				igc.builder.CreateCall(igc.puts_func, { log_str });
-			} else {
-				SmoothValue smooth = evaluate_structval(igc, *v_log->message);
-				
-				if (!smooth.has_leaf) {
-					fprintf(stderr, "Not good circumstances - no leaf.\n");
-					exit(1);
-				}
-				
-				llvm::Value* leaf = smooth.extract_leaf(igc.builder);
-				igc.builder.CreateCall(igc.puts_func, { leaf });
-			}
-		}
-		
-		if (std::holds_alternative<std::shared_ptr<InstructionAssign>>(instruction)) {
-			const auto& v_assign = std::get<std::shared_ptr<InstructionAssign>>(instruction);
-			
-			std::string map_var_name = "m_" + v_assign->name;
-			
-			SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
-			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, map_var_name);
-			igc.builder.CreateStore(smooth.struct_value, alloca);
-			
-			ValueSymbolTableEntry entry{
-				alloca,
-				smooth.struct_value->getType(),
-				smooth.type,
-				smooth.has_leaf,
-			};
-			
-			igc.value_table.set(map_var_name, entry);
-		}
-	}
 }
 
 void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {

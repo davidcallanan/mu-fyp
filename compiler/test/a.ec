@@ -60,7 +60,9 @@ create() -> { ; this comment works
 	
 	object := {
 		name := "David";
-		age := 23;	
+		age := 23;
+		:octopus "Test";
+		:another_variable 23;
 	};
 	
 	log("Hello, World!");
