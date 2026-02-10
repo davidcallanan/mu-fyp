@@ -426,7 +426,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 			exit(1);
 		}
 		
-		ValueSymbolTable value_table = create_value_symbol_table();
+		std::shared_ptr<ValueSymbolTable> value_table = std::make_shared<ValueSymbolTable>(create_value_symbol_table());
 		
 		IrGenCtx igc = {
 			context,

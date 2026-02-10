@@ -38,9 +38,10 @@ void process_map_body(
 			const auto& v_assign = std::get<std::shared_ptr<InstructionAssign>>(instruction);
 			
 			std::string map_var_name = "m_" + v_assign->name;
+			std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
 			
 			SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
-			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, map_var_name);
+			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
 			igc.builder.CreateStore(smooth.struct_value, alloca);
 			
 			ValueSymbolTableEntry entry{
@@ -50,16 +51,17 @@ void process_map_body(
 				smooth.has_leaf,
 			};
 			
-			igc.value_table.set(map_var_name, entry);
+			igc.value_table->set(map_var_name, entry);
 		}
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionSym>>(instruction)) {
 			const auto& v_sym = std::get<std::shared_ptr<InstructionSym>>(instruction);
 			
 			std::string map_sym_var_name = "ms_" + v_sym->name;
+			std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_sym_var_name;
 			
 			SmoothValue smooth = evaluate_structval(igc, *v_sym->typeval);
-			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, map_sym_var_name);
+			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
 			igc.builder.CreateStore(smooth.struct_value, alloca);
 			
 			ValueSymbolTableEntry entry{
@@ -69,7 +71,7 @@ void process_map_body(
 				smooth.has_leaf,
 			};
 			
-			igc.value_table.set(map_sym_var_name, entry);
+			igc.value_table->set(map_sym_var_name, entry);
 		}
 	}
 }

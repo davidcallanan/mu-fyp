@@ -17,13 +17,17 @@ struct ValueSymbolTableEntry {
 class ValueSymbolTable {
 private:
 	std::map<std::string, ValueSymbolTableEntry> _values;
+	ValueSymbolTable* _parent;
+	std::string _scope_id;
 
 public:
-	ValueSymbolTable();
+	ValueSymbolTable(ValueSymbolTable* parent);
 
 	void set(const std::string& name, const ValueSymbolTableEntry& entry);
 
 	std::optional<ValueSymbolTableEntry> get(const std::string& name);
+	const std::string& scope_id() const;
 };
 
 ValueSymbolTable create_value_symbol_table();
+ValueSymbolTable create_value_symbol_table(ValueSymbolTable* parent);

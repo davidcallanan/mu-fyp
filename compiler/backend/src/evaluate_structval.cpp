@@ -20,7 +20,7 @@ SmoothValue evaluate_structval(
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
 		const auto& var_access = **p_v_var_access;
 		std::string var_name = "m_" + var_access.target_name;
-		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table.get(var_name);
+		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
 		
 		if (!o_entry.has_value()) {
 			fprintf(stderr, "This variable %s was not actually present in our value table\n", var_access.target_name.c_str());
@@ -61,7 +61,14 @@ SmoothValue evaluate_structval(
 	
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
 		const TypeMap& map = **p_v_map;
-		process_map_body(igc, map);
+		std::shared_ptr<ValueSymbolTable> map_value_table = std::make_shared<ValueSymbolTable>(
+			create_value_symbol_table(igc.value_table.get())
+		);
+		
+		IrGenCtx map_igc = igc;
+		map_igc.value_table = map_value_table;
+		
+		process_map_body(map_igc, map);
 		
 		std::vector<llvm::Type*> member_types;
 		std::vector<llvm::Value*> member_values;
@@ -81,7 +88,7 @@ SmoothValue evaluate_structval(
 				}
 			}
 			
-			llvm::Value* leaf_value = evaluate_hardval(igc, hardval, type_str);
+			llvm::Value* leaf_value = evaluate_hardval(map_igc, hardval, type_str);
 			member_types.push_back(leaf_value->getType());
 			member_values.push_back(leaf_value);
 			has_leaf = true;
@@ -89,7 +96,7 @@ SmoothValue evaluate_structval(
 		
 		for (const auto& [sym_name, sym_type] : map.sym_inputs) {
 			std::string map_sym_var_name = "ms_" + sym_name;
-			std::optional<ValueSymbolTableEntry> o_entry = igc.value_table.get(map_sym_var_name);
+			std::optional<ValueSymbolTableEntry> o_entry = map_igc.value_table->get(map_sym_var_name);
 			
 			if (!o_entry.has_value()) {
 				fprintf(stderr, "Symbol as a variable %s was not really present in the value table\n", sym_name.c_str());
@@ -98,7 +105,7 @@ SmoothValue evaluate_structval(
 			
 			ValueSymbolTableEntry entry = o_entry.value();
 			
-			llvm::Value* loaded = igc.builder.CreateLoad(
+			llvm::Value* loaded = map_igc.builder.CreateLoad(
 				entry.ir_type,
 				entry.alloca_ptr
 			);

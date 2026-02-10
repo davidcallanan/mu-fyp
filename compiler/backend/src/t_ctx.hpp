@@ -12,6 +12,6 @@ struct IrGenCtx {
 	llvm::Module& module;
 	llvm::IRBuilder<>& builder;
 	TypeSymbolTable& type_table;
-	ValueSymbolTable& value_table;
+	std::shared_ptr<ValueSymbolTable> value_table;
 	llvm::FunctionCallee& puts_func;
 };
