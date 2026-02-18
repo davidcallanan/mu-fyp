@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[12pt,a4paper,twoside]{report}
 
 \usepackage{comment}
 \usepackage{listings}
@@ -8,7 +8,7 @@
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{tgpagella,eulervm}
+\usepackage{lmodern}
 \usepackage{microtype}
 
 \usepackage[a4paper,margin=1in]{geometry}
@@ -25,6 +25,13 @@
 
 \usepackage{fancyhdr}
 \usepackage{lastpage}
+
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+  {\normalfont\huge\bfseries}
+  {\chaptertitlename\ \thechapter\ --}
+  {0.5em}
+  {}
 
 \usepackage{setspace}
 \onehalfspacing
@@ -51,16 +58,14 @@
 \pagestyle{fancy}
 \fancyhf{}
 
-\newcommand{\HeaderCenterText}{%
-  {\color{headergray}\sffamily\bfseries FYP Final Report 2025-2026}\\
-  {\color{headergray}\sffamily Department of Computer Science}%
-}
+\fancyhead[LE]{\color{headergray}\sffamily\bfseries Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules}
+\fancyhead[RO]{\color{headergray}\sffamily\bfseries\nouppercase{\leftmark}}
 
-\newcommand{\HeaderRightImage}{%
-  \raisebox{-0.2\height}{\includegraphics[height=1.2cm]{mu.png}}%
-}
+\fancyfoot[C]{\sffamily\thepage}
 
-\fancyfoot[C]{\sffamily Page \thepage\ of \pageref*{LastPage}}
+\renewcommand{\chaptermark}[1]{\markboth{Chapter \thechapter\ -- #1}{}}
+
+\fancypagestyle{plain}{\pagestyle{fancy}}
 
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\headheight}{24pt}
@@ -72,10 +77,10 @@
 \begin{document}
 
 \begin{titlepage}
-  \setstretch{1.25}
+  \setstretch{1.125}
   \centering
   
-  {\large\textbf{Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules.}\par}
+  {\large\textbf{Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules}\par}
   
   \vspace{1.5cm}
   
@@ -105,7 +110,7 @@
   
   \vspace{1cm}
   
-  {\textbf{Supervisor: \color{red}{Dr. Phil Maguire}}\par}
+  {\textbf{Supervisor: Dr. Phil Maguire}\par}
   
 \end{titlepage}
 
@@ -115,7 +120,69 @@
 
 \newpage
 
-\section{Parsing Library}
+\thispagestyle{empty}
+
+\section*{Declaration}
+\addcontentsline{toc}{section}{Declaration}
+
+I hereby certify that this material, which I now submit for assessment on the program of study as part of the B.Sc. Computational Thinking qualification, is entirely my own work and has not been taken from the work of others - save and to the extent that such work has been cited and acknowledged within the text of my work.
+
+I hereby acknowledge and accept that this thesis may be distributed to future final year students, as an example of the standard expected of final year projects.
+
+\vspace{2cm}
+
+Signed: \rule{5cm}{0.4pt} \hfill Date: \rule{3cm}{0.4pt}
+
+\vspace{2cm}
+
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
+
+I would like to thank my parents/guardians/siblings/classmate/friends for their \ldots
+
+\newpage
+
+\begin{abstract}
+
+The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels.
+
+\end{abstract}
+
+\newpage
+
+\chapter{Introduction}
+
+TODO
+
+\newpage
+
+test
+
+\newpage
+
+test
+
+\chapter{Technical Background}
+
+TODO
+
+\chapter{The Problem}
+
+TODO
+
+\chapter{The Solution}
+
+TODO
+
+\chapter{Evaluation}
+
+TODO
+
+\chapter{Conclusion}
+
+TODO
+
+\chapter{Parsing Library}
 
 Prior to this project I had already developed a simple parsing library in JavaScript, which allows for:
 
