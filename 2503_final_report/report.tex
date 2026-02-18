@@ -144,7 +144,7 @@ I would like to thank my parents/guardians/siblings/classmate/friends for their 
 
 \begin{abstract}
 
-The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels.
+The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code once that is agnostic to the linking strategy. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries.
 
 \end{abstract}
 
@@ -152,19 +152,55 @@ The logic of computer software is primarily expressed using programming language
 
 \chapter{Introduction}
 
-TODO
+\section{Overview}
 
-\newpage
 
-test
 
-\newpage
+\section{Motivation}
 
-test
+
+
+\section{Methodology}
+
+Thesis structure, and a resesarch strategy.
+
+To address the objectives of this research, a design-science methodology is employed with a focus on continued interation and evaluation of ``Essence C''. This approach was selected because the project is concerned with the implementation of a novel programming language that advances the flexibility and performance of modules in software development, and thus requires a design and implementation process that is informed by ongoing evaluation.
+
+The structure of this thesis is organized to reflect this methodology. Chapter 2 reviews existing literature.
+
+\section{Success Criteria}
+
+Success will be evidenced by the following deliverables:
+
+\begin{enumerate}
+	\item A functional compiler that implements the designed module system;
+	\item Documentation of the module system and other core language features;
+	\item A simple IDE extension that provides syntax highlighting to the programmer;
+	\item A body of research into the continuum of static and dynamic modules in software development, with kernel development as a case study;
+	\item An implementation of link-time optimization techniques that leverage the designed module system;
+	\item An evaluation of the effectiveness of these optimizations through the benchmarking of sample programs;
+	\item A monorepo containing extensive git history, demonstrating ongoing development progress;
+	\item A final written report detailing the research, design, implementation and evaluation of the project.
+\end{enumerate}
+
 
 \chapter{Technical Background}
 
-TODO
+\section{Literature Review}
+
+\subsection{Continuum of static and dynamic modules}
+
+Static vs dynamic dispatch. Everything in between.
+
+\subsection{Module loading in operating system kernels}
+
+\subsection{Link-time optimizations}
+
+\subsection{Inlining and IR-level linking}
+
+\section{Technical Material}
+
+\subsection{LLVM intermediatea representation}
 
 \chapter{The Problem}
 
@@ -172,7 +208,11 @@ TODO
 
 \chapter{The Solution}
 
-TODO
+\section{Individual elements}
+
+\section{Picking of overall solution}
+
+\section{Design and implementation}
 
 \chapter{Evaluation}
 
