@@ -188,13 +188,42 @@ Success will be evidenced by the following deliverables:
 
 \section{Literature Review}
 
-\subsection{Continuum of static and dynamic modules}
+\subsection{Static vs dynamic dispatch}
 
-Static vs dynamic dispatch. Everything in between.
+Methods of class instances (or equivalent constructs) dispatch calls either statically or dynamically. When the exact implementation of a method is known at compile-time, static dispatch is typically used, involving a direct assembly call to the method. Since the method is known at compile-time, the compiler can use an immediate addressing, which is most efficient. In contrast, when the exact implementation of a method is not decided until runtime (or if the compiler cannot prove otherwise), dynamic dispatch is used, which involves an indirect call through a vtable or similar structure.
+
+\subsection{Static vs dynamic linking}
+
+There is much overlap in the literature between dispatch and linking, but linking focuses on larger units of code, often referred to as modules or libraries, as opposed to class instances. This concept exists in C where there is no inbuilt notion of static vs dynamic dispatch.
+
+When the exact source code (implementation) of a module is known at compile-time, static linking is typically used, involving the direct inclusion of the module's code into the final executable. Then, the compiler can use immediate addressing to invoke functions or access data from this module. In contrast, when the exact source code of a module is not decided until runtime, dynamic linking is used which typically requires a Procedure Linkage Table (PLT) and Global Offset Table (GOT).
+
+However, various techniques are already employed to optimize dynamic linking:
+
+\begin{enumerate}
+  \item Some architectures use the "relaxation" technique to replace indirection at runtime by modifying the assembly instructions.
+  \item  PLT Rewriting provided by compilers.
+  \item Bespoke replacement (e.g. linux kernel static\_call).
+\end{enumerate} 
+
+However, two primary concerns of interest are still evident:
+
+\begin{enumerate}
+  \item There is always some level of pointer indirection that cannot be avoided (nvm);
+  \item Various techniques such as inlining become impossible due to this indirection.
+\end{enumerate}
+
+Terrible PIMPLE idiom. Headers of headers.
 
 \subsection{Module loading in operating system kernels}
 
 \subsection{Link-time optimizations}
+
+Traditionally, many optimizations were performed at the language level, before the program was compiled to object files. For instance, inlining could not be performed at link-time because there was insufficient information in the object files to reason about the semantics of the program. While dedicated link-time optimizations were introduced, their scope was limited for this reason.
+
+However, LLVM IR sits in between the level of abstraction of source code and object files, and maintains higher-level semantics. By keeping the program in this intermediate representation longer (and treating this as modern object files), recent developments have made link-time optimizations more powerful, allowing for, for instance, inlining across module boundaries.
+
+
 
 \subsection{Inlining and IR-level linking}
 
@@ -210,6 +239,10 @@ TODO
 
 \section{Individual elements}
 
+\subsection{Modules treated like classes}
+
+\subsection{Additional benefit of inlining: interacting with existing languages without indirection.}
+
 \section{Picking of overall solution}
 
 \section{Design and implementation}
@@ -221,6 +254,13 @@ TODO
 \chapter{Conclusion}
 
 TODO
+
+\subsection{Contribution to state-of-the-art}
+
+- inlining
+- built in language constructs to avoid likes of kernel static\_call
+- continuum of dispatch, not just static vs dynamic, but by merging the notion of class instances (and fusing classes and modules), if we detect multiple instances we can switch to an even more dynamic dispatch mechanism.
+- more efficient inter-language interoperability
 
 \chapter{Parsing Library}
 
