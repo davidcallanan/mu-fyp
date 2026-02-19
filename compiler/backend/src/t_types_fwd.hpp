@@ -17,6 +17,7 @@ struct TypeMerged;
 struct TypeRotten;
 struct TypeLog;
 struct TypeAssign;
+struct TypeCallWithSym;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -27,5 +28,6 @@ using Type = std::variant<
 	std::shared_ptr<TypeMerged>,
 	std::shared_ptr<TypeRotten>,
 	std::shared_ptr<TypeLog>,
-	std::shared_ptr<TypeAssign>
+	std::shared_ptr<TypeAssign>,
+	std::shared_ptr<TypeCallWithSym>
 >;

@@ -13,6 +13,18 @@
 #include "create_value_symbol_table.hpp"
 #include "process_map_body.hpp"
 
+static bool determine_has_leaf(const Type& type) {
+	if (auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
+		return (*p_map)->leaf_hardval != nullptr;
+	}
+	
+	if (auto p_pointer = std::get_if<std::shared_ptr<TypePointer>>(&type)) {
+		return true;
+	}
+	
+	return false;
+}
+
 static SmoothValue access_variable(
 	IrGenCtx& igc,
 	const std::string& target_name
@@ -42,6 +54,46 @@ static SmoothValue access_variable(
 		entry.type,
 		entry.has_leaf,
 	};
+}
+
+static SmoothValue access_member(
+	IrGenCtx& igc,
+	const SmoothValue& target_smooth,
+	const std::string& sym
+) {
+	if (auto p_map_type = std::get_if<std::shared_ptr<TypeMap>>(&target_smooth.type)) {
+		const auto& map_type = *p_map_type;
+		
+		if (map_type->sym_inputs.find(sym) == map_type->sym_inputs.end()) {
+			fprintf(stderr, "Symbol %s not really available here", sym.c_str());
+			exit(1);
+		}
+		
+		const Type& sym_type = *map_type->sym_inputs.at(sym);
+		
+		// i know this logic is terrible but performance is not a concern for me.
+		
+		size_t field_index = (target_smooth.has_leaf ? 1 : 0);
+		
+		for (const auto& [sym_name, _] : map_type->sym_inputs) {
+			if (sym_name == sym) {
+				break;
+			}
+			
+			field_index++;
+		}
+		
+		llvm::Value* extracted = igc.builder.CreateExtractValue(target_smooth.struct_value, field_index);
+		
+		return SmoothValue{
+			extracted,
+			sym_type,
+			determine_has_leaf(sym_type),
+		};
+	} else {
+		fprintf(stderr, "Impossible to call a non-map with a symbol, what are you doing?\n");
+		exit(1);
+	}
 }
 
 SmoothValue evaluate_structval(
@@ -85,8 +137,6 @@ SmoothValue evaluate_structval(
 		std::vector<llvm::Type*> member_types;
 		std::vector<llvm::Value*> member_values;
 		
-		bool has_leaf = false;
-		
 		if (map.leaf_hardval != nullptr) {
 			const Hardval& hardval = *map.leaf_hardval;
 			
@@ -103,7 +153,6 @@ SmoothValue evaluate_structval(
 			llvm::Value* leaf_value = evaluate_hardval(map_igc, hardval, type_str);
 			member_types.push_back(leaf_value->getType());
 			member_values.push_back(leaf_value);
-			has_leaf = true;
 		}
 		
 		for (const auto& [sym_name, sym_type] : map.sym_inputs) {
@@ -136,7 +185,7 @@ SmoothValue evaluate_structval(
 		return SmoothValue{
 			struct_value,
 			type,
-			has_leaf,
+			determine_has_leaf(type),
 		};
 	}
 	
@@ -212,6 +261,12 @@ SmoothValue evaluate_structval(
 		igc.value_table->set(map_var_name, entry);
 		
 		return access_variable(igc, v_assign->name);
+	}
+	
+	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
+		const auto& v_call_with_sym = std::get<std::shared_ptr<TypeCallWithSym>>(type);
+		SmoothValue target_smooth = evaluate_structval(igc, *v_call_with_sym->target);
+		return access_member(igc, target_smooth, v_call_with_sym->sym);
 	}
 	
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");

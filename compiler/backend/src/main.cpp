@@ -293,6 +293,25 @@ Type normalize_type(
 		return v_log;
 	}
 	
+	if (type == "expr_call_with_sym") {
+		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
+		
+		if (!typeval.contains("target")) {
+			fprintf(stderr, "Where is this .target gone!\n");
+			exit(1);
+		}
+		
+		if (!typeval.contains("sym")) {
+			fprintf(stderr, "Where is the .sym gone!\n");
+			exit(1);
+		}
+		
+		v_call_with_sym->target = std::make_shared<Type>(normalize_type(typeval["target"], symbol_table));
+		v_call_with_sym->sym = typeval["sym"].get<std::string>();
+		
+		return v_call_with_sym;
+	}
+	
 	if (type == "type_constrained") {
 		if (false
 			|| !typeval.contains("constraints")

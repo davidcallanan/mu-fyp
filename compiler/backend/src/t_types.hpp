@@ -43,3 +43,8 @@ struct TypeAssign {
 	std::string name;
 	std::shared_ptr<Type> typeval;
 };
+
+struct TypeCallWithSym {
+	std::shared_ptr<Type> target;
+	std::string sym;
+};
