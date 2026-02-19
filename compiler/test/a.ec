@@ -67,6 +67,8 @@ create() -> { ; this comment works
 		name3 := name2;
 	};
 	
+	; foo := object:name2;
+	
 	log("Hello, World!");
 	log();
 	log("This log statement can now handle strings coming from variables.");

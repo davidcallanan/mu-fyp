@@ -201,39 +201,57 @@ Type normalize_type(
 				
 				std::string instruction_type = instruction_data["type"];
 				
-				if (instruction_type == "map_entry_log") {
-					auto v_log = std::make_shared<InstructionLog>();
+				if (instruction_type == "map_entry_expr") {
+					auto v_expr = std::make_shared<InstructionExpr>();
 					
-					v_log->message = (false
-						|| !instruction_data.contains("message")
-						|| instruction_data["message"].is_null()
-					) ? nullptr : std::make_shared<Type>(normalize_type(instruction_data["message"], symbol_table));
-					
-					result.execution_sequence.push_back(v_log);
-					
-					continue;
-				}
-				
-				if (instruction_type == "map_entry_assign") {
-					auto v_assign = std::make_shared<InstructionAssign>();
-					
-					if (!instruction_data.contains("name")) {
-						fprintf(stderr, "Expected .name\n");
+					if (!instruction_data.contains("expr")) {
+						fprintf(stderr, "Expected an actual .expr\n");
 						exit(1);
 					}
 					
+					const auto& expr_data = instruction_data["expr"];
 					
-					v_assign->name = instruction_data["name"].get<std::string>();
-					
-					if (!instruction_data.contains("typeval")) {
-						fprintf(stderr, "Expected .typeval\n");
+					if (!expr_data.contains("type")) {
+						fprintf(stderr, "Expected a .type\n");
 						exit(1);
 					}
 					
-					Type normalized_type = normalize_type(instruction_data["typeval"], symbol_table);
-					v_assign->typeval = std::make_shared<Type>(normalized_type);
+					std::string expr_type = expr_data["type"];
 					
-					result.execution_sequence.push_back(v_assign);
+					if (expr_type == "expr_log") {
+						auto v_log = std::make_shared<TypeLog>();
+						
+						v_log->message = (false
+							|| !expr_data.contains("message")
+							|| expr_data["message"].is_null()
+						) ? nullptr : std::make_shared<Type>(normalize_type(expr_data["message"], symbol_table));
+						
+						v_expr->expr = std::make_shared<Type>(v_log);
+					} else if (expr_type == "expr_assign") {
+						auto v_assign = std::make_shared<TypeAssign>();
+						
+						if (!expr_data.contains("name")) {
+							fprintf(stderr, "Expected .name\n");
+							exit(1);
+						}
+						
+						v_assign->name = expr_data["name"].get<std::string>();
+						
+						if (!expr_data.contains("typeval")) {
+							fprintf(stderr, "Expected .typeval\n");
+							exit(1);
+						}
+						
+						Type normalized_type = normalize_type(expr_data["typeval"], symbol_table);
+						v_assign->typeval = std::make_shared<Type>(normalized_type);
+						
+						v_expr->expr = std::make_shared<Type>(v_assign);
+					} else {
+						fprintf(stderr, "Unusual expression type detected: %s\n", expr_type.c_str());
+						exit(1);
+					}
+					
+					result.execution_sequence.push_back(v_expr);
 					continue;
 				}
 				

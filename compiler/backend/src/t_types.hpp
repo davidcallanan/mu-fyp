@@ -34,3 +34,12 @@ struct TypeMerged {
 struct TypeRotten {
 	std::string type_str;
 };
+
+struct TypeLog {
+	std::shared_ptr<Type> message;
+};
+
+struct TypeAssign {
+	std::string name;
+	std::shared_ptr<Type> typeval;
+};

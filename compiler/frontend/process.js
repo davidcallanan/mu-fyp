@@ -75,10 +75,10 @@ const symbol_path = rule("symbol_path", mapData(
 	}),
 ));
 
-const map_entry_log = rule("map_entry_log", mapData(
+const expr_log = rule("expr_log", mapData(
 	join(KW_LOG, LPAREN, opt(typeval), RPAREN),
 	(data) => ({
-		type: "map_entry_log",
+		type: "expr_log",
 		message: data[2],
 	}),
 ));
@@ -138,10 +138,10 @@ hardval.define(rule("hardval", or(
 	),
 )));
 
-const map_entry_assign = rule("map_entry_assign", mapData(
+const expr_assign = rule("expr_assign", mapData(
 	join(IDENT, WALRUS, typeval),
 	(data) => ({
-		type: "map_entry_assign",
+		type: "expr_assign",
 		name: data[0],
 		typeval: data[2],
 	}),
@@ -156,12 +156,21 @@ const map_entry_sym = rule("map_entry_sym", mapData(
 	}),
 ));
 
+const expr = rule("expr", or(
+	expr_log,
+	expr_assign,
+));
+
+const map_entry_expr = rule("map_entry_expr", mapData(
+	expr,
+	(data) => ({
+		type: "map_entry_expr",
+		expr: data,
+	}),
+));
+
 const map_entry = rule("map_entry", or(
-	mapData(map_entry_log, (data) => ({
-		type: "instruction",
-		data,
-	})),
-	mapData(map_entry_assign, (data) => ({
+	mapData(map_entry_expr, (data) => ({
 		type: "instruction",
 		data,
 	})),

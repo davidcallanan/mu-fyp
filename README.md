@@ -22,4 +22,10 @@ Of course, this final year project is really just initial research and developme
 
 ## Git Submodules
 
-When cloning this repo, make sure git "submodules" are enabled and are recursively cloned.
+**Mandatory:** When cloning this repo, make sure git "submodules" are enabled and are recursively cloned.
+
+If you have accidentally cloned without submodules, it is no problem, simply run this command:
+
+```
+git submodule update --init --recursive
+```
