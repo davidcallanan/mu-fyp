@@ -61,21 +61,21 @@ static SmoothValue access_member(
 	const SmoothValue& target_smooth,
 	const std::string& sym
 ) {
-	if (auto p_map_type = std::get_if<std::shared_ptr<TypeMap>>(&target_smooth.type)) {
-		const auto& map_type = *p_map_type;
+	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&target_smooth.type)) {
+		const auto& v_map = *p_v_map;
 		
-		if (map_type->sym_inputs.find(sym) == map_type->sym_inputs.end()) {
+		if (v_map->sym_inputs.find(sym) == v_map->sym_inputs.end()) {
 			fprintf(stderr, "Symbol %s not really available here", sym.c_str());
 			exit(1);
 		}
 		
-		const Type& sym_type = *map_type->sym_inputs.at(sym);
+		const Type& sym_type = *v_map->sym_inputs.at(sym);
 		
 		// i know this logic is terrible but performance is not a concern for me.
 		
 		size_t field_index = (target_smooth.has_leaf ? 1 : 0);
 		
-		for (const auto& [sym_name, _] : map_type->sym_inputs) {
+		for (const auto& [sym_name, _] : v_map->sym_inputs) {
 			if (sym_name == sym) {
 				break;
 			}
