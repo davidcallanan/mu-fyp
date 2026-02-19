@@ -73,4 +73,5 @@ create() -> { ; this comment works
 	log();
 	log("This log statement can now handle strings coming from variables.");
 	log(str3);
+	log(access_during_assign := "This is really cool");
 }

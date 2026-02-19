@@ -162,7 +162,7 @@ const expr = rule("expr", or(
 ));
 
 const map_entry_expr = rule("map_entry_expr", mapData(
-	expr,
+	typeval,
 	(data) => ({
 		type: "map_entry_expr",
 		expr: data,
@@ -438,6 +438,7 @@ const type_callable = rule("type_callable", mapData(
 ));
 
 typeval.define(rule("typeval", or(
+	expr,
 	type_callable,
 	typeval_atom,
 )));

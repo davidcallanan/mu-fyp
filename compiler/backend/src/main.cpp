@@ -209,47 +209,8 @@ Type normalize_type(
 						exit(1);
 					}
 					
-					const auto& expr_data = instruction_data["expr"];
-					
-					if (!expr_data.contains("type")) {
-						fprintf(stderr, "Expected a .type\n");
-						exit(1);
-					}
-					
-					std::string expr_type = expr_data["type"];
-					
-					if (expr_type == "expr_log") {
-						auto v_log = std::make_shared<TypeLog>();
-						
-						v_log->message = (false
-							|| !expr_data.contains("message")
-							|| expr_data["message"].is_null()
-						) ? nullptr : std::make_shared<Type>(normalize_type(expr_data["message"], symbol_table));
-						
-						v_expr->expr = std::make_shared<Type>(v_log);
-					} else if (expr_type == "expr_assign") {
-						auto v_assign = std::make_shared<TypeAssign>();
-						
-						if (!expr_data.contains("name")) {
-							fprintf(stderr, "Expected .name\n");
-							exit(1);
-						}
-						
-						v_assign->name = expr_data["name"].get<std::string>();
-						
-						if (!expr_data.contains("typeval")) {
-							fprintf(stderr, "Expected .typeval\n");
-							exit(1);
-						}
-						
-						Type normalized_type = normalize_type(expr_data["typeval"], symbol_table);
-						v_assign->typeval = std::make_shared<Type>(normalized_type);
-						
-						v_expr->expr = std::make_shared<Type>(v_assign);
-					} else {
-						fprintf(stderr, "Unusual expression type detected: %s\n", expr_type.c_str());
-						exit(1);
-					}
+					Type actually_normalized = normalize_type(instruction_data["expr"], symbol_table);
+					v_expr->expr = std::make_shared<Type>(actually_normalized);
 					
 					result.execution_sequence.push_back(v_expr);
 					continue;
@@ -298,6 +259,38 @@ Type normalize_type(
 		return std::make_shared<TypeVarAccess>(TypeVarAccess{
 			target_name,
 		});
+	}
+	
+	if (type == "expr_assign") {
+		auto v_assign = std::make_shared<TypeAssign>();
+		
+		if (!typeval.contains("name")) {
+			fprintf(stderr, "expected .name\n");
+			exit(1);
+		}
+		
+		v_assign->name = typeval["name"].get<std::string>();
+		
+		if (!typeval.contains("typeval")) {
+			fprintf(stderr, "expectred .typeval\n");
+			exit(1);
+		}
+		
+		Type delicious_type = normalize_type(typeval["typeval"], symbol_table);
+		v_assign->typeval = std::make_shared<Type>(delicious_type);
+		
+		return v_assign;
+	}
+	
+	if (type == "expr_log") {
+		auto v_log = std::make_shared<TypeLog>();
+		
+		v_log->message = (false
+			|| !typeval.contains("message")
+			|| typeval["message"].is_null()
+		) ? nullptr : std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+		
+		return v_log;
 	}
 	
 	if (type == "type_constrained") {

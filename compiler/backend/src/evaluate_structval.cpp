@@ -13,37 +13,44 @@
 #include "create_value_symbol_table.hpp"
 #include "process_map_body.hpp"
 
+static SmoothValue access_variable(
+	IrGenCtx& igc,
+	const std::string& target_name
+) {
+	std::string var_name = "m_" + target_name;
+	std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
+	
+	if (!o_entry.has_value()) {
+		std::string sym_var_name = "ms_:" + target_name;
+		o_entry = igc.value_table->get(sym_var_name);
+		
+		if (!o_entry.has_value()) {
+			fprintf(stderr, "This variable %s was not actually present in our value table\n", target_name.c_str());
+			exit(1);
+		}
+	}
+	
+	ValueSymbolTableEntry entry = o_entry.value();
+	
+	llvm::Value* loaded = igc.builder.CreateLoad(
+		entry.ir_type,
+		entry.alloca_ptr
+	);
+	
+	return SmoothValue{
+		loaded,
+		entry.type,
+		entry.has_leaf,
+	};
+}
+
 SmoothValue evaluate_structval(
 	IrGenCtx& igc,
 	const Type& type
 ) {
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
 		const auto& var_access = **p_v_var_access;
-		std::string var_name = "m_" + var_access.target_name;
-		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
-		
-		if (!o_entry.has_value()) {
-			std::string sym_var_name = "ms_:" + var_access.target_name;
-			o_entry = igc.value_table->get(sym_var_name);
-			
-			if (!o_entry.has_value()) {
-				fprintf(stderr, "This variable %s was not actually present in our value table\n", var_access.target_name.c_str());
-				exit(1);
-			}
-		}
-		
-		ValueSymbolTableEntry entry = o_entry.value();
-		
-		llvm::Value* loaded = igc.builder.CreateLoad(
-			entry.ir_type,
-			entry.alloca_ptr
-		);
-		
-		return SmoothValue{
-			loaded,
-			entry.type,
-			entry.has_leaf,
-		};
+		return access_variable(igc, var_access.target_name);
 	}
 	
 	if (auto p_v_merged = std::get_if<std::shared_ptr<TypeMerged>>(&type)) {
@@ -155,6 +162,56 @@ SmoothValue evaluate_structval(
 			type,
 			true,
 		};
+	}
+	
+	if (auto p_v_log = std::get_if<std::shared_ptr<TypeLog>>(&type)) {
+		const auto& v_log = std::get<std::shared_ptr<TypeLog>>(type);
+		
+		if (v_log->message == nullptr) {
+			llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
+			igc.builder.CreateCall(igc.puts_func, { log_str });
+		} else {
+			SmoothValue smooth = evaluate_structval(igc, *v_log->message);
+			
+			if (!smooth.has_leaf) {
+				fprintf(stderr, "Not good circumstances - no leaf.\n");
+				exit(1);
+			}
+			
+			llvm::Value* leaf = smooth.extract_leaf(igc.builder);
+			igc.builder.CreateCall(igc.puts_func, { leaf });
+		}
+		
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		
+		return SmoothValue{
+			struct_value,
+			type,
+			false,
+		};
+	}
+	
+	if (auto p_v_assign = std::get_if<std::shared_ptr<TypeAssign>>(&type)) {
+		const auto& v_assign = std::get<std::shared_ptr<TypeAssign>>(type);
+		
+		std::string map_var_name = "m_" + v_assign->name;
+		std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
+		
+		SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
+		llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
+		igc.builder.CreateStore(smooth.struct_value, alloca);
+		
+		ValueSymbolTableEntry entry{
+			alloca,
+			smooth.struct_value->getType(),
+			smooth.type,
+			smooth.has_leaf,
+		};
+		
+		igc.value_table->set(map_var_name, entry);
+		
+		return access_variable(igc, v_assign->name);
 	}
 	
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");

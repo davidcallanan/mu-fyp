@@ -17,45 +17,7 @@ void process_map_body(
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionExpr>>(instruction)) {
 			const auto& v_expr = std::get<std::shared_ptr<InstructionExpr>>(instruction);
-			
-			if (std::holds_alternative<std::shared_ptr<TypeLog>>(*v_expr->expr)) {
-				const auto& v_log = std::get<std::shared_ptr<TypeLog>>(*v_expr->expr);
-				
-				if (v_log->message == nullptr) {
-					llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
-					igc.builder.CreateCall(igc.puts_func, { log_str });
-				} else {
-					SmoothValue smooth = evaluate_structval(igc, *v_log->message);
-					
-					if (!smooth.has_leaf) {
-						fprintf(stderr, "Not good circumstances - no leaf.\n");
-						exit(1);
-					}
-					
-					llvm::Value* leaf = smooth.extract_leaf(igc.builder);
-					igc.builder.CreateCall(igc.puts_func, { leaf });
-				}
-			}
-			
-			if (std::holds_alternative<std::shared_ptr<TypeAssign>>(*v_expr->expr)) {
-				const auto& v_assign = std::get<std::shared_ptr<TypeAssign>>(*v_expr->expr);
-				
-				std::string map_var_name = "m_" + v_assign->name;
-				std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
-				
-				SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
-				llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
-				igc.builder.CreateStore(smooth.struct_value, alloca);
-				
-				ValueSymbolTableEntry entry{
-					alloca,
-					smooth.struct_value->getType(),
-					smooth.type,
-					smooth.has_leaf,
-				};
-				
-				igc.value_table->set(map_var_name, entry);
-			}
+			evaluate_structval(igc, *v_expr->expr);
 		}
 		
 		if (std::holds_alternative<std::shared_ptr<InstructionSym>>(instruction)) {
