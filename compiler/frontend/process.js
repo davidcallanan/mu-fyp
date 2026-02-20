@@ -23,6 +23,7 @@ const withSkippers = (p) => mapData(join(SKIPPERS, p, SKIPPERS), data => data[1]
 const withCarefulSkippers = (p) => mapData(join(SKIPPERS, p, CORE_SKIPPERS), data => data[1]);
 const withLeftSkippers = (p) => mapData(join(SKIPPERS, p), data => data[1]);
 const withRightSkippers = (p) => mapData(join(p, SKIPPERS), data => data[0]);
+const withBareboneSkippers = (p) => mapData(join(CORE_SKIPPERS, p, CORE_SKIPPERS), data => data[1]);
 
 const MANDATORY_NEWLINE = rule("MANDATORY_NEWLINE", join(CORE_SKIPPERS, or(SINGLELINE_COMMENT, NEWLINE)));
 
@@ -52,6 +53,7 @@ const TYPE_IDENT = rule("TYPE_IDENT", withCarefulSkippers(mapData(/^(?:(?:([a-z]
 const TYPES_IDENT = rule("TYPES_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)));
 const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all))); // identical to TYPES_IDENT for now.
 const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const IDENT = rule("IDENT", withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
 const EXTAT = rule("EXTAT", withLeftSkippers("@"));
@@ -64,6 +66,7 @@ const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)
 const hardval = declare();
 const typeval = declare();
 const typeval_atom = declare();
+const type_callable = declare();
 
 const symbol_path = rule("symbol_path", mapData(
 	multi(
@@ -159,11 +162,12 @@ const map_entry_sym = rule("map_entry_sym", mapData(
 const expr25 = rule("expr25", or(
 	expr_log,
 	expr_assign,
+	type_callable,
 ));
 
 const expr75 = rule("expr75", mapData(join(
 	expr25,
-	// opt_multi(SYMBOL),
+	opt_multi(SYMBOL_BARE),
 ), (data) => {
 	return data[0];
 }));
@@ -437,7 +441,7 @@ typeval_atom.define(rule("typeval_atom", or(
 	// ),
 )));
 
-const type_callable = rule("type_callable", mapData(
+type_callable.define(rule("type_callable", mapData(
 	join(typeval_atom, ARROW, typeval_atom),
 	(data) => ({
 		type: "type_map",
@@ -446,11 +450,10 @@ const type_callable = rule("type_callable", mapData(
 		call_output_type: data[2],
 		sym_inputs: new Map(), // todo: do i want to switch from object to Map everywhere?
 	}),
-));
+)));
 
 typeval.define(rule("typeval", or(
 	expr,
-	type_callable,
 	typeval_atom,
 )));
 
