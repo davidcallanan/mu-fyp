@@ -156,9 +156,20 @@ const map_entry_sym = rule("map_entry_sym", mapData(
 	}),
 ));
 
-const expr = rule("expr", or(
+const expr25 = rule("expr25", or(
 	expr_log,
 	expr_assign,
+));
+
+const expr75 = rule("expr75", mapData(join(
+	expr25,
+	// opt_multi(SYMBOL),
+), (data) => {
+	return data[0];
+}));
+
+const expr = rule("expr", or(
+	expr75,
 ));
 
 const map_entry_expr = rule("map_entry_expr", mapData(
