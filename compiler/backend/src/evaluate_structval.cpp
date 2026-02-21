@@ -74,7 +74,7 @@ static SmoothValue access_member(
 		}
 		
 		const Type& unclear_type = *v_map->sym_inputs.at(sym_key);
-		const Type& sym_type = get_underlying_type(unclear_type);
+		Type sym_type = get_underlying_type(unclear_type, igc.value_table.get());
 		
 		// i know this logic is terrible but performance is not a concern for me.
 		
