@@ -67,13 +67,13 @@ create() -> { ; this comment works
 		name3 := name2;
 	};
 	
-	; foo := object:name2;
+	foo := object:name2;
 	; bar := object:name2:octopus;
 	
 	log("Hello, World!");
 	log();
 	log("This log statement can now handle strings coming from variables.");
 	log(str3);
-	; log(foo);
+	log(foo);
 	log(access_during_assign := "This is really cool");
 }

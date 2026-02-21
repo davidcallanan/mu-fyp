@@ -25,6 +25,7 @@ struct TypePointer {
 
 struct TypeVarAccess {
 	std::string target_name;
+	std::shared_ptr<Type> underlying_type;
 };
 
 struct TypeMerged {
@@ -42,6 +43,7 @@ struct TypeLog {
 struct TypeAssign {
 	std::string name;
 	std::shared_ptr<Type> typeval;
+	std::shared_ptr<Type> underlying_type; // note this is not the underlying type of the assignment, but rather the usage of assignment as an expression, which evaluates to a variable access - equivalent to underlying_type in TypeVarAccess.
 };
 
 struct TypeCallWithSym {

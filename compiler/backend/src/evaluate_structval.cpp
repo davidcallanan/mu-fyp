@@ -29,8 +29,22 @@ static bool determine_has_leaf(const Type& type) {
 
 static SmoothValue access_variable(
 	IrGenCtx& igc,
-	const std::string& target_name
+	const Type& node
 ) {
+	std::string target_name;
+	std::shared_ptr<Type>* underlying_type = nullptr;
+	
+	if (auto p = std::get_if<std::shared_ptr<TypeVarAccess>>(&node)) {
+		target_name = (*p)->target_name;
+		underlying_type = &(*p)->underlying_type;
+	} else if (auto p = std::get_if<std::shared_ptr<TypeAssign>>(&node)) {
+		target_name = (*p)->name;
+		underlying_type = &(*p)->underlying_type;
+	} else {
+		fprintf(stderr, "only TypeAssign and TypeVarAccess can access a variable!\n");
+		exit(1);
+	}
+	
 	std::string var_name = "m_" + target_name;
 	std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
 	
@@ -45,6 +59,8 @@ static SmoothValue access_variable(
 	}
 	
 	const ValueSymbolTableEntry& entry = o_entry.value();
+	
+	*underlying_type = std::make_shared<Type>(entry.type);
 	
 	llvm::Value* loaded = igc.builder.CreateLoad(
 		entry.ir_type,
@@ -74,7 +90,7 @@ static SmoothValue access_member(
 		}
 		
 		const Type& unclear_type = *v_map->sym_inputs.at(sym_key);
-		Type sym_type = get_underlying_type(unclear_type, igc.value_table.get());
+		Type sym_type = get_underlying_type(unclear_type);
 		
 		// i know this logic is terrible but performance is not a concern for me.
 		
@@ -125,7 +141,7 @@ SmoothValue evaluate_structval(
 	const Type& type
 ) {
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
-		return access_variable(igc, (*p_v_var_access)->target_name);
+		return access_variable(igc, type);
 	}
 	
 	if (auto p_v_merged = std::get_if<std::shared_ptr<TypeMerged>>(&type)) {
@@ -286,7 +302,7 @@ SmoothValue evaluate_structval(
 		
 		igc.value_table->set(map_var_name, entry);
 		
-		return access_variable(igc, v_assign->name);
+		return access_variable(igc, type);
 	}
 	
 	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
