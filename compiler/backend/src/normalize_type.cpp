@@ -243,25 +243,47 @@ Type normalize_type(
 		return v_var_access;
 	}
 	
-	if (type == "expr_assign") {
-		auto v_assign = std::make_shared<TypeAssign>();
+	if (type == "expr_var_walrus") {
+		auto v_var_walrus = std::make_shared<TypeVarWalrus>();
 		
 		if (!typeval.contains("name")) {
 			fprintf(stderr, "expected .name\n");
 			exit(1);
 		}
 		
-		v_assign->name = typeval["name"].get<std::string>();
+		v_var_walrus->name = typeval["name"].get<std::string>();
+		v_var_walrus->is_mut = typeval.value("is_mut", false);
 		
 		if (!typeval.contains("typeval")) {
-			fprintf(stderr, "expectred .typeval\n");
+			fprintf(stderr, "expected .typeval\n");
 			exit(1);
 		}
 		
 		Type delicious_type = normalize_type(typeval["typeval"], symbol_table);
-		v_assign->typeval = std::make_shared<Type>(delicious_type);
+		v_var_walrus->typeval = std::make_shared<Type>(delicious_type);
 		
-		return v_assign;
+		return v_var_walrus;
+	}
+	
+	if (type == "expr_var_assign") {
+		auto v_var_assign = std::make_shared<TypeVarAssign>();
+		
+		if (!typeval.contains("name")) {
+			fprintf(stderr, "expected .name\n");
+			exit(1);
+		}
+		
+		v_var_assign->name = typeval["name"].get<std::string>();
+		
+		if (!typeval.contains("typeval")) {
+			fprintf(stderr, "expectred .typevla\n");
+			exit(1);
+		}
+		
+		Type delicious_type = normalize_type(typeval["typeval"], symbol_table);
+		v_var_assign->typeval = std::make_shared<Type>(delicious_type);
+		
+		return v_var_assign;
 	}
 	
 	if (type == "expr_log") {

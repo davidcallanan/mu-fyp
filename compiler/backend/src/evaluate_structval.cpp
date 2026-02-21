@@ -13,6 +13,7 @@
 #include "create_value_symbol_table.hpp"
 #include "process_map_body.hpp"
 #include "get_underlying_type.hpp"
+#include "is_subset_type.hpp"
 
 static bool determine_has_leaf(const Type& type) {
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -37,11 +38,14 @@ static SmoothValue access_variable(
 	if (auto p = std::get_if<std::shared_ptr<TypeVarAccess>>(&node)) {
 		target_name = (*p)->target_name;
 		underlying_type = &(*p)->underlying_type;
-	} else if (auto p = std::get_if<std::shared_ptr<TypeAssign>>(&node)) {
+	} else if (auto p = std::get_if<std::shared_ptr<TypeVarWalrus>>(&node)) {
+		target_name = (*p)->name;
+		underlying_type = &(*p)->underlying_type;
+	} else if (auto p = std::get_if<std::shared_ptr<TypeVarAssign>>(&node)) {
 		target_name = (*p)->name;
 		underlying_type = &(*p)->underlying_type;
 	} else {
-		fprintf(stderr, "only TypeAssign and TypeVarAccess can access a variable!\n");
+		fprintf(stderr, "only TypeVarWalrus, TypeVarAssign, and TypeVarAccess can access a variable!\n");
 		exit(1);
 	}
 	
@@ -282,13 +286,13 @@ SmoothValue evaluate_structval(
 		};
 	}
 	
-	if (auto p_v_assign = std::get_if<std::shared_ptr<TypeAssign>>(&type)) {
-		const auto& v_assign = std::get<std::shared_ptr<TypeAssign>>(type);
+	if (auto p_v_var_walrus = std::get_if<std::shared_ptr<TypeVarWalrus>>(&type)) {
+		const auto& v_var_walrus = std::get<std::shared_ptr<TypeVarWalrus>>(type);
 		
-		std::string map_var_name = "m_" + v_assign->name;
+		std::string map_var_name = "m_" + v_var_walrus->name;
 		std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
 		
-		SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
+		SmoothValue smooth = evaluate_structval(igc, *v_var_walrus->typeval);
 		llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
 		igc.builder.CreateStore(smooth.struct_value, alloca);
 		
@@ -298,9 +302,42 @@ SmoothValue evaluate_structval(
 			smooth.struct_value->getType(),
 			smooth.type,
 			smooth.has_leaf,
+			v_var_walrus->is_mut,
 		};
 		
 		igc.value_table->set(map_var_name, entry);
+		
+		return access_variable(igc, type);
+	}
+	
+	if (auto p_v_var_assign = std::get_if<std::shared_ptr<TypeVarAssign>>(&type)) {
+		const auto& v_var_assign = std::get<std::shared_ptr<TypeVarAssign>>(type);
+		
+		std::string map_var_name = "m_" + v_var_assign->name;
+		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(map_var_name);
+		
+		if (!o_entry.has_value()) {
+			fprintf(stderr, "So %s does not exist.\n", v_var_assign->name.c_str());
+			exit(1);
+		}
+		
+		const ValueSymbolTableEntry& existing = o_entry.value();
+		
+		if (!existing.is_mut) {
+			fprintf(stderr, "Cannot mutate immutable variable %s, consider adding \"mut\" keyword like `mut x := 5;`\n", v_var_assign->name.c_str());
+			exit(1);
+		}
+		
+		SmoothValue smooth = evaluate_structval(igc, *v_var_assign->typeval);
+		
+		if (!is_subset_type(smooth.type, existing.type)) {
+			fprintf(stderr, "Value is not assignable to variable \"%s\" due to incompatibility (types are not subsets)\n", v_var_assign->name.c_str());
+			exit(1);
+		}
+		
+		igc.builder.CreateStore(smooth.struct_value, existing.alloca_ptr);
+		
+		// todo: yeah no chance this is gonna work, since LLVM IR uses immutable variables with phi.
 		
 		return access_variable(igc, type);
 	}

@@ -35,6 +35,7 @@ void process_map_body(
 				smooth.struct_value->getType(),
 				smooth.type,
 				smooth.has_leaf,
+				false, // syms, when treated as variables, are always immutable.
 			};
 			
 			igc.value_table->set(map_sym_var_name, entry);

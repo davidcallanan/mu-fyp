@@ -40,10 +40,17 @@ struct TypeLog {
 	std::shared_ptr<Type> message;
 };
 
-struct TypeAssign {
+struct TypeVarWalrus {
 	std::string name;
+	bool is_mut;
 	std::shared_ptr<Type> typeval;
 	std::shared_ptr<Type> underlying_type; // note this is not the underlying type of the assignment, but rather the usage of assignment as an expression, which evaluates to a variable access - equivalent to underlying_type in TypeVarAccess.
+};
+
+struct TypeVarAssign {
+	std::string name;
+	std::shared_ptr<Type> typeval;
+	std::shared_ptr<Type> underlying_type; // note this is similar to TypeVarWalrus
 };
 
 struct TypeCallWithSym {

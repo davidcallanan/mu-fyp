@@ -36,6 +36,7 @@ const KW_IMPORT = rule("KW_IMPORT", withCarefulSkippers("import"));
 const KW_MOD = rule("KW_MOD", withCarefulSkippers("mod"));
 const KW_CREATE = rule("KW_CREATE", withCarefulSkippers("create"));
 const KW_LOG = rule("KW_LOG", withCarefulSkippers("log"));
+const KW_MUT = rule("KW_MUT", withCarefulSkippers("mut"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -59,6 +60,7 @@ const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z
 const IDENT = rule("IDENT", withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const IDENT_BB = rule("IDENT_BB", withBareboneSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups[0])));
 const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
+const EQUALS = rule("EQUALS", withCarefulSkippers("="));
 const EXTAT = rule("EXTAT", withLeftSkippers("@"));
 const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
 const INTEGER_BB = rule("INTEGER_BB", withBareboneSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
@@ -203,10 +205,20 @@ hardval_bb.define(rule("hardval_bb", or(
 	),
 )));
 
-const expr_assign = rule("expr_assign", mapData(
-	join(IDENT, WALRUS, typeval),
+const expr_var_walrus = rule("expr_var_walrus", mapData(
+	join(opt(KW_MUT), IDENT, WALRUS, typeval),
 	(data) => ({
-		type: "expr_assign",
+		type: "expr_var_walrus",
+		is_mut: data[0] !== undefined,
+		name: data[1],
+		typeval: data[3],
+	}),
+));
+
+const expr_var_assign = rule("expr_var_assign", mapData(
+	join(IDENT, EQUALS, typeval),
+	(data) => ({
+		type: "expr_var_assign",
 		name: data[0],
 		typeval: data[2],
 	}),
@@ -245,7 +257,8 @@ const expr75 = rule("expr75", mapData(join(
 }));
 
 const expr85 = rule("expr85", or(
-	expr_assign,
+	expr_var_walrus,
+	expr_var_assign,
 	expr75
 ));
 
