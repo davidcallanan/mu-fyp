@@ -61,6 +61,7 @@ create() -> { ; this comment works
 	str2 := *u8 "Hello, Kingdom!";
 	str3 := str2;
 	str4 := String "Test";
+	mut str5 := String "Mutable String";
 	
 	object := {
 		name := "David";
@@ -85,4 +86,10 @@ create() -> { ; this comment works
 	log(foo);
 	log(bar);
 	log(access_during_assign := "This is really cool");
+	
+	log("Str 5 is:");
+	log(str5);
+	str5 = String "New mutated value!";
+	log("Str 5 is now:");
+	log(str5);
 }

@@ -249,6 +249,10 @@ TODO
 
 \section{Implementation}
 
+\subsection{Mutability}
+
+LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus variables are entirely implemented using stack allocations.
+
 \subsection{Tooling and Infrastructure}
 
 \subsubsection{Parser Trace Explorer}

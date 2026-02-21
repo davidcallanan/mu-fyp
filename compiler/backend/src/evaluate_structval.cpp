@@ -337,7 +337,8 @@ SmoothValue evaluate_structval(
 		
 		igc.builder.CreateStore(smooth.struct_value, existing.alloca_ptr);
 		
-		// todo: yeah no chance this is gonna work, since LLVM IR uses immutable variables with phi.
+		// as we are using stack allocations, we can mutate via stack address, bypassing immutable registers and phi logic.
+		// llvm will optimize this to single-static-assignment (SSA) form for us, when possible.
 		
 		return access_variable(igc, type);
 	}
