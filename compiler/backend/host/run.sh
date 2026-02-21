@@ -11,6 +11,9 @@ mkdir -p "$(pwd)/out"
 cp "${module_path}/frontend.out.json" "$(pwd)/in/frontend.out.json"
 
 docker run \
+    --init \
+    --rm \
+    -it \
     -v "$(pwd)/in:/volume/in" \
     -v "$(pwd)/out:/volume/out" \
     davidcallanan--mu-fyp--compiler-backend
