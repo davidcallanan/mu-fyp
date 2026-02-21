@@ -89,7 +89,7 @@ create() -> { ; this comment works
 	
 	log("Str 5 is:");
 	log(str5);
-	str5 = String "New mutated value!";
+	str5 = "New mutated value!";
 	log("Str 5 is now:");
 	log(str5);
 }

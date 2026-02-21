@@ -5,10 +5,11 @@
 
 // While these are called types, they can often be thought of as expressions (as the design has shifted over time).
 
-// The following terms are used interchangebly throughout this project, due to legacy naming:
+// The following terms are used fairly interchangebly throughout this project, due to legacy naming:
 // - expression
 // - type
 // - typeval
+// - constraint
 
 struct TypeMap;
 struct TypePointer;
@@ -37,5 +38,6 @@ using Type = std::variant<
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.
 	std::shared_ptr<TypeMap>,
 	std::shared_ptr<TypePointer>,
-	std::shared_ptr<TypeMerged>
+	std::shared_ptr<TypeMerged>,
+	std::shared_ptr<TypeRotten>
 >;
