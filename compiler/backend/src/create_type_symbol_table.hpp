@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 #include <memory>
@@ -13,7 +14,7 @@ class TypeSymbolTable {
 private:
 	struct MapEntry {
 		std::map<std::string, std::unique_ptr<MapEntry>> children;
-		std::unique_ptr<TypeMap> type_value;
+		std::optional<UnderlyingType> type_value;
 	};
 	
 	std::unique_ptr<MapEntry> _root;
@@ -22,14 +23,10 @@ private:
 
 public:
 	TypeSymbolTable();
-
-	// decision for TypeMap is because it is working with an underlying type.
-	// perhaps at some point there could be other underlying types.
-	// pointers can always be wrapped, so for now i don't think so.
 	
-	void set(const std::string& trail, const TypeMap& value);
+	void set(const std::string& trail, const UnderlyingType& value);
 	
-	TypeMap* get(const std::string& trail);
+	std::optional<UnderlyingType> get(const std::string& trail);
 };
 
 TypeSymbolTable create_type_symbol_table();

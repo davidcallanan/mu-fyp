@@ -24,7 +24,7 @@ TypeSymbolTable::TypeSymbolTable() {
 	const std::vector<std::string> float_types = {"f16", "f32", "f64", "f128"};
 
 	for (const auto &leaf_type : float_types) {
-		auto map = std::make_unique<TypeMap>();
+		auto map = std::make_shared<TypeMap>();
 		
 		auto rotten = std::make_shared<TypeRotten>();
 		rotten->type_str = leaf_type;
@@ -34,12 +34,12 @@ TypeSymbolTable::TypeSymbolTable() {
 		map->call_output_type = nullptr;
 
 		auto entry = std::make_unique<MapEntry>();
-		entry->type_value = std::move(map);
+		entry->type_value = UnderlyingType{map};
 		_root->children[leaf_type] = std::move(entry);
 	}
 }
 
-void TypeSymbolTable::set(const std::string &trail, const TypeMap &value) {
+void TypeSymbolTable::set(const std::string &trail, const UnderlyingType &value) {
 	auto segments = _split_trail(trail);
 
 	if (segments.empty()) {
@@ -57,10 +57,10 @@ void TypeSymbolTable::set(const std::string &trail, const TypeMap &value) {
 		curr_entry = curr_entry->children[segment].get();
 	}
 
-	curr_entry->type_value = std::make_unique<TypeMap>(value);
+	curr_entry->type_value = value;
 }
 
-TypeMap *TypeSymbolTable::get(const std::string &trail) {
+std::optional<UnderlyingType> TypeSymbolTable::get(const std::string &trail) {
 	auto segments = _split_trail(trail);
 
 	if (segments.empty()) {
@@ -78,7 +78,7 @@ TypeMap *TypeSymbolTable::get(const std::string &trail) {
 				break;
 			}
 			
-			return nullptr;
+			return std::nullopt;
 		}
 
 		curr_entry = curr_entry->children[segment].get();
@@ -86,11 +86,12 @@ TypeMap *TypeSymbolTable::get(const std::string &trail) {
 
 	const std::string &key = segments[segments.size() - 1];
 
-	if (curr_entry->children.find(key) != curr_entry->children.end()) {
-		return curr_entry->children[key]->type_value.get();
+	if (curr_entry->type_value.has_value()) {
+		return curr_entry->type_value;
 	}
 
 	if (true
+		&& curr_entry == _root.get()
 		&& segments.size() == 1
 		&& key.length() >= 2
 		&& (key[0] == 'i' || key[0] == 'u')
@@ -107,7 +108,7 @@ TypeMap *TypeSymbolTable::get(const std::string &trail) {
 		}
 
 		if (is_valid_intish) {
-			auto map = std::make_unique<TypeMap>();
+			auto map = std::make_shared<TypeMap>();
 			
 			auto rotten = std::make_shared<TypeRotten>();
 			rotten->type_str = key;
@@ -117,16 +118,16 @@ TypeMap *TypeSymbolTable::get(const std::string &trail) {
 			map->call_output_type = nullptr;
 
 			auto entry = std::make_unique<MapEntry>();
-			entry->type_value = std::move(map);
+			entry->type_value = UnderlyingType{map};
 
-			TypeMap *result = entry->type_value.get();
+			std::optional<UnderlyingType> result = entry->type_value;
 			curr_entry->children[key] = std::move(entry);
 
 			return result;
 		}
 	}
 
-	return nullptr;
+	return std::nullopt;
 }
 
 TypeSymbolTable create_type_symbol_table() {

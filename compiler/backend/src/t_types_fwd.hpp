@@ -31,3 +31,9 @@ using Type = std::variant<
 	std::shared_ptr<TypeAssign>,
 	std::shared_ptr<TypeCallWithSym>
 >;
+
+using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.
+	std::shared_ptr<TypeMap>,
+	std::shared_ptr<TypePointer>,
+	std::shared_ptr<TypeMerged>
+>;

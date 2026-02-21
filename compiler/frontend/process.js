@@ -37,8 +37,10 @@ const KW_MOD = rule("KW_MOD", withCarefulSkippers("mod"));
 const KW_CREATE = rule("KW_CREATE", withCarefulSkippers("create"));
 const KW_LOG = rule("KW_LOG", withCarefulSkippers("log"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
+const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
 const LPAREN = rule("LPAREN", withCarefulSkippers("("));
+const LPAREN_BB = rule("LPAREN_BB", withBareboneSkippers("("));
 const RPAREN = rule("RPAREN", withCarefulSkippers(")"));
 const ARROW = rule("ARROW", withCarefulSkippers("->"));
 const ASTERISK = rule("ASTERISK", withCarefulSkippers("*"));
@@ -55,15 +57,20 @@ const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_
 const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const IDENT = rule("IDENT", withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const IDENT_BB = rule("IDENT_BB", withBareboneSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups[0])));
 const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
 const EXTAT = rule("EXTAT", withLeftSkippers("@"));
 const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
+const INTEGER_BB = rule("INTEGER_BB", withBareboneSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
 const FLOAT = rule("FLOAT", withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
+const FLOAT_BB = rule("FLOAT_BB", withBareboneSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
 const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0])));
+const STRING_BB = rule("STRING_BB", withBareboneSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/,  data => data.groups[0])));
 
 // PARSER RULES
 
 const hardval = declare();
+const hardval_bb = declare();
 const typeval = declare();
 const typeval_atom = declare();
 const type_callable = declare();
@@ -88,12 +95,12 @@ const expr_log = rule("expr_log", mapData(
 
 hardval.define(rule("hardval", or(
 	mapData(
-		INTEGER,
+		FLOAT, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
 		(data) => ({
 			type: "type_map",
 			leaf_type: undefined,
 			leaf_hardval: {
-				type: "hardval_integer",
+				type: "hardval_float",
 				value: data,
 			},
 			call_input_type: undefined,
@@ -103,12 +110,12 @@ hardval.define(rule("hardval", or(
 		}),
 	),
 	mapData(
-		FLOAT,
+		INTEGER,
 		(data) => ({
 			type: "type_map",
 			leaf_type: undefined,
 			leaf_hardval: {
-				type: "hardval_float",
+				type: "hardval_integer",
 				value: data,
 			},
 			call_input_type: undefined,
@@ -134,6 +141,61 @@ hardval.define(rule("hardval", or(
 	),
 	mapData( // to be honest i'm not sure if variable access should be a hardval, it makes me reconsider whether pointers should also be normalized to maps.
 		IDENT,
+		(data) => ({
+			type: "type_var_access",
+			target_name: data,
+		}),
+	),
+)));
+
+hardval_bb.define(rule("hardval_bb", or(
+	mapData(
+		FLOAT_BB, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_float",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+	mapData(
+		INTEGER_BB,
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_integer",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+	mapData(
+		STRING_BB,
+		(data) => ({
+			type: "type_map",
+			leaf_type: undefined,
+			leaf_hardval: {
+				type: "hardval_string",
+				value: data,
+			},
+			call_input_type: undefined,
+			call_output_type: undefined,
+			sym_inputs: {},
+			instructions: [],
+		}),
+	),
+	mapData(
+		IDENT_BB,
 		(data) => ({
 			type: "type_var_access",
 			target_name: data,
@@ -244,9 +306,84 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 	},
 ));
 
+const constraint_map_braced_multiline_bb = rule("constraint_map_braced_multiline_bb", mapData(
+	join(
+		LBRACE_BB,
+		MANDATORY_NEWLINE,
+		opt_multi(
+			join(
+				map_entry,
+				SEMI,
+			),
+		),
+		RBRACE,
+	),
+	(data) => {
+		const entries = data[2].map(entry => entry[0]);
+		
+		const instructions = (entries
+			.filter(entry => entry.type === "instruction")
+			.map(entry => entry.data)
+		);
+		
+		const sym_inputs = Object.fromEntries(
+			instructions
+				.filter(instr => instr.type === "map_entry_sym")
+				.map(instr => [instr.name, {}])
+		);
+			
+		return {
+			type: "type_map",
+			sym_inputs,
+			instructions,
+		}
+	},
+));
+
 const constraint_map_braced_singleline = rule("constraint_map_braced_singleline", mapData(
 	join(
 		LBRACE,
+		opt(
+			join(
+				map_entry,
+				opt_multi(join(COMMA, map_entry)),
+			),
+		),
+		RBRACE,
+	),
+	(data) => {
+		const entries = [];
+
+		if (data[1] !== undefined) {
+			entries.push(data[1][0]);
+
+			for (const entry of data[1][1]) {
+				entries.push(entry[1]);
+			}
+		}
+		
+		const instructions = (entries
+			.filter(entry => entry.type === "instruction")
+			.map(entry => entry.data)
+		);
+		
+		const sym_inputs = Object.fromEntries(
+			instructions
+				.filter(instr => instr.type === "map_entry_sym")
+				.map(instr => [instr.name, {}])
+		);
+
+		return {
+			type: "type_map",
+			sym_inputs,
+			instructions,
+		};
+	},
+));
+
+const constraint_map_braced_singleline_bb = rule("constraint_map_braced_singleline_bb", mapData(
+	join(
+		LBRACE_BB,
 		opt(
 			join(
 				map_entry,
@@ -290,6 +427,11 @@ const constraint_map_braced = rule("constraint_map_braced", or(
 	constraint_map_braced_singleline,
 ));
 
+const constraint_map_braced_bb = rule("constraint_map_braced_bb", or(
+	constraint_map_braced_multiline_bb,
+	constraint_map_braced_singleline_bb,
+));
+
 const constraint_map_tupled = rule("constraint_map_tupled", mapData(
 	join(
 		LPAREN,
@@ -300,9 +442,24 @@ const constraint_map_tupled = rule("constraint_map_tupled", mapData(
 	}),
 ));
 
+const constraint_map_tupled_bb = rule("constraint_map_tupled_bb", mapData(
+	join(
+		LPAREN_BB,
+		RPAREN
+	),
+	(data) => ({
+		type: "type_map",
+	}),
+));
+
 const constraint_map = rule("constraint_map", or(
 	constraint_map_braced,
 	constraint_map_tupled,
+));
+
+const constraint_map_bb = rule("constraint_map_bb", or(
+	constraint_map_braced_bb,
+	constraint_map_tupled_bb,
 ));
 
 const constraint_integer = rule("constraint_integer", mapData(
@@ -376,7 +533,7 @@ const top_forwarding = rule("top_forwarding", mapData(
 const type_reference = declare();
 // todo: probably just declare everything at the top to avoid stress.
 
-type_reference.define(rule("type_reference", or(
+type_reference.define(rule("type_reference", or( // this rule is outdated and will be destroyed in a future update.
 	mapData(
 		KW_MAP,
 		(_data) => ({
@@ -414,11 +571,19 @@ const type_named = rule("type_named", mapData(
 ));
 
 const type_ptr_named = rule("type_ptr_named", mapData(
-	join(ASTERISK, type_named),
-	(data) => ({
-		type: "type_ptr",
-		target: data[1],
-	}),
+	join(multi(ASTERISK), type_named),
+	(data) => {
+		let result = data[1];
+
+		for (let i = data[0].length - 1; i >= 0; i--) {
+			result = {
+				type: "type_ptr",
+				target: result,
+			};
+		}
+
+		return result;
+	},
 ));
 
 const type_first = rule("type_first", or(
@@ -428,7 +593,7 @@ const type_first = rule("type_first", or(
 
 typeval_atom.define(rule("typeval_atom", or(
 	mapData(
-		join(type_first, hardval),
+		join(type_first, hardval_bb),
 		(data) => ({
 			type: "type_constrained",
 			constraints: [
@@ -438,7 +603,7 @@ typeval_atom.define(rule("typeval_atom", or(
 		}),
 	),
 	mapData(
-		join(type_first, constraint_map),
+		join(type_first, constraint_map_bb),
 		(data) => ({
 			type: "type_constrained",
 			constraints: [
@@ -512,46 +677,18 @@ const type_map_callable = rule("type_map_callable", mapData( // outdated not usi
 	}),
 ));
 
-const top_type = rule("top_type", or(
-	mapData(
-		join(
-			KW_TYPE,
-			TYPE_IDENT,
-			type_reference,
-			SEMI,
-		),
-		(data) => ({
-			type: "type",
-			trail: data[1],
-			definition: data[2],
-		}),
+const top_type = rule("top_type", mapData(
+	join(
+		KW_TYPE,
+		TYPE_IDENT,
+		typeval,
+		SEMI,
 	),
-	mapData(
-		join(
-			KW_TYPE,
-			TYPE_IDENT,
-			type_reference,
-			constraint_maybesemi,
-		),
-		(data) => ({
-			type: "type",
-			trail: data[1],
-			definition: data[2],
-			constraint: data[3],
-		}),
-	),
-	mapData(
-		join(
-			KW_TYPE,
-			TYPE_IDENT,
-			constraint_maybesemi,
-		),
-		(data) => ({
-			type: "type",
-			trail: data[1],
-			constraint: data[2],
-		}),
-	),
+	(data) => ({
+		type: "type",
+		trail: data[1],
+		definition: data[2],
+	}),
 ));
 
 // a value is just a stricter version of a type, but it's still a type from the compiler's perspective. (value constraint perhaps i'll call it constraint instead of value).

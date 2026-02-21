@@ -1,8 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <memory>
 #include "normalize_type.hpp"
+#include "demote_underlying.hpp"
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
@@ -32,14 +34,14 @@ Type normalize_type(
 		}
 		
 		std::string trail = typeval["trail"];
-		TypeMap* found = symbol_table.get(trail);
+		std::optional<UnderlyingType> found = symbol_table.get(trail);
 		
-		if (found == nullptr) {
+		if (!found.has_value()) {
 			fprintf(stderr, "No type pre-given for this %s\n", trail.c_str());
 			exit(1);
 		}
 		
-		return std::make_shared<TypeMap>(*found);
+		return demote_underlying(found.value());
 	}
 	
 	if (type == "type_ptr") {

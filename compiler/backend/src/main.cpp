@@ -8,6 +8,7 @@
 #include "evaluate_structval.hpp"
 #include "process_map_body.hpp"
 #include "normalize_type.hpp"
+#include "promote_to_underlying.hpp"
 #include "t_hardval.hpp"
 #include "t_instructions.hpp"
 #include "t_ctx.hpp"
@@ -184,7 +185,33 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 	delete target_machine;
 }
 
+static void populate_type_symbol_table(const json& structure, TypeSymbolTable& symbol_table) {
+	for (const auto& entry : structure) {
+		if (!entry.contains("type") || entry["type"] != "type") {
+			continue;
+		}
+		
+		if (!entry.contains("trail")) {
+			fprintf(stderr, "Missing .trail\n");
+			exit(1);
+		}
+
+		if (!entry.contains("definition")) {
+			fprintf(stderr, "Missing .definition\n");
+			exit(1);
+		}
+
+		std::string trail = entry["trail"].get<std::string>();
+		Type normalized = normalize_type(entry["definition"], symbol_table);
+		symbol_table.set(trail, promote_to_underlying(normalized));
+	}
+}
+
 int main(int argc, char* argv[]) {
+	// disable out-of-order prints by just disabling buffering.
+	setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+	
 	std::string json_path = "/volume/in/frontend.out.json";
 
 	printf("Obtaining json frontend result from %s\n", json_path.c_str());
@@ -212,6 +239,13 @@ int main(int argc, char* argv[]) {
 	auto& parse_output = frontend_data["parse_output"];
 	
 	TypeSymbolTable symbol_table = create_type_symbol_table();
+
+	if (!parse_output.contains("structure") || !parse_output["structure"].is_array()) {
+		fprintf(stderr, "There is no .structure\n");
+		exit(1);
+	}
+
+	populate_type_symbol_table(parse_output["structure"], symbol_table);
 	
 	json create_block = nullptr;
 	if (parse_output.contains("create") && !parse_output["create"].is_null()) {

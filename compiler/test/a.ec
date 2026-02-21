@@ -11,9 +11,10 @@ forwarding {
 type foo::Bar f32;
 
 ; types foo::bar foo::bar;
+type Banana f64;
 type foo::bar::Baz Banana;
 type foo::bar::Bink foo::Bar;
-type foo::Coconut map;
+type foo::Coconut {};
 
 ; types egg::plant foo::bar;
 
@@ -43,6 +44,8 @@ type TesingPointers *u8;
 
 type TestingPointersMore **u8;
 
+type String *u8;
+
 ; types compiler import //std/compiler;
 
 ; @Mod:ct compiler::CompTime;
@@ -57,6 +60,7 @@ create() -> { ; this comment works
 	str := "Hello, Universe!";
 	str2 := *u8 "Hello, Kingdom!";
 	str3 := str2;
+	str4 := String "Test";
 	
 	object := {
 		name := "David";
@@ -65,15 +69,20 @@ create() -> { ; this comment works
 		:another_variable 23;
 		:name2 name;
 		name3 := name2;
+		:nested {
+			:octopus "This would be really cool if it worked.";	
+		};
 	};
 	
 	foo := object:name2;
-	; bar := object:name2:octopus;
+	bar := object:nested:octopus;
 	
 	log("Hello, World!");
 	log();
 	log("This log statement can now handle strings coming from variables.");
 	log(str3);
+	log(str4);
 	log(foo);
+	log(bar);
 	log(access_during_assign := "This is really cool");
 }
