@@ -161,19 +161,34 @@ const map_entry_sym = rule("map_entry_sym", mapData(
 
 const expr25 = rule("expr25", or(
 	expr_log,
-	expr_assign,
 	type_callable,
+	typeval_atom,
 ));
 
 const expr75 = rule("expr75", mapData(join(
 	expr25,
 	opt_multi(SYMBOL_BARE),
 ), (data) => {
-	return data[0];
+	let result = data[0];
+	
+	for (const sym of data[1]) {
+		result = {
+			type: "expr_call_with_sym",
+			target: result,
+			sym: sym.substring(1),
+		};
+	}
+	
+	return result;
 }));
 
+const expr85 = rule("expr85", or(
+	expr_assign,
+	expr75
+));
+
 const expr = rule("expr", or(
-	expr75,
+	expr85,
 ));
 
 const map_entry_expr = rule("map_entry_expr", mapData(
@@ -454,7 +469,6 @@ type_callable.define(rule("type_callable", mapData(
 
 typeval.define(rule("typeval", or(
 	expr,
-	typeval_atom,
 )));
 
 const type_map_body_braced = rule("type_map_body_braced", mapData(

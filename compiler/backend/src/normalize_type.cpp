@@ -6,6 +6,7 @@
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
+#include "get_underlying_type.hpp"
 
 using json = nlohmann::json;
 
@@ -234,10 +235,22 @@ Type normalize_type(
 		}
 		
 		std::string target_name = typeval["target_name"];
+		auto v_var_access = std::make_shared<TypeVarAccess>();
 		
-		return std::make_shared<TypeVarAccess>(TypeVarAccess{
-			target_name,
-		});
+		v_var_access->target_name = target_name;
+		
+		TypeMap* entry = symbol_table.get(target_name);
+		
+		if (entry == nullptr) {
+			fprintf(stderr, "Var access failed to determine type information because consultation of symbol table failed on %s.\n", target_name.c_str());
+			exit(1);
+		}
+		
+		Type entry_as_type = std::make_shared<TypeMap>(*entry);
+		const Type& underlying = get_underlying_type(entry_as_type);
+		v_var_access->underlying_type = std::make_shared<Type>(underlying);
+		
+		return v_var_access;
 	}
 	
 	if (type == "expr_assign") {

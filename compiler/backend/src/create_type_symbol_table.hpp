@@ -23,8 +23,12 @@ private:
 public:
 	TypeSymbolTable();
 
+	// decision for TypeMap is because it is working with an underlying type.
+	// perhaps at some point there could be other underlying types.
+	// pointers can always be wrapped, so for now i don't think so.
+	
 	void set(const std::string& trail, const TypeMap& value);
-
+	
 	TypeMap* get(const std::string& trail);
 };
 

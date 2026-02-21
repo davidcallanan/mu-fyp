@@ -25,6 +25,7 @@ struct TypePointer {
 
 struct TypeVarAccess {
 	std::string target_name;
+	std::shared_ptr<Type> underlying_type;
 };
 
 struct TypeMerged {

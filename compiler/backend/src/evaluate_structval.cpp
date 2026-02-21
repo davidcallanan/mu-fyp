@@ -12,15 +12,17 @@
 #include "merge_smooth_value.hpp"
 #include "create_value_symbol_table.hpp"
 #include "process_map_body.hpp"
+#include "get_underlying_type.hpp"
 
 static bool determine_has_leaf(const Type& type) {
-	if (auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
-		return (*p_map)->leaf_hardval != nullptr;
+	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
+		return (*p_v_map)->leaf_type != nullptr || (*p_v_map)->leaf_hardval != nullptr;
 	}
 	
-	if (auto p_pointer = std::get_if<std::shared_ptr<TypePointer>>(&type)) {
-		return true;
-	}
+	// what was I thinking here.
+	// if (auto p_pointer = std::get_if<std::shared_ptr<TypePointer>>(&type)) {
+	// 	return true;
+	// }
 	
 	return false;
 }
@@ -42,7 +44,7 @@ static SmoothValue access_variable(
 		}
 	}
 	
-	ValueSymbolTableEntry entry = o_entry.value();
+	const ValueSymbolTableEntry& entry = o_entry.value();
 	
 	llvm::Value* loaded = igc.builder.CreateLoad(
 		entry.ir_type,
@@ -64,19 +66,22 @@ static SmoothValue access_member(
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&target_smooth.type)) {
 		const auto& v_map = *p_v_map;
 		
-		if (v_map->sym_inputs.find(sym) == v_map->sym_inputs.end()) {
+		std::string sym_key = ":" + sym;
+		
+		if (v_map->sym_inputs.find(sym_key) == v_map->sym_inputs.end()) {
 			fprintf(stderr, "Symbol %s not really available here", sym.c_str());
 			exit(1);
 		}
 		
-		const Type& sym_type = *v_map->sym_inputs.at(sym);
+		const Type& unclear_type = *v_map->sym_inputs.at(sym_key);
+		const Type& sym_type = get_underlying_type(unclear_type);
 		
 		// i know this logic is terrible but performance is not a concern for me.
 		
 		size_t field_index = (target_smooth.has_leaf ? 1 : 0);
 		
 		for (const auto& [sym_name, _] : v_map->sym_inputs) {
-			if (sym_name == sym) {
+			if (sym_name == sym_key) {
 				break;
 			}
 			
@@ -85,13 +90,32 @@ static SmoothValue access_member(
 		
 		llvm::Value* extracted = igc.builder.CreateExtractValue(target_smooth.struct_value, field_index);
 		
+		// pointers are typically disallowed on their own, and must be wrapped into a leaf map.
+		// exception is made for syms of maps to prevent infinite recursion.
+		// this is why we must deal with raw pointer here and wrap it back up.
+		// we gradually wrap up pointers as they are used, lazily.
+		
+		if (auto p_pointer = std::get_if<std::shared_ptr<TypePointer>>(&sym_type)) {
+			fprintf(stderr, "is it even getting here. %s\n", sym.c_str());
+			
+			llvm::StructType* wrapped_pointer = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ extracted->getType() });
+			llvm::Value* final_pointer = llvm::UndefValue::get(wrapped_pointer);
+			final_pointer = igc.builder.CreateInsertValue(final_pointer, extracted, 0);
+			
+			return SmoothValue{
+				final_pointer,
+				sym_type,
+				true,
+			};
+		}
+		
 		return SmoothValue{
 			extracted,
 			sym_type,
 			determine_has_leaf(sym_type),
 		};
 	} else {
-		fprintf(stderr, "Impossible to call a non-map with a symbol, what are you doing?\n");
+		fprintf(stderr, "Impossible to call a non-map with a symbol, what are you doing?\n");       
 		exit(1);
 	}
 }
@@ -101,8 +125,7 @@ SmoothValue evaluate_structval(
 	const Type& type
 ) {
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
-		const auto& var_access = **p_v_var_access;
-		return access_variable(igc, var_access.target_name);
+		return access_variable(igc, (*p_v_var_access)->target_name);
 	}
 	
 	if (auto p_v_merged = std::get_if<std::shared_ptr<TypeMerged>>(&type)) {
@@ -224,6 +247,8 @@ SmoothValue evaluate_structval(
 			
 			if (!smooth.has_leaf) {
 				fprintf(stderr, "Not good circumstances - no leaf.\n");
+				fprintf(stderr, "Actually what we got is: ");
+				smooth.struct_value->print(llvm::errs());
 				exit(1);
 			}
 			
@@ -250,6 +275,7 @@ SmoothValue evaluate_structval(
 		SmoothValue smooth = evaluate_structval(igc, *v_assign->typeval);
 		llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
 		igc.builder.CreateStore(smooth.struct_value, alloca);
+		
 		
 		ValueSymbolTableEntry entry{
 			alloca,
