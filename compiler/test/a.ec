@@ -92,4 +92,8 @@ create() -> { ; this comment works
 	str5 = "New mutated value!";
 	log("Str 5 is now:");
 	log(str5);
+	
+	for {
+		log("Forever.");
+	}
 }

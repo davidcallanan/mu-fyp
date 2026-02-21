@@ -14,3 +14,7 @@ struct InstructionExpr {
 	std::shared_ptr<Type> expr;
 };
 
+struct InstructionFor {
+	std::shared_ptr<TypeMap> body;
+};
+

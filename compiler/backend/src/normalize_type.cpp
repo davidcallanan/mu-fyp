@@ -221,6 +221,28 @@ Type normalize_type(
 					continue;
 				}
 			
+				if (instruction_type == "instruction_for") {
+					auto v_for = std::make_shared<InstructionFor>();
+
+					if (!instruction_data.contains("body")) {
+						fprintf(stderr, "Expecting .body\n");
+						exit(1);
+					}
+
+					Type body = normalize_type(instruction_data["body"], symbol_table);
+					auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&body);
+
+					if (!p_v_map) {
+						fprintf(stderr, "Somehow parser allowed non-map body for my loop.\n");
+						exit(1);
+					}
+
+					v_for->body = *p_v_map;
+					result.execution_sequence.push_back(v_for);
+					
+					continue;
+				}
+
 				fprintf(stderr, "Not recognized instructoin type: %s\n", instruction_type.c_str());
 				exit(1);
 			}

@@ -37,6 +37,7 @@ const KW_MOD = rule("KW_MOD", withCarefulSkippers("mod"));
 const KW_CREATE = rule("KW_CREATE", withCarefulSkippers("create"));
 const KW_LOG = rule("KW_LOG", withCarefulSkippers("log"));
 const KW_MUT = rule("KW_MUT", withCarefulSkippers("mut"));
+const KW_FOR = rule("KW_FOR", withCarefulSkippers("for"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -76,6 +77,8 @@ const hardval_bb = declare();
 const typeval = declare();
 const typeval_atom = declare();
 const type_callable = declare();
+const map_entry_for = declare();
+const map_entry_semiless = declare();
 
 const symbol_path = rule("symbol_path", mapData(
 	multi(
@@ -290,15 +293,18 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 		LBRACE,
 		MANDATORY_NEWLINE,
 		opt_multi(
-			join(
-				map_entry,
-				SEMI,
+			or(
+				mapData(
+					join(map_entry, SEMI),
+					(data) => data[0],
+				),
+				map_entry_semiless,
 			),
 		),
 		RBRACE,
 	),
 	(data) => {
-		const entries = data[2].map(entry => entry[0]);
+		const entries = data[2];
 		
 		const instructions = (entries
 			.filter(entry => entry.type === "instruction")
@@ -318,6 +324,21 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 		}
 	},
 ));
+
+map_entry_for.define(rule("map_entry_for", mapData(
+	join(KW_FOR, constraint_map_braced_multiline),
+	(data) => ({
+		type: "instruction_for",
+		body: data[1],
+	}),
+)));
+
+map_entry_semiless.define(rule("map_entry_semiless", or(
+	mapData(map_entry_for, (data) => ({
+		type: "instruction",
+		data,
+	})),
+)));
 
 const constraint_map_braced_multiline_bb = rule("constraint_map_braced_multiline_bb", mapData(
 	join(
