@@ -105,5 +105,5 @@ create() -> { ; this comment works
 	
 	log_d(advanced_calculation);
 	log_d(156);
-	; log_d(str5);
+	log_d(str5);
 }

@@ -302,12 +302,18 @@ SmoothValue evaluate_structval(
 
 		uint64_t bit_width = leaf_type->getPrimitiveSizeInBits();
 
+		if (bit_width == 0 && leaf_type->isPointerTy()) {
+			bit_width = igc.module.getDataLayout().getPointerSizeInBits();
+		}
+
 		if (bit_width == 0) {
 			fprintf(stderr, "cannot print this thing because its size is undeterminable\n");
 			exit(1);
 		}
 
-		if (!leaf_type->isIntegerTy()) { // interpret the value as raw bits
+		if (leaf_type->isPointerTy()) {
+			leaf = igc.builder.CreatePtrToInt(leaf, llvm::IntegerType::get(igc.context, bit_width));
+		} else if (!leaf_type->isIntegerTy()) { // interpret the value as raw bits
 			leaf = igc.builder.CreateBitCast(leaf, llvm::IntegerType::get(igc.context, bit_width));
 		}
 
