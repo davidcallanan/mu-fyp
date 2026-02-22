@@ -40,6 +40,10 @@ struct TypeLog {
 	std::shared_ptr<Type> message;
 };
 
+struct TypeLogD {
+	std::shared_ptr<Type> message;
+};
+
 struct TypeVarWalrus {
 	std::string name;
 	bool is_mut;

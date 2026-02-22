@@ -7,6 +7,7 @@ add break keyword
 add type modifications (via @)
 add call_with_map
 add comptime llvm/c abi
+add log_f, log_i, log_u, log_p for debugging purposes
 
 MAIN GOALS:
 add module system

@@ -96,4 +96,14 @@ create() -> { ; this comment works
 	; for {
 	;	log("Forever.");
 	; }
+	
+	advanced_calculation :=
+		+ 50
+		+ 70
+		- 30
+	;
+	
+	log_d(advanced_calculation);
+	log_d(156);
+	; log_d(str5);
 }

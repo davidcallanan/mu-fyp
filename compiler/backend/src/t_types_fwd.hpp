@@ -17,6 +17,7 @@ struct TypeVarAccess;
 struct TypeMerged;
 struct TypeRotten;
 struct TypeLog;
+struct TypeLogD;
 struct TypeVarWalrus;
 struct TypeVarAssign;
 struct TypeCallWithSym;
@@ -32,6 +33,7 @@ using Type = std::variant<
 	std::shared_ptr<TypeMerged>,
 	std::shared_ptr<TypeRotten>,
 	std::shared_ptr<TypeLog>,
+	std::shared_ptr<TypeLogD>,
 	std::shared_ptr<TypeVarWalrus>,
 	std::shared_ptr<TypeVarAssign>,
 	std::shared_ptr<TypeCallWithSym>,

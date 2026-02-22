@@ -319,6 +319,19 @@ Type normalize_type(
 		return v_log;
 	}
 	
+	if (type == "expr_log_d") {
+		auto v_log_d = std::make_shared<TypeLogD>();
+
+		if (!typeval.contains("message") || typeval["message"].is_null()) {
+			fprintf(stderr, "you have to actually log something when using log_d, not provide no arguments\n");
+			exit(1);
+		}
+
+		v_log_d->message = std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+		
+		return v_log_d;
+	}
+
 	if (type == "expr_call_with_sym") {
 		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
 		

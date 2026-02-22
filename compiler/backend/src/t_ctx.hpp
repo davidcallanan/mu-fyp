@@ -14,4 +14,5 @@ struct IrGenCtx {
 	TypeSymbolTable& type_table;
 	std::shared_ptr<ValueSymbolTable> value_table;
 	llvm::FunctionCallee& puts_func;
+	llvm::Function* log_data_func;
 };

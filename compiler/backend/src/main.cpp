@@ -51,6 +51,139 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 	
 	llvm::FunctionCallee puts_func = module.getOrInsertFunction("puts", puts_type);
 	
+	// Takes in (i64 chunk, i8 bl, i8 br).
+	llvm::Function* log_data_func = [&]() -> llvm::Function* {
+		// there's only one worse thing than handwriting an LLVM IR function, and that's handwiriting C++ code that generates one lol.
+		// but by relying on handrwritten functions just for debugging functions (like log_d), we don't depend on the language's interoperability layer to be in working condition, allowing interoparability to be developed at a later stage.
+		
+		llvm::Type* i8  = llvm::Type::getInt8Ty(context);
+		llvm::Type* i32 = llvm::Type::getInt32Ty(context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(context);
+
+		llvm::FunctionType* fn_type = llvm::FunctionType::get(
+			llvm::Type::getVoidTy(context),
+			{ i64, i8, i8 },
+			false
+		);
+
+		llvm::Function* fn = llvm::Function::Create(
+			fn_type,
+			llvm::Function::PrivateLinkage,
+			"__ec_log_data",
+			module
+		);
+		
+		fn->addFnAttr(llvm::Attribute::NoInline);
+
+		llvm::Argument* arg_chunk = fn->getArg(0);
+		llvm::Argument* arg_bl    = fn->getArg(1);
+		llvm::Argument* arg_br    = fn->getArg(2);
+
+		llvm::IRBuilder<> b(context);
+
+		auto* blk = llvm::BasicBlock::Create(context, "entry", fn);
+		b.SetInsertPoint(blk);
+
+		// if i've counted right, 51 should be enough characters for a single row.
+		// 2 (prefix) + 1 (space) + 16 (hex) + 1 (space) + 8 (ascii) + 1 (space) + log10(2^64) (decimal) + 1 (null terminator) = 50
+		
+		llvm::Value* buf = b.CreateAlloca(i8, b.getInt32(51), "buf");
+		
+		int pos = 0;
+
+		auto store_valu = [&](llvm::Value* val, int at) {
+			// get-element-pointer generates offset on pointer in platform-agnostic manner.	
+			b.CreateStore(val, b.CreateGEP(i8, buf, b.getInt32(at)));
+		};
+
+		auto store_char = [&](char ch) {
+			store_valu(b.getInt8(ch), pos++);
+		};
+
+		// 1. PREFIX
+
+		store_valu(arg_bl, pos++);
+		store_valu(arg_br, pos++);
+		store_char(' ');
+
+		// 2. HEX
+		
+		for (int nibble = 15; nibble >= 0; nibble--) { // most significnant first
+			int shift_amt = nibble * 4;
+			llvm::Value* shifted = b.CreateLShr(arg_chunk, b.getInt64(shift_amt));
+			llvm::Value* masked = b.CreateAnd(shifted, b.getInt64(0xF)); // grab 4 bits at a times.
+			llvm::Value* truncated = b.CreateTrunc(masked, i8); // dealing with 8 bit characters
+			llvm::Value* decimal  = b.CreateAdd(truncated, b.getInt8('0'));
+			llvm::Value* hex  = b.CreateAdd(truncated, b.getInt8('a' - 10));
+			llvm::Value* is_less_than_ten = b.CreateICmpULT(truncated, b.getInt8(10));
+			llvm::Value* hex_char = b.CreateSelect(is_less_than_ten, decimal, hex);
+			store_valu(hex_char, pos++);
+		}
+
+		store_char(' ');
+
+		// 3. ASCII
+		
+		for (int byte_idx = 7; byte_idx >= 0; byte_idx--) { // msb first
+			int shift_amt = byte_idx * 8;
+			llvm::Value* shifted = b.CreateLShr(arg_chunk, b.getInt64(shift_amt));
+			llvm::Value* truncated = b.CreateTrunc(shifted, i8); // dealing with 8 bit characters, and grabbing 8 bits at a time.
+			// printable range is generally recognized as 0x20 to 0x7e
+			// other chars may do funny business: move cursor, play beep, etc , so are replaced with `.`
+			llvm::Value* high_enough = b.CreateICmpUGE(truncated, b.getInt8(0x20));
+			llvm::Value* low_enough = b.CreateICmpULE(truncated, b.getInt8(0x7e));
+			llvm::Value* is_printable = b.CreateAnd(high_enough, low_enough);
+			llvm::Value* ascii_char = b.CreateSelect(is_printable, truncated, b.getInt8('.'));
+			store_valu(ascii_char, pos++);
+		}
+
+		store_char(' ');
+
+		// 4. DECIMAL (unsigned only)
+		
+		int dec_tail = 48; // we are floating to the right and working our way to the left
+
+		auto* block_dec_loop = llvm::BasicBlock::Create(context, "dec_loop", fn);
+		auto* block_dec_done = llvm::BasicBlock::Create(context, "dec_done", fn);
+		auto* block_fill_loop = llvm::BasicBlock::Create(context, "fill_loop", fn);
+		auto* block_fill_done = llvm::BasicBlock::Create(context, "fill_done", fn);
+
+		b.CreateStore(b.getInt8(0), b.CreateGEP(i8, buf, b.getInt32(dec_tail + 1))); // null terminator
+		
+		llvm::Value* alloca_idx = b.CreateAlloca(i32, nullptr, "idx");
+		llvm::Value* alloca_dec_value = b.CreateAlloca(i64, nullptr, "dec_value");
+		b.CreateStore(b.getInt32(dec_tail), alloca_idx);
+		b.CreateStore(arg_chunk, alloca_dec_value);
+		b.CreateBr(block_dec_loop);
+		
+		b.SetInsertPoint(block_dec_loop);
+		llvm::Value* dec_value = b.CreateLoad(i64, alloca_dec_value);
+		llvm::Value* digit_rem = b.CreateURem(dec_value, b.getInt64(10));
+		llvm::Value* digit_truncated = b.CreateTrunc(digit_rem, i8);
+		llvm::Value* digit_char = b.CreateAdd(digit_truncated, b.getInt8('0'));
+		llvm::Value* idx = b.CreateLoad(i32, alloca_idx);
+		b.CreateStore(digit_char, b.CreateGEP(i8, buf, idx));
+		b.CreateStore(b.CreateSub(idx, b.getInt32(1)), alloca_idx);
+		llvm::Value* dec_value_next = b.CreateUDiv(dec_value, b.getInt64(10));
+		b.CreateStore(dec_value_next, alloca_dec_value);
+		b.CreateCondBr(b.CreateICmpNE(dec_value_next, b.getInt64(0)), block_dec_loop, block_dec_done);
+		
+		b.SetInsertPoint(block_dec_done);
+		b.CreateBr(block_fill_loop);
+
+		b.SetInsertPoint(block_fill_loop);
+		idx = b.CreateLoad(i32, alloca_idx);
+		b.CreateStore(b.getInt8(' '), b.CreateGEP(i8, buf, idx));
+		b.CreateStore(b.CreateSub(idx, b.getInt32(1)), alloca_idx);
+		b.CreateCondBr(b.CreateICmpSGE(b.CreateLoad(i32, alloca_idx), b.getInt32(pos)), block_fill_loop, block_fill_done);
+
+		b.SetInsertPoint(block_fill_done);
+		b.CreateCall(puts_func, { buf });
+		b.CreateRetVoid();
+
+		return fn;
+	}();
+
 	llvm::FunctionType* main_type = llvm::FunctionType::get(
 		llvm::Type::getInt32Ty(context),
 		false
@@ -107,6 +240,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 			symbol_table,
 			value_table,
 			puts_func,
+			log_data_func,
 		};
 		
 		process_map_body(igc, *v_map.call_output_type);

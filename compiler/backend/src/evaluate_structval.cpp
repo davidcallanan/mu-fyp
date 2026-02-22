@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstdint>
 #include <variant>
 #include <string>
 #include "llvm/IR/Constants.h"
@@ -257,7 +258,7 @@ SmoothValue evaluate_structval(
 	}
 	
 	if (auto p_v_log = std::get_if<std::shared_ptr<TypeLog>>(&type)) {
-		const auto& v_log = std::get<std::shared_ptr<TypeLog>>(type);
+		const auto& v_log = *p_v_log;
 		
 		if (v_log->message == nullptr) {
 			llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
@@ -286,8 +287,77 @@ SmoothValue evaluate_structval(
 		};
 	}
 	
+	if (auto p_v_log_d = std::get_if<std::shared_ptr<TypeLogD>>(&type)) {
+		const auto& v_log_d = *p_v_log_d;
+
+		SmoothValue smooth = evaluate_structval(igc, *v_log_d->message);
+
+		if (!smooth.has_leaf) {
+			fprintf(stderr, "No leaf so impossible to log its data (consider using \"log(...)\" for strings).\n");
+			exit(1);
+		}
+
+		llvm::Value* leaf = smooth.extract_leaf(igc.builder);
+		llvm::Type* leaf_type = leaf->getType();
+
+		uint64_t bit_width = leaf_type->getPrimitiveSizeInBits();
+
+		if (bit_width == 0) {
+			fprintf(stderr, "cannot print this thing because its size is undeterminable\n");
+			exit(1);
+		}
+
+		if (!leaf_type->isIntegerTy()) { // interpret the value as raw bits
+			leaf = igc.builder.CreateBitCast(leaf, llvm::IntegerType::get(igc.context, bit_width));
+		}
+
+		uint64_t num_chunks = (bit_width + 63) / 64;
+		uint64_t total_bits = num_chunks * 64;
+
+		llvm::Type* i8  = llvm::Type::getInt8Ty(igc.context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(igc.context);
+
+		llvm::Value* wide = (total_bits > bit_width) // zero-extend
+			? igc.builder.CreateZExt(leaf, llvm::IntegerType::get(igc.context, total_bits))
+			: leaf;
+
+		for (uint64_t i = 0; i < num_chunks; i++) {
+			uint64_t shift = (num_chunks - 1 - i) * 64;
+			llvm::Value* shifted = igc.builder.CreateLShr(wide, llvm::ConstantInt::get(wide->getType(), shift));
+			llvm::Value* chunk = igc.builder.CreateTrunc(shifted, i64);
+
+			llvm::Value* bl;
+			llvm::Value* br;
+			
+			if (num_chunks == 1) {
+				bl = llvm::ConstantInt::get(i8, '[');
+				br = llvm::ConstantInt::get(i8, ']');
+			} else if (i == 0) {
+				bl = llvm::ConstantInt::get(i8, '[');
+				br = llvm::ConstantInt::get(i8, '-');
+			} else if (i == num_chunks - 1) {
+				bl = llvm::ConstantInt::get(i8, '-');
+				br = llvm::ConstantInt::get(i8, ']');
+			} else {
+				bl = llvm::ConstantInt::get(i8, '-');
+				br = llvm::ConstantInt::get(i8, '-');
+			}
+
+			igc.builder.CreateCall(igc.log_data_func, { chunk, bl, br });
+		}
+
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		
+		return SmoothValue{
+			struct_value,
+			type,
+			false,
+		};
+	}
+	
 	if (auto p_v_var_walrus = std::get_if<std::shared_ptr<TypeVarWalrus>>(&type)) {
-		const auto& v_var_walrus = std::get<std::shared_ptr<TypeVarWalrus>>(type);
+		const auto& v_var_walrus = *p_v_var_walrus;
 		
 		std::string map_var_name = "m_" + v_var_walrus->name;
 		std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
@@ -311,7 +381,7 @@ SmoothValue evaluate_structval(
 	}
 	
 	if (auto p_v_var_assign = std::get_if<std::shared_ptr<TypeVarAssign>>(&type)) {
-		const auto& v_var_assign = std::get<std::shared_ptr<TypeVarAssign>>(type);
+		const auto& v_var_assign = *p_v_var_assign;
 		
 		std::string map_var_name = "m_" + v_var_assign->name;
 		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(map_var_name);
@@ -344,7 +414,7 @@ SmoothValue evaluate_structval(
 	}
 	
 	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
-		const auto& v_call_with_sym = std::get<std::shared_ptr<TypeCallWithSym>>(type);
+		const auto& v_call_with_sym = *p_v_call_with_sym;
 		SmoothValue target_smooth = evaluate_structval(igc, *v_call_with_sym->target);
 		return access_member(igc, target_smooth, v_call_with_sym->sym);
 	}

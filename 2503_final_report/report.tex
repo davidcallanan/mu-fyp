@@ -276,6 +276,10 @@ Since parsers try a vast number of rules and are inherently recursive, the logs 
 
 As the language has strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. This could be due to semantic violations in the user's code, or due to bugs in the compiler itself.
 
+\subsection{Debugging}
+
+While the primary mechanism of performing external communication is to link with external code via the C ABI (which may be LLVM IR), debugging functionality is often preferable within the language directly in case that there are issues with the interoperability layer itself. Thus, two basic logging functions were implemented, ``log'' and ``log\_d''. The former takes a null-terminated ascii string and prints this output in an implementation-specific manner. The latter takes an arbitrarily-sized value (like an integer or pointer) and prints its raw binary representation (in 64-bit chunks), including both its hex representation, ascii representation, and decimal representation. In this specificic language implementation, the external ``puts'' function was seletcted to implement this functionality, available in many environments. Todo: A flag was implemented to disable ``puts'' usage in case the environment does not support it, in which case, logs are dropped.
+
 \chapter{Evaluation}
 
 TODO
