@@ -436,6 +436,17 @@ SmoothValue evaluate_structval(
 				exit(1);
 			}
 
+			if (!is_float) { // i don't care about floats for now.
+				uint32_t result_bits = result->getType()->getIntegerBitWidth();
+				uint32_t val_bits = val->getType()->getIntegerBitWidth();
+				
+				if (result_bits < val_bits) {
+					result = igc.builder.CreateZExt(result, val->getType());
+				} else if (val_bits < result_bits) {
+					val = igc.builder.CreateZExt(val, result->getType());
+				}
+			}
+
 			if (op_numeric.op == "*") {
 				result = is_float ? igc.builder.CreateFMul(result, val) : igc.builder.CreateMul(result, val);
 			} else if (op_numeric.op == "/") {
@@ -475,6 +486,17 @@ SmoothValue evaluate_structval(
 			} else if (val->getType()->isFloatingPointTy() != is_float) {
 				fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
 				exit(1);
+			}
+
+			if (!is_float) { // dont care about floats for now.
+				uint32_t result_bits = result->getType()->getIntegerBitWidth();
+				uint32_t val_bits = val->getType()->getIntegerBitWidth();
+				
+				if (result_bits < val_bits) {
+					result = igc.builder.CreateZExt(result, val->getType());
+				} else if (val_bits < result_bits) {
+					val = igc.builder.CreateZExt(val, result->getType());
+				}
 			}
 
 			if (op_numeric.op == "+") {
