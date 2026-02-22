@@ -184,6 +184,151 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		return fn;
 	}();
 
+	// Takes in (i8* ptr, i64 byte_count).
+	// byte_count of -1 means null-terminated.
+	llvm::Function* log_data_deref_func = [&]() -> llvm::Function* {
+		llvm::Type* i1 = llvm::Type::getInt1Ty(context);
+		llvm::Type* i8 = llvm::Type::getInt8Ty(context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(context);
+		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(context);
+
+		llvm::FunctionType* fn_type = llvm::FunctionType::get(
+			llvm::Type::getVoidTy(context),
+			{ i8ptr, i64 },
+			false
+		);
+
+		llvm::Function* fn = llvm::Function::Create(
+			fn_type,
+			llvm::Function::PrivateLinkage,
+			"__ec_log_data_deref",
+			module
+		);
+
+		fn->addFnAttr(llvm::Attribute::NoInline);
+
+		llvm::Argument* arg_ptr = fn->getArg(0);
+		llvm::Argument* arg_byte_count = fn->getArg(1);
+
+		llvm::IRBuilder<> b(context);
+
+		auto* block_entry = llvm::BasicBlock::Create(context, "entry", fn);
+		auto* block_outer_loop = llvm::BasicBlock::Create(context, "outer_loop", fn);
+		auto* block_inner_setup = llvm::BasicBlock::Create(context, "inner_setup", fn);
+		auto* block_inner_loop = llvm::BasicBlock::Create(context, "inner_loop", fn);
+		auto* block_inner_body = llvm::BasicBlock::Create(context, "inner_body", fn);
+		auto* block_inner_body2 = llvm::BasicBlock::Create(context, "inner_body2", fn);
+		auto* block_inner_body3 = llvm::BasicBlock::Create(context, "inner_body3", fn);
+		auto* block_render = llvm::BasicBlock::Create(context, "render", fn);
+		auto* block_advance = llvm::BasicBlock::Create(context, "advance", fn);
+		auto* block_advance2 = llvm::BasicBlock::Create(context, "advance2", fn);
+		auto* block_advance3 = llvm::BasicBlock::Create(context, "advance3", fn);
+		auto* block_flush = llvm::BasicBlock::Create(context, "flush", fn);
+		auto* block_flush_final = llvm::BasicBlock::Create(context, "flush_final", fn);
+		auto* block_done = llvm::BasicBlock::Create(context, "done", fn);
+
+		b.SetInsertPoint(block_entry);
+		llvm::Value* alloca_outer_idx = b.CreateAlloca(i64, nullptr, "outer_idx");
+		llvm::Value* alloca_inner_idx = b.CreateAlloca(i64, nullptr, "inner_idx");
+		llvm::Value* alloca_chunk = b.CreateAlloca(i64, nullptr, "chunk");
+		llvm::Value* alloca_chunk_prev = b.CreateAlloca(i64, nullptr, "chunk_prev");
+		llvm::Value* alloca_has_prev = b.CreateAlloca(i1, nullptr, "has_prev");
+		llvm::Value* alloca_is_first = b.CreateAlloca(i1, nullptr, "is_first");
+		llvm::Value* is_nullterm = b.CreateICmpEQ(arg_byte_count, b.getInt64(-1), "is_nullterm");
+		b.CreateStore(b.getInt64(0), alloca_outer_idx);
+		b.CreateStore(b.getFalse(), alloca_has_prev);
+		b.CreateBr(block_outer_loop);
+
+		b.SetInsertPoint(block_outer_loop);
+		llvm::Value* outer_idx = b.CreateLoad(i64, alloca_outer_idx);
+		
+		b.CreateCondBr(
+			b.CreateAnd(b.CreateNot(is_nullterm), b.CreateICmpUGE(outer_idx, arg_byte_count)),
+			block_flush,
+			block_inner_setup
+		);
+
+		b.SetInsertPoint(block_inner_setup);
+		b.CreateStore(b.getInt64(0), alloca_chunk);
+		b.CreateStore(b.getInt64(0), alloca_inner_idx);
+		b.CreateBr(block_inner_loop);
+
+		b.SetInsertPoint(block_inner_loop);
+		llvm::Value* inner_idx = b.CreateLoad(i64, alloca_inner_idx);
+		llvm::Value* byte_idx = b.CreateAdd(outer_idx, inner_idx);
+		llvm::Value* is_inner_done = b.CreateICmpEQ(inner_idx, b.getInt64(8));
+		llvm::Value* is_outer_done = b.CreateAnd(b.CreateNot(is_nullterm), b.CreateICmpUGE(byte_idx, arg_byte_count));
+		b.CreateCondBr(b.CreateOr(is_inner_done, is_outer_done), block_render, block_inner_body);
+
+		b.SetInsertPoint(block_inner_body);
+		llvm::Value* byte_ptr = b.CreateGEP(i8, arg_ptr, byte_idx);
+		llvm::Value* byte_value = b.CreateLoad(i8, byte_ptr);
+		
+		b.CreateCondBr(
+			b.CreateAnd(is_nullterm, b.CreateICmpEQ(byte_value, b.getInt8(0))),
+			block_inner_body3,
+			block_inner_body2
+		);
+
+		b.SetInsertPoint(block_inner_body3);
+		llvm::Value* is_lonely_chunk = b.CreateNot(b.CreateLoad(i1, alloca_has_prev));
+		b.CreateStore(b.CreateLoad(i64, alloca_chunk), alloca_chunk_prev);
+		b.CreateStore(is_lonely_chunk, alloca_is_first);
+		b.CreateStore(b.getTrue(), alloca_has_prev);
+		b.CreateBr(block_flush_final);
+
+		b.SetInsertPoint(block_inner_body2);
+		llvm::Value* extended = b.CreateZExt(byte_value, i64);
+		llvm::Value* shift_amt = b.CreateSub(b.getInt64(56), b.CreateMul(inner_idx, b.getInt64(8))); // start from most significant side
+		llvm::Value* chunk_original = b.CreateLoad(i64, alloca_chunk);
+		b.CreateStore(b.CreateOr(chunk_original, b.CreateShl(extended, shift_amt)), alloca_chunk);
+		b.CreateStore(b.CreateAdd(inner_idx, b.getInt64(1)), alloca_inner_idx);
+		b.CreateBr(block_inner_loop);
+
+		b.SetInsertPoint(block_render);
+		llvm::Value* chunk = b.CreateLoad(i64, alloca_chunk);
+		
+		b.CreateCondBr(
+			b.CreateAnd(is_nullterm, b.CreateICmpEQ(chunk, b.getInt64(0))),
+			block_flush,
+			block_advance
+		);
+
+		b.SetInsertPoint(block_advance);
+		llvm::Value* has_prev = b.CreateLoad(i1, alloca_has_prev);
+		b.CreateCondBr(has_prev, block_advance2, block_advance3);
+
+		b.SetInsertPoint(block_advance2);
+		llvm::Value* chunk_prev = b.CreateLoad(i64, alloca_chunk_prev);
+		llvm::Value* is_first = b.CreateLoad(i1, alloca_is_first);
+		llvm::Value* bl_of_interest = b.CreateSelect(is_first, b.getInt8('['), b.getInt8('-'));
+		b.CreateCall(log_data_func, { chunk_prev, bl_of_interest, b.getInt8('-') });
+		b.CreateBr(block_advance3);
+
+		b.SetInsertPoint(block_advance3);
+		llvm::Value* was_first = b.CreateNot(b.CreateLoad(i1, alloca_has_prev));
+		b.CreateStore(chunk, alloca_chunk_prev);
+		b.CreateStore(was_first, alloca_is_first);
+		b.CreateStore(b.getTrue(), alloca_has_prev);
+		b.CreateStore(b.CreateAdd(outer_idx, b.getInt64(8)), alloca_outer_idx);
+		b.CreateBr(block_outer_loop);
+
+		b.SetInsertPoint(block_flush);
+		has_prev = b.CreateLoad(i1, alloca_has_prev);
+		b.CreateCondBr(has_prev, block_flush_final, block_done);
+
+		b.SetInsertPoint(block_flush_final);
+		llvm::Value* chunk_final = b.CreateLoad(i64, alloca_chunk_prev);
+		bl_of_interest = b.CreateSelect(b.CreateLoad(i1, alloca_is_first), b.getInt8('['), b.getInt8('-'));
+		b.CreateCall(log_data_func, { chunk_final, bl_of_interest, b.getInt8(']') });
+		b.CreateBr(block_done);
+
+		b.SetInsertPoint(block_done);
+		b.CreateRetVoid();
+
+		return fn;
+	}();
+
 	llvm::FunctionType* main_type = llvm::FunctionType::get(
 		llvm::Type::getInt32Ty(context),
 		false
@@ -241,6 +386,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 			value_table,
 			puts_func,
 			log_data_func,
+			log_data_deref_func,
 		};
 		
 		process_map_body(igc, *v_map.call_output_type);

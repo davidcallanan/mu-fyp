@@ -37,6 +37,8 @@ const KW_MOD = rule("KW_MOD", withCarefulSkippers("mod"));
 const KW_CREATE = rule("KW_CREATE", withCarefulSkippers("create"));
 const KW_LOG = rule("KW_LOG", withCarefulSkippers("log"));
 const KW_LOG_D = rule("KW_LOG_D", withCarefulSkippers("log_d"));
+const KW_LOG_DD = rule("KW_LOG_DD", withCarefulSkippers("log_dd"));
+const KW_NULLTERM = rule("KW_NULLTERM", withCarefulSkippers("null-term"));
 const KW_MUT = rule("KW_MUT", withCarefulSkippers("mut"));
 const KW_FOR = rule("KW_FOR", withCarefulSkippers("for"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
@@ -95,7 +97,12 @@ const symbol_path = rule("symbol_path", mapData(
 ));
 
 const expr_log = rule("expr_log", mapData(
-	join(KW_LOG, LPAREN, opt(typeval), RPAREN),
+	join(
+		KW_LOG,
+		LPAREN,
+		opt(typeval),
+		RPAREN,
+	),
 	(data) => ({
 		type: "expr_log",
 		message: data[2],
@@ -103,10 +110,34 @@ const expr_log = rule("expr_log", mapData(
 ));
 
 const expr_log_d = rule("expr_log_d", mapData(
-	join(KW_LOG_D, LPAREN, typeval, RPAREN),
+	join(
+		KW_LOG_D,
+		LPAREN,
+		typeval,
+		RPAREN,
+	),
 	(data) => ({
 		type: "expr_log_d",
 		message: data[2],
+	}),
+));
+
+const expr_log_dd = rule("expr_log_dd", mapData(
+	join(
+		KW_LOG_DD,
+		LPAREN,
+		typeval,
+		COMMA,
+		or(
+			mapData(KW_NULLTERM, () => ({ type: "nullterm" })),
+			mapData(typeval, (data) => ({ type: "byte_count", count: data })),
+		),
+		RPAREN,
+	),
+	(data) => ({
+		type: "expr_log_dd",
+		message: data[2],
+		byte_count: data[4],
 	}),
 ));
 
@@ -249,6 +280,7 @@ const map_entry_sym = rule("map_entry_sym", mapData(
 ));
 
 const expr25 = rule("expr25", or(
+	expr_log_dd,
 	expr_log_d,
 	expr_log,
 	type_callable,

@@ -106,4 +106,10 @@ create() -> { ; this comment works
 	log_d(advanced_calculation);
 	log_d(156);
 	log_d(str5);
+	log("null-term");
+	log_dd(str5, null-term);
+	log("byte-count");
+	log_dd(str5, 10);
+	log("byte-count");
+	log_dd(str5, 5);
 }

@@ -44,6 +44,12 @@ struct TypeLogD {
 	std::shared_ptr<Type> message;
 };
 
+struct TypeLogDd {
+	std::shared_ptr<Type> message;
+	std::shared_ptr<Type> byte_count;
+	bool is_nullterm;
+};
+
 struct TypeVarWalrus {
 	std::string name;
 	bool is_mut;

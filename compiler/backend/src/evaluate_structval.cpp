@@ -362,6 +362,65 @@ SmoothValue evaluate_structval(
 		};
 	}
 	
+	if (auto p_v_log_dd = std::get_if<std::shared_ptr<TypeLogDd>>(&type)) {
+		const auto& v_log_dd = *p_v_log_dd;
+
+		SmoothValue smooth = evaluate_structval(igc, *v_log_dd->message);
+
+		if (!smooth.has_leaf) {
+			fprintf(stderr, "Cannot log_dd something that has no leaf (must be poitner!)\n");
+			exit(1);
+		}
+
+		llvm::Value* leaf = smooth.extract_leaf(igc.builder);
+		llvm::Type* leaf_type = leaf->getType();
+
+		if (!leaf_type->isPointerTy()) {
+			fprintf(stderr, "A pointer must be encoded in the leaf when logging in dd mode\n");
+			exit(1);
+		}
+
+		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(igc.context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(igc.context);
+
+		llvm::Value* ptr = igc.builder.CreateBitCast(leaf, i8ptr);
+
+		llvm::Value* byte_count;
+
+		if (v_log_dd->is_nullterm) {
+			byte_count = llvm::ConstantInt::get(i64, (uint64_t) -1);
+		} else {
+			SmoothValue count_smooth = evaluate_structval(igc, *v_log_dd->byte_count);
+
+			if (!count_smooth.has_leaf) {
+				fprintf(stderr, "log_dd byte_count must have leaf.\n");
+				exit(1);
+			}
+
+			llvm::Value* count_leaf = count_smooth.extract_leaf(igc.builder);
+			
+			if (!count_leaf->getType()->isIntegerTy()) {
+				fprintf(stderr, "log_dd byte_count must be integeral.\n");
+				exit(1);
+			}
+
+			byte_count = (count_leaf->getType() == i64)
+				? count_leaf
+				: igc.builder.CreateZExt(count_leaf, i64);
+		}
+
+		igc.builder.CreateCall(igc.log_data_deref_func, { ptr, byte_count });
+
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+
+		return SmoothValue{
+			struct_value,
+			type,
+			false,
+		};
+	}
+	
 	if (auto p_v_var_walrus = std::get_if<std::shared_ptr<TypeVarWalrus>>(&type)) {
 		const auto& v_var_walrus = *p_v_var_walrus;
 		

@@ -332,6 +332,38 @@ Type normalize_type(
 		return v_log_d;
 	}
 
+	if (type == "expr_log_dd") {
+		auto v_log_dd = std::make_shared<TypeLogDd>();
+
+		if (!typeval.contains("message") || typeval["message"].is_null()) {
+			fprintf(stderr, "have to provide a message to log_dd\n");
+			exit(1);
+		}
+
+		if (!typeval.contains("byte_count") || typeval["byte_count"].is_null()) {
+			fprintf(stderr, "have to provide a byte_count to log_dd or specify null-term\n");
+			exit(1);
+		}
+
+		v_log_dd->message = std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+
+		const auto& byte_count = typeval["byte_count"];
+		const std::string byte_count_type = byte_count["type"].get<std::string>();
+
+		if (byte_count_type == "nullterm") {
+			v_log_dd->is_nullterm = true;
+			v_log_dd->byte_count = nullptr;
+		} else if (byte_count_type == "byte_count") {
+			v_log_dd->is_nullterm = false;
+			v_log_dd->byte_count = std::make_shared<Type>(normalize_type(byte_count["count"], symbol_table));
+		} else {
+			fprintf(stderr, "bizarre type for byte_count %s\n", byte_count_type.c_str());
+			exit(1);
+		}
+
+		return v_log_dd;
+	}
+
 	if (type == "expr_call_with_sym") {
 		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
 		

@@ -1,5 +1,7 @@
 LANGUAGE FEATURES:
+fix log_dd null-term (missing byte)
 add numeric expressions
+add enums and true false enums
 add logical expressions
 add comparison expressions
 and if statement
