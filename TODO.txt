@@ -1,0 +1,14 @@
+LANGUAGE FEATURES:
+add numeric expressions
+add logical expressions
+add comparison expressions
+and if statement
+add break keyword
+add type modifications (via @)
+add call_with_map
+add comptime llvm/c abi
+
+MAIN GOALS:
+add module system
+add optimizations
+add evaluation

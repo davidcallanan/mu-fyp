@@ -6,6 +6,8 @@
 
 using json = nlohmann::json;
 
+// This function both parses and normalizes the JSON into a nice programmatic structure.
+
 Type normalize_type(
 	const json& typeval,
 	TypeSymbolTable& symbol_table

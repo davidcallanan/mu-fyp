@@ -247,6 +247,17 @@ TODO
 
 \section{Design}
 
+\subsection{Associativity}
+
+The syntax was designed to follow the crystal/pistol pattern, some terminology devised to mean the following:
+
+\begin{itemize}
+  \item Crystal: A unary batch of operator/operand pairs.
+  \item Pistol: A binary batch of operations (like how existing languages handle binary operations).
+\end{itemize}
+
+For precedence reasons, we have four separate rules: additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
+  
 \section{Implementation}
 
 \subsection{Mutability}
@@ -260,6 +271,10 @@ LLVM IR is in SSA form, where registers are immutable. One cannot reuse a regist
 Parsing issues were frequently encountered during the development cycle, and manual debugging became infeasible as complexity increased. Hence, a \textit{Parser Trace Explorer} was developed, consisting of a JSON trace logger in the compiler frontend, and a separate web-app tool for exploring these logs. A simple SolidStart + Tanstack Router tech stack was selected for this tool due to existing familiarity with this stack, and because of the straightforward requirements of the tool.
 
 Since parsers try a vast number of rules and are inherently recursive, the logs quickly exceed $500,000$ lines for small source files. To deal with this, the logs are structured as a tree, and the user of the tool is expected to navigate this tree by selecting the precise rule attempts that the parser is supposed to succeed on, thus hiding irrelevant attempts. A dedicated lexer, in hindsight, would have reduced the exponential growth of the logs, but might not have easily parsed some of the unique language features (such as semicolons acting as both terminators and comments).
+
+\subsection{Defensive Programming}
+
+As the language has strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. This could be due to semantic violations in the user's code, or due to bugs in the compiler itself.
 
 \chapter{Evaluation}
 

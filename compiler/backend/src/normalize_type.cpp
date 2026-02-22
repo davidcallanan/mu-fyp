@@ -338,6 +338,32 @@ Type normalize_type(
 		return v_call_with_sym;
 	}
 	
+	if (type == "expr_multi") {
+		auto v_expr_multi = std::make_shared<TypeExprMulti>();
+		
+		for (const auto& op_data : typeval["ops"]) {
+			OpNumeric op;
+			op.op = op_data["op"].get<std::string>();
+			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			v_expr_multi->ops.push_back(op);
+		}
+		
+		return v_expr_multi;
+	}
+
+	if (type == "expr_addit") {
+		auto v_expr_addit = std::make_shared<TypeExprAddit>();
+		
+		for (const auto& op_data : typeval["ops"]) {
+			OpNumeric op;
+			op.op = op_data["op"].get<std::string>();
+			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			v_expr_addit->ops.push_back(op);
+		}
+		
+		return v_expr_addit;
+	}
+	
 	if (type == "type_constrained") {
 		if (false
 			|| !typeval.contains("constraints")

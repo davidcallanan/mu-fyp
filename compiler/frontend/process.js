@@ -69,6 +69,9 @@ const FLOAT = rule("FLOAT", withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data 
 const FLOAT_BB = rule("FLOAT_BB", withBareboneSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
 const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0])));
 const STRING_BB = rule("STRING_BB", withBareboneSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/,  data => data.groups[0])));
+const PLUS = rule("PLUS", withCarefulSkippers("+"));
+const MINUS = rule("MINUS", withCarefulSkippers("-"));
+const DIV = rule("DIV", withCarefulSkippers("/"));
 
 // PARSER RULES
 
@@ -242,8 +245,76 @@ const expr25 = rule("expr25", or(
 	typeval_atom,
 ));
 
-const expr75 = rule("expr75", mapData(join(
+const expr30 = rule("expr30", or( // multiplicative pistol
+	mapData(
+		join(expr25, multi(join(or(ASTERISK, DIV), expr25))),
+		(data) => {
+			if (data[1].length === 0) {
+				return data[0];
+			}
+
+			return ({
+				type: "expr_multi",
+				ops: [{ op: "*", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
+			});
+		},
+	),
 	expr25,
+));
+
+const expr35 = rule("expr35", or( // multiplicative crystal
+	mapData(
+		multi(join(or(ASTERISK, DIV), expr25)), // in unary case, we skip to expr25 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_multi",
+				ops: data.map(([op, operand]) => ({ op, operand })),
+			});
+		},
+	),
+	expr30,
+));
+
+const expr40 = rule("expr40", or( // additive pistol
+	mapData(
+		join(expr35, multi(join(or(PLUS, MINUS), expr35))),
+		(data) => {
+			if (data[1].length === 0) {
+				return data[0];
+			}
+
+			return ({
+				type: "expr_addit",
+				ops: [{ op: "+", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
+			});
+		},
+	),
+	expr35,
+));
+
+const expr45 = rule("expr45", or( // additive crystal
+	mapData(
+		multi(join(or(PLUS, MINUS), expr35)), // in unary case, we skip to expr35 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_addit",
+				ops: data.map(([op, operand]) => ({ op, operand })),
+			});
+		},
+	),
+	expr40,
+));
+
+const expr75 = rule("expr75", mapData(join(
+	expr45,
 	opt_multi(SYMBOL_BARE),
 ), (data) => {
 	let result = data[0];

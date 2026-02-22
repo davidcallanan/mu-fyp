@@ -349,6 +349,87 @@ SmoothValue evaluate_structval(
 		return access_member(igc, target_smooth, v_call_with_sym->sym);
 	}
 	
+	if (auto p_expr_multi = std::get_if<std::shared_ptr<TypeExprMulti>>(&type)) {
+		const auto& v_expr_multi = **p_expr_multi;
+		llvm::Value* result = nullptr;
+		bool is_float = false; // we will not allow combining int and float operations implicitely.
+
+		for (const auto& op_numeric : v_expr_multi.ops) {
+			SmoothValue smooth = evaluate_structval(igc, *op_numeric.operand);
+			llvm::Value* val = smooth.extract_leaf(igc.builder);
+
+			if (result == nullptr) {
+				is_float = val->getType()->isFloatingPointTy();
+				result = is_float ? llvm::ConstantFP::get(val->getType(), 1.0) : llvm::ConstantInt::get(val->getType(), 1);
+			} else if (val->getType()->isFloatingPointTy() != is_float) {
+				fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+				exit(1);
+			}
+
+			if (op_numeric.op == "*") {
+				result = is_float ? igc.builder.CreateFMul(result, val) : igc.builder.CreateMul(result, val);
+			} else if (op_numeric.op == "/") {
+				result = is_float ? igc.builder.CreateFDiv(result, val) : igc.builder.CreateSDiv(result, val);
+				// todo: is signed division appropriate in all cases? probably need to adjust this.
+			} else {
+				fprintf(stderr, "Some bizarre operator was encountered %s (multiplicative)\n", op_numeric.op.c_str());
+				exit(1);
+			}
+		}
+
+		if (result == nullptr) {
+			fprintf(stderr, "multiplicative expression had no operations.\n");
+			exit(1);
+		}
+
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ result->getType() });
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		
+		struct_value = igc.builder.CreateInsertValue(struct_value, result, 0);
+		
+		return SmoothValue{ struct_value, type, true };
+	}
+
+	if (auto p_expr_addit = std::get_if<std::shared_ptr<TypeExprAddit>>(&type)) {
+		const auto& v_expr_addit = **p_expr_addit;
+		llvm::Value* result = nullptr;
+		bool is_float = false;
+
+		for (const auto& op_numeric : v_expr_addit.ops) {
+			SmoothValue smooth = evaluate_structval(igc, *op_numeric.operand);
+			llvm::Value* val = smooth.extract_leaf(igc.builder);
+
+			if (result == nullptr) {
+				is_float = val->getType()->isFloatingPointTy();
+				result = is_float ? llvm::ConstantFP::get(val->getType(), 0.0) : llvm::ConstantInt::get(val->getType(), 0);
+			} else if (val->getType()->isFloatingPointTy() != is_float) {
+				fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+				exit(1);
+			}
+
+			if (op_numeric.op == "+") {
+				result = is_float ? igc.builder.CreateFAdd(result, val) : igc.builder.CreateAdd(result, val);
+			} else if (op_numeric.op == "-") {
+				result = is_float ? igc.builder.CreateFSub(result, val) : igc.builder.CreateSub(result, val);
+			} else {
+				fprintf(stderr, "Some bizarre operator was encountered %s (additive)\n", op_numeric.op.c_str());
+				exit(1);
+			}
+		}
+
+		if (result == nullptr) {
+			fprintf(stderr, "additive expression had no operations.\n");
+			exit(1);
+		}
+
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ result->getType() });
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		
+		struct_value = igc.builder.CreateInsertValue(struct_value, result, 0);
+		
+		return SmoothValue{ struct_value, type, true };
+	}
+
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");
 	exit(1);
 }

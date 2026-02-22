@@ -57,3 +57,16 @@ struct TypeCallWithSym {
 	std::shared_ptr<Type> target;
 	std::string sym;
 };
+
+struct OpNumeric {
+	std::string op;
+	std::shared_ptr<Type> operand;
+};
+
+struct TypeExprMulti {
+	std::vector<OpNumeric> ops;
+};
+
+struct TypeExprAddit {
+	std::vector<OpNumeric> ops;
+};

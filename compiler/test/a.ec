@@ -93,7 +93,7 @@ create() -> { ; this comment works
 	log("Str 5 is now:");
 	log(str5);
 	
-	for {
-		log("Forever.");
-	}
+	; for {
+	;	log("Forever.");
+	; }
 }
