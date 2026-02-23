@@ -187,6 +187,13 @@ hardval.define(rule("hardval", or(
 			instructions: [],
 		}),
 	),
+	mapData(
+		SYMBOL,
+		(data) => ({
+			type: "type_enum",
+			sym: data.substring(1),
+		}),
+	),
 	mapData( // to be honest i'm not sure if variable access should be a hardval, it makes me reconsider whether pointers should also be normalized to maps.
 		IDENT,
 		(data) => ({
@@ -391,11 +398,11 @@ const map_entry_expr = rule("map_entry_expr", mapData(
 ));
 
 const map_entry = rule("map_entry", or(
-	mapData(map_entry_expr, (data) => ({
+	mapData(map_entry_sym, (data) => ({
 		type: "instruction",
 		data,
 	})),
-	mapData(map_entry_sym, (data) => ({
+	mapData(map_entry_expr, (data) => ({
 		type: "instruction",
 		data,
 	})),

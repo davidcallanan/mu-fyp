@@ -1,5 +1,6 @@
 #include "is_subset_type.hpp"
 #include "is_subset_type_map.hpp"
+#include "is_subset_type_enum.hpp"
 #include "is_leafable.hpp"
 #include "wrap_leafable.hpp"
 #include "t_types.hpp"
@@ -32,6 +33,11 @@ bool is_subset_type(const Type& type_a, const Type& type_b) {
 	if (auto p_v_rotten_a = std::get_if<std::shared_ptr<TypeRotten>>(&type_a)) {
 		auto p_v_rotten_b = std::get_if<std::shared_ptr<TypeRotten>>(&type_b);
 		return (*p_v_rotten_a)->type_str == (*p_v_rotten_b)->type_str; // language will require explicit casting for now.
+	}
+
+	if (auto p_v_enum_a = std::get_if<std::shared_ptr<TypeEnum>>(&type_a)) {
+		auto p_v_enum_b = std::get_if<std::shared_ptr<TypeEnum>>(&type_b);
+		return is_subset_type_enum(**p_v_enum_a, **p_v_enum_b);
 	}
 
 	// for now we pretend everything else is incompatible.

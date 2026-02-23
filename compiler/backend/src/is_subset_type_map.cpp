@@ -9,7 +9,7 @@ bool is_subset_type_map(const TypeMap& map_a, const TypeMap& map_b) {
 		return false;
 	}
 
-	for (const auto& [sym_name_b, sym_type_b] : map_b.sym_inputs) {
+	for (const auto& [sym_name_b, sym_type_b] : map_b.sym_inputs) { // todo: not sure if i got this backwards.
 		auto it = map_a.sym_inputs.find(sym_name_b);
 
 		if (it == map_a.sym_inputs.end()) {

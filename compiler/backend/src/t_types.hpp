@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 #include <variant>
@@ -34,6 +35,11 @@ struct TypeMerged {
 
 struct TypeRotten {
 	std::string type_str;
+};
+
+struct TypeEnum {
+	std::optional<std::string> hardsym;
+	std::vector<std::string> syms;
 };
 
 struct TypeLog {

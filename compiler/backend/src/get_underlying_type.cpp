@@ -13,6 +13,10 @@ Type get_underlying_type(const Type& type) {
 		return type;
 	}
 
+	if (std::holds_alternative<std::shared_ptr<TypeEnum>>(type)) {
+		return type;
+	}
+
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
 		const auto& v_var_access = *p_v_var_access;
 		

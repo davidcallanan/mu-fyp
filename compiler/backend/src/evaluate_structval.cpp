@@ -478,6 +478,21 @@ SmoothValue evaluate_structval(
 		return access_variable(igc, type);
 	}
 	
+	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {
+		llvm::Type* i32 = llvm::Type::getInt32Ty(igc.context);
+		llvm::Value* enum_val = llvm::ConstantInt::get(i32, 0); // for now we don't know how many syms are known so all syms are mapped to 0.
+
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ i32 });
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		struct_value = igc.builder.CreateInsertValue(struct_value, enum_val, 0);
+
+		return SmoothValue{
+			struct_value,
+			type,
+			true,
+		};
+	}
+
 	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
 		const auto& v_call_with_sym = *p_v_call_with_sym;
 		SmoothValue target_smooth = evaluate_structval(igc, *v_call_with_sym->target);

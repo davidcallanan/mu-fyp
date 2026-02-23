@@ -16,6 +16,7 @@ struct TypePointer;
 struct TypeVarAccess;
 struct TypeMerged;
 struct TypeRotten;
+struct TypeEnum;
 struct TypeLog;
 struct TypeLogD;
 struct TypeLogDd;
@@ -33,6 +34,7 @@ using Type = std::variant<
 	std::shared_ptr<TypeVarAccess>,
 	std::shared_ptr<TypeMerged>,
 	std::shared_ptr<TypeRotten>,
+	std::shared_ptr<TypeEnum>,
 	std::shared_ptr<TypeLog>,
 	std::shared_ptr<TypeLogD>,
 	std::shared_ptr<TypeLogDd>,
@@ -47,5 +49,6 @@ using UnderlyingType = std::variant< // an underlying type is kind of the eventu
 	std::shared_ptr<TypeMap>,
 	std::shared_ptr<TypePointer>,
 	std::shared_ptr<TypeMerged>,
-	std::shared_ptr<TypeRotten>
+	std::shared_ptr<TypeRotten>,
+	std::shared_ptr<TypeEnum>
 >;

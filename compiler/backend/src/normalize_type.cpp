@@ -364,6 +364,22 @@ Type normalize_type(
 		return v_log_dd;
 	}
 
+	if (type == "type_enum") {
+		if (!typeval.contains("sym")) {
+			fprintf(stderr, "A definitive enum instantiation requires an actual symbol.\n");
+			exit(1);
+		}
+
+		auto v_enum = std::make_shared<TypeEnum>();
+		
+		std::string hardsym = typeval["sym"].get<std::string>();
+		
+		v_enum->hardsym = hardsym;
+		v_enum->syms.push_back(hardsym);
+
+		return v_enum;
+	}
+
 	if (type == "expr_call_with_sym") {
 		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
 		
