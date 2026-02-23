@@ -211,16 +211,18 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		llvm::Argument* arg_byte_count = fn->getArg(1);
 
 		llvm::IRBuilder<> b(context);
+		
+		// uses an outer loop for blocks and inner loop to deal with potential partial blocks.
+		// because of "[---]", we have to implement lookahead so keep track of both chunk and chunk_prev. 
 
 		auto* block_entry = llvm::BasicBlock::Create(context, "entry", fn);
 		auto* block_outer_loop = llvm::BasicBlock::Create(context, "outer_loop", fn);
 		auto* block_inner_setup = llvm::BasicBlock::Create(context, "inner_setup", fn);
 		auto* block_inner_loop = llvm::BasicBlock::Create(context, "inner_loop", fn);
 		auto* block_inner_body = llvm::BasicBlock::Create(context, "inner_body", fn);
-		auto* block_inner_body2 = llvm::BasicBlock::Create(context, "inner_body2", fn);
 		auto* block_inner_body3 = llvm::BasicBlock::Create(context, "inner_body3", fn);
+		auto* block_inner_body2 = llvm::BasicBlock::Create(context, "inner_body2", fn);
 		auto* block_render = llvm::BasicBlock::Create(context, "render", fn);
-		auto* block_advance = llvm::BasicBlock::Create(context, "advance", fn);
 		auto* block_advance2 = llvm::BasicBlock::Create(context, "advance2", fn);
 		auto* block_advance3 = llvm::BasicBlock::Create(context, "advance3", fn);
 		auto* block_flush = llvm::BasicBlock::Create(context, "flush", fn);
@@ -234,19 +236,16 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		llvm::Value* alloca_chunk_prev = b.CreateAlloca(i64, nullptr, "chunk_prev");
 		llvm::Value* alloca_has_prev = b.CreateAlloca(i1, nullptr, "has_prev");
 		llvm::Value* alloca_is_first = b.CreateAlloca(i1, nullptr, "is_first");
+		llvm::Value* alloca_is_game_over = b.CreateAlloca(i1, nullptr, "is_game_over");
 		llvm::Value* is_nullterm = b.CreateICmpEQ(arg_byte_count, b.getInt64(-1), "is_nullterm");
 		b.CreateStore(b.getInt64(0), alloca_outer_idx);
 		b.CreateStore(b.getFalse(), alloca_has_prev);
+		b.CreateStore(b.getFalse(), alloca_is_game_over);
 		b.CreateBr(block_outer_loop);
 
 		b.SetInsertPoint(block_outer_loop);
 		llvm::Value* outer_idx = b.CreateLoad(i64, alloca_outer_idx);
-		
-		b.CreateCondBr(
-			b.CreateAnd(b.CreateNot(is_nullterm), b.CreateICmpUGE(outer_idx, arg_byte_count)),
-			block_flush,
-			block_inner_setup
-		);
+		b.CreateCondBr(b.CreateLoad(i1, alloca_is_game_over), block_flush, block_inner_setup); // i feel like this won't handle zero rows properly.
 
 		b.SetInsertPoint(block_inner_setup);
 		b.CreateStore(b.getInt64(0), alloca_chunk);
@@ -257,25 +256,20 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		llvm::Value* inner_idx = b.CreateLoad(i64, alloca_inner_idx);
 		llvm::Value* byte_idx = b.CreateAdd(outer_idx, inner_idx);
 		llvm::Value* is_inner_done = b.CreateICmpEQ(inner_idx, b.getInt64(8));
-		llvm::Value* is_outer_done = b.CreateAnd(b.CreateNot(is_nullterm), b.CreateICmpUGE(byte_idx, arg_byte_count));
-		b.CreateCondBr(b.CreateOr(is_inner_done, is_outer_done), block_render, block_inner_body);
+		b.CreateCondBr(is_inner_done, block_render, block_inner_body);
 
 		b.SetInsertPoint(block_inner_body);
 		llvm::Value* byte_ptr = b.CreateGEP(i8, arg_ptr, byte_idx);
 		llvm::Value* byte_value = b.CreateLoad(i8, byte_ptr);
-		
-		b.CreateCondBr(
-			b.CreateAnd(is_nullterm, b.CreateICmpEQ(byte_value, b.getInt8(0))),
-			block_inner_body3,
-			block_inner_body2
-		);
+		llvm::Value* is_null = b.CreateAnd(is_nullterm, b.CreateICmpEQ(byte_value, b.getInt8(0)));
+		llvm::Value* is_ended = b.CreateAnd(b.CreateNot(is_nullterm), b.CreateICmpEQ(b.CreateAdd(byte_idx, b.getInt64(1)), arg_byte_count));
+		llvm::Value* is_game_over = b.CreateOr(is_null, is_ended);
+		b.CreateStore(is_game_over, alloca_is_game_over);
+		llvm::Value* is_empty_chunk = b.CreateICmpEQ(inner_idx, b.getInt64(0));
+		b.CreateCondBr(is_null, block_inner_body3, block_inner_body2);
 
 		b.SetInsertPoint(block_inner_body3);
-		llvm::Value* is_lonely_chunk = b.CreateNot(b.CreateLoad(i1, alloca_has_prev));
-		b.CreateStore(b.CreateLoad(i64, alloca_chunk), alloca_chunk_prev);
-		b.CreateStore(is_lonely_chunk, alloca_is_first);
-		b.CreateStore(b.getTrue(), alloca_has_prev);
-		b.CreateBr(block_flush_final);
+		b.CreateCondBr(is_empty_chunk, block_flush, block_render);
 
 		b.SetInsertPoint(block_inner_body2);
 		llvm::Value* extended = b.CreateZExt(byte_value, i64);
@@ -283,18 +277,10 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		llvm::Value* chunk_original = b.CreateLoad(i64, alloca_chunk);
 		b.CreateStore(b.CreateOr(chunk_original, b.CreateShl(extended, shift_amt)), alloca_chunk);
 		b.CreateStore(b.CreateAdd(inner_idx, b.getInt64(1)), alloca_inner_idx);
-		b.CreateBr(block_inner_loop);
+		b.CreateCondBr(is_game_over, block_render, block_inner_loop);
 
 		b.SetInsertPoint(block_render);
 		llvm::Value* chunk = b.CreateLoad(i64, alloca_chunk);
-		
-		b.CreateCondBr(
-			b.CreateAnd(is_nullterm, b.CreateICmpEQ(chunk, b.getInt64(0))),
-			block_flush,
-			block_advance
-		);
-
-		b.SetInsertPoint(block_advance);
 		llvm::Value* has_prev = b.CreateLoad(i1, alloca_has_prev);
 		b.CreateCondBr(has_prev, block_advance2, block_advance3);
 
@@ -314,13 +300,11 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		b.CreateBr(block_outer_loop);
 
 		b.SetInsertPoint(block_flush);
-		has_prev = b.CreateLoad(i1, alloca_has_prev);
-		b.CreateCondBr(has_prev, block_flush_final, block_done);
+		b.CreateCondBr(b.CreateLoad(i1, alloca_has_prev), block_flush_final, block_done);
 
 		b.SetInsertPoint(block_flush_final);
 		llvm::Value* chunk_final = b.CreateLoad(i64, alloca_chunk_prev);
-		bl_of_interest = b.CreateSelect(b.CreateLoad(i1, alloca_is_first), b.getInt8('['), b.getInt8('-'));
-		b.CreateCall(log_data_func, { chunk_final, bl_of_interest, b.getInt8(']') });
+		b.CreateCall(log_data_func, { chunk_final, b.CreateSelect(b.CreateLoad(i1, alloca_is_first), b.getInt8('['), b.getInt8('-')), b.getInt8(']') });
 		b.CreateBr(block_done);
 
 		b.SetInsertPoint(block_done);

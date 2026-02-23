@@ -89,7 +89,7 @@ create() -> { ; this comment works
 	
 	log("Str 5 is:");
 	log(str5);
-	str5 = "New mutated value!";
+	str5 = "New mutated value! I hope this formats well. abc";
 	log("Str 5 is now:");
 	log(str5);
 	
@@ -109,7 +109,7 @@ create() -> { ; this comment works
 	log("null-term");
 	log_dd(str5, null-term);
 	log("byte-count");
-	log_dd(str5, 10);
+	log_dd(str5, 20);
 	log("byte-count");
 	log_dd(str5, 5);
 }
