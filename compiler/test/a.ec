@@ -126,4 +126,14 @@ create() -> { ; this comment works
 	} :true;
 	
 	log_d(new_boolean);
+	
+	log("Boolean values:");
+	 
+	mut actual_boolean := bool :true;
+	
+	log_d(actual_boolean);
+	
+	actual_boolean = :false;
+	
+	log_d(actual_boolean);
 }

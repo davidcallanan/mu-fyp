@@ -37,6 +37,15 @@ TypeSymbolTable::TypeSymbolTable() {
 		entry->type_value = UnderlyingType{map};
 		_root->children[leaf_type] = std::move(entry);
 	}
+
+	{
+		auto v_enum = std::make_shared<TypeEnum>();
+		v_enum->syms = {"false", "true"};
+
+		auto entry = std::make_unique<MapEntry>();
+		entry->type_value = UnderlyingType{v_enum};
+		_root->children["bool"] = std::move(entry);
+	}
 }
 
 void TypeSymbolTable::set(const std::string &trail, const UnderlyingType &value) {

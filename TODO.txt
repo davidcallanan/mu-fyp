@@ -1,6 +1,4 @@
 LANGUAGE FEATURES:
-add numeric expressions
-add enum types to say possibilities
 add values to enums
 add built-in boolean enum
 make enums encode boolean and do logical stuff
