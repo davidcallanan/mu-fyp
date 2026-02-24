@@ -237,9 +237,17 @@ TODO
 
 \chapter{The Solution}
 
-\section{Individual elements}
+\section{Design Elements}
 
-\subsection{Modules treated like classes}
+\subsection{Unification of Modules and Classes}
+
+Languages have historically offered various features like classes, modules, packages, and so on, that have much overlap in their functionality. One of the core design decisions was to unify these elements into a single system that consists of a smaller unit called a "map" (which bares some resemblence with Rust- and go-like structs), and a larger organizational unit called a "module". Most importantly, every module still uses a map for instance-management purposes, and so the same capabilities are available whether or not a program is split into more modules or not. This differs from languages like C, where separate linkage units has an impact on the final prograsm. The decision for this unification stems from Rust's philosophy of "zero-cost abstractions", an acknowledgement that organizational differences in a program that aids with design and iteration should not impact the performance of the final artifact.
+
+\subsection{Map Enum Equivalence}
+
+Three features in programming languages worth considering are structs (or classes), functions (or methods), and enums (specifically, tagged unions). Structs and functions have been unified into a single feature called a "map".
+
+One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters.
 
 \subsection{Additional benefit of inlining: interacting with existing languages without indirection.}
 
@@ -249,11 +257,20 @@ TODO
 
 \subsection{Associativity}
 
+In most programming languages, addition and subtraction are treated as unary operations in an additive batch, whereras operations like multiplication and division are instead treated as binary operations in a multiplicative tree. However, it turns out that any associative operation (such as multiplication) can be written in the former form, where operations in the same family (such as division) control the unary effect via an operator that prefixes the operand. As such, a consistent syntax was employed in this language, allowing both the unary and binary approach for all associative operations and their respective intra-family operations. This includes the following families:
+
+\begin{itemize}
+  \item Addition and subtraction (like existing languages);
+  \item Multiplication and division;
+  \item Logical AND;
+  \item Logical OR;
+\end{itemize}
+
 The syntax was designed to follow the crystal/pistol pattern, some terminology devised to mean the following:
 
 \begin{itemize}
-  \item Crystal: A unary batch of operator/operand pairs.
-  \item Pistol: A binary batch of operations (like how existing languages handle binary operations).
+  \item Crystal: A unary batch of operator/operand pairs (an extension of how existing languages handle addition and subtraction).
+  \item Pistol: A binary tree of operations (like how existing languages handle multiplication and division).
 \end{itemize}
 
 For precedence reasons, we have four separate rules: additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
