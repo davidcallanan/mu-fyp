@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <bit>
 #include <cstdio>
 #include <cstdlib>
 #include <cstdint>
@@ -479,15 +481,43 @@ SmoothValue evaluate_structval(
 	}
 	
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {
-		llvm::Type* i32 = llvm::Type::getInt32Ty(igc.context);
-		llvm::Value* enum_val = llvm::ConstantInt::get(i32, 0); // for now we don't know how many syms are known so all syms are mapped to 0.
+		const auto& v_enum = *p_v_enum;
 
-		llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ i32 });
-		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-		struct_value = igc.builder.CreateInsertValue(struct_value, enum_val, 0);
+		uint32_t bit_width = (uint32_t) std::bit_width(v_enum->syms.size());
+		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
+		
+		// if (!v_enum->hardsym.has_value()) {
+		// 	fprintf(stderr, "Enum does not have any definitive symbol, could not reduce to one possibility.\n");
+		// 	exit(1);
+		// }
 
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = std::make_shared<Type>(type);
+
+		if (!v_enum->hardsym.has_value()) {
+			llvm::StructType* empty = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{});
+			llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ empty });
+			llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+			
+			return SmoothValue{
+				struct_value,
+				v_map,
+				true
+			};
+		}
+
+		const std::string& hardsym = v_enum->hardsym.value();
+		auto it = std::find(v_enum->syms.begin(), v_enum->syms.end(), hardsym);
+
+		if (it == v_enum->syms.end()) {
+			fprintf(stderr, "While attempting to instantiate \"%s\", it was not found as a possibility.\n", hardsym.c_str());
+			exit(1);
+		}
+
+		uint32_t enum_idx = (uint32_t) std::distance(v_enum->syms.begin(), it);
+		llvm::StructType* struct_type = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ int_type });
+		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+		struct_value = igc.builder.CreateInsertValue(struct_value, llvm::ConstantInt::get(int_type, enum_idx), 0);
 
 		return SmoothValue{
 			struct_value,

@@ -38,8 +38,8 @@ struct TypeRotten {
 };
 
 struct TypeEnum {
-	std::optional<std::string> hardsym;
-	std::vector<std::string> syms;
+	std::optional<std::string> hardsym; // this is a restrictive constraint, when merging, we imagine any value that satisfies ALL.
+	std::vector<std::string> syms; // this is a permissive constraint, when merging, imagine any value that satisfies ANY.
 };
 
 struct TypeLog {

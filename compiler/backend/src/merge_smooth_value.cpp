@@ -1,6 +1,9 @@
+#include <algorithm>
+#include <bit>
 #include <cstdio>
 #include <cstdlib>
 #include <variant>
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "merge_smooth_value.hpp"
 #include "is_eq_type_pointer.hpp"
@@ -24,6 +27,7 @@ SmoothValue merge_smooth_value(
 	const TypeMap& map_b = **p_v_map_b;
 	
 	std::shared_ptr<Type> updated_leaf_type = nullptr;
+	llvm::Value* updated_leaf_value = nullptr;
 	
 	if (!map_a.execution_sequence.empty() || !map_b.execution_sequence.empty()) {
 		fprintf(stderr, "Instructoins should not be present, expected to be processed already by this point.\n");
@@ -88,6 +92,18 @@ SmoothValue merge_smooth_value(
 			}
 
 			updated_leaf_type = std::make_shared<Type>(v_merged_enum);
+			
+			// as merging enums will cause indies to change, we have to recompute here.
+			// really I need to find a unified place for producing values properly, but for now this will do.
+
+			if (v_merged_enum->hardsym.has_value()) {
+				const std::string& hardsym = v_merged_enum->hardsym.value();
+				auto it = std::find(v_merged_enum->syms.begin(), v_merged_enum->syms.end(), hardsym);
+				uint32_t enum_idx = (uint32_t) std::distance(v_merged_enum->syms.begin(), it);
+				uint32_t bit_width = (uint32_t) std::bit_width(v_merged_enum->syms.size());
+				llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
+				updated_leaf_value = llvm::ConstantInt::get(int_type, enum_idx);
+			}
 		}
 
 		auto p_v_rotten_a = std::get_if<std::shared_ptr<TypeRotten>>(map_a.leaf_type.get());
@@ -139,8 +155,16 @@ SmoothValue merge_smooth_value(
 		p_merged->sym_inputs = map_a.sym_inputs;
 	}
 	
+	// todo: consider sym_inputs
+	
+	llvm::Value* struct_outcome = smooth_b.struct_value;
+
+	if (updated_leaf_value != nullptr && smooth_b.has_leaf) {
+		struct_outcome = igc.builder.CreateInsertValue(smooth_b.struct_value, updated_leaf_value, 0);
+	}
+
 	return SmoothValue{
-		smooth_b.struct_value,
+		struct_outcome,
 		p_merged,
 		smooth_b.has_leaf,
 	};
