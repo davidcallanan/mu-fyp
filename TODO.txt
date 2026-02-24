@@ -1,6 +1,9 @@
 LANGUAGE FEATURES:
 add numeric expressions
-add enums and true false enums
+add enum types to say possibilities
+add values to enums
+add built-in boolean enum
+make enums encode boolean and do logical stuff
 add logical expressions
 add comparison expressions
 and if statement

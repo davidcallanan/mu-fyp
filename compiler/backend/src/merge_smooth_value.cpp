@@ -23,6 +23,8 @@ SmoothValue merge_smooth_value(
 	const TypeMap& map_a = **p_v_map_a;
 	const TypeMap& map_b = **p_v_map_b;
 	
+	std::shared_ptr<Type> updated_leaf_type = nullptr;
+	
 	if (!map_a.execution_sequence.empty() || !map_b.execution_sequence.empty()) {
 		fprintf(stderr, "Instructoins should not be present, expected to be processed already by this point.\n");
 		exit(1);
@@ -44,6 +46,50 @@ SmoothValue merge_smooth_value(
 	}
 	
 	if (map_a.leaf_type != nullptr && map_b.leaf_type != nullptr) {
+		auto p_v_enum_a = std::get_if<std::shared_ptr<TypeEnum>>(map_a.leaf_type.get());
+		auto p_v_enum_b = std::get_if<std::shared_ptr<TypeEnum>>(map_b.leaf_type.get());
+
+		if (p_v_enum_a && p_v_enum_b) {
+			const TypeEnum& enum_a = **p_v_enum_a;
+			const TypeEnum& enum_b = **p_v_enum_b;
+
+			auto v_merged_enum = std::make_shared<TypeEnum>();
+
+			for (const auto& sym : enum_a.syms) {
+				v_merged_enum->syms.push_back(sym);
+			}
+
+			for (const auto& sym : enum_b.syms) {
+				bool already_present = false;
+
+				for (const auto& existing : v_merged_enum->syms) {
+					if (existing == sym) {
+						already_present = true;
+						break;
+					}
+				}
+
+				if (!already_present) {
+					v_merged_enum->syms.push_back(sym);
+				}
+			}
+
+			if (enum_a.hardsym.has_value() && enum_b.hardsym.has_value()) {
+				if (enum_a.hardsym.value() != enum_b.hardsym.value()) {
+					fprintf(stderr, "no, cannot combine two enum syms simultaneously %s and %s.\n", enum_a.hardsym.value().c_str(), enum_b.hardsym.value().c_str());
+					exit(1);
+				}
+
+				v_merged_enum->hardsym = enum_a.hardsym;
+			} else if (enum_a.hardsym.has_value()) {
+				v_merged_enum->hardsym = enum_a.hardsym;
+			} else if (enum_b.hardsym.has_value()) {
+				v_merged_enum->hardsym = enum_b.hardsym;
+			}
+
+			updated_leaf_type = std::make_shared<Type>(v_merged_enum);
+		}
+
 		auto p_v_rotten_a = std::get_if<std::shared_ptr<TypeRotten>>(map_a.leaf_type.get());
 		auto p_v_rotten_b = std::get_if<std::shared_ptr<TypeRotten>>(map_b.leaf_type.get());
 		
@@ -74,8 +120,10 @@ SmoothValue merge_smooth_value(
 	}
 	
 	auto p_merged = std::make_shared<TypeMap>(map_b);
-	
-	if (map_a.leaf_type != nullptr) {
+
+	if (updated_leaf_type != nullptr) {
+		p_merged->leaf_type = updated_leaf_type;
+	} else if (map_a.leaf_type != nullptr) {
 		p_merged->leaf_type = map_a.leaf_type;
 	}
 	

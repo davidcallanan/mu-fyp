@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <optional>
@@ -365,24 +366,29 @@ Type normalize_type(
 	}
 
 	if (type == "type_enum") {
-		if (!typeval.contains("sym")) {
-			fprintf(stderr, "A definitive enum instantiation requires an actual symbol.\n");
+		if (!typeval.contains("hardsym") && !typeval.contains("syms")) {
+			fprintf(stderr, "A definitive enum instantiation requires an actual symbol or a list of acceptable possibilities.\n");
 			exit(1);
 		}
 
 		auto v_enum = std::make_shared<TypeEnum>();
-		
-		std::string hardsym = typeval["sym"].get<std::string>();
-		
-		v_enum->hardsym = hardsym;
-		v_enum->syms.push_back(hardsym);
+
+		if (typeval.contains("syms") && typeval["syms"].is_array()) {
+			for (const auto& sym_json : typeval["syms"]) {
+				v_enum->syms.push_back(sym_json.get<std::string>());
+			}
+		}
+
+		if (typeval.contains("hardsym")) {
+			std::string hardsym = typeval["hardsym"].get<std::string>();
+			v_enum->hardsym = hardsym;
+			v_enum->syms.push_back(hardsym);
+		}
 
 		return v_enum;
 	}
 
 	if (type == "expr_call_with_sym") {
-		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
-		
 		if (!typeval.contains("target")) {
 			fprintf(stderr, "Where is this .target gone!\n");
 			exit(1);
@@ -392,9 +398,36 @@ Type normalize_type(
 			fprintf(stderr, "Where is the .sym gone!\n");
 			exit(1);
 		}
-		
-		v_call_with_sym->target = std::make_shared<Type>(normalize_type(typeval["target"], symbol_table));
-		v_call_with_sym->sym = typeval["sym"].get<std::string>();
+
+		Type target = normalize_type(typeval["target"], symbol_table);
+		std::string sym = typeval["sym"].get<std::string>();
+
+		if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&target)) {
+			if (!(*p_v_enum)->hardsym.has_value()) {
+				// the syntax is not actually a call in this case, but rather an instantiation.
+
+				bool was_found = std::find((*p_v_enum)->syms.begin(), (*p_v_enum)->syms.end(), sym) != (*p_v_enum)->syms.end();
+
+				if (!was_found) {
+					fprintf(stderr, "Cannot instantiate %s as it is not one of the predefined possibilitirets.\n", sym.c_str());
+					exit(1);
+				}
+
+				auto v_enum_with_hardsym = std::make_shared<TypeEnum>();
+				v_enum_with_hardsym->hardsym = sym;
+				v_enum_with_hardsym->syms.push_back(sym);
+
+				auto v_merged = std::make_shared<TypeMerged>();
+				v_merged->types.push_back(target);
+				v_merged->types.push_back(v_enum_with_hardsym);
+
+				return v_merged;
+			}
+		}
+
+		auto v_call_with_sym = std::make_shared<TypeCallWithSym>();
+		v_call_with_sym->target = std::make_shared<Type>(target);
+		v_call_with_sym->sym = sym;
 		
 		return v_call_with_sym;
 	}

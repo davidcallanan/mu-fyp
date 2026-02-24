@@ -41,6 +41,7 @@ const KW_LOG_DD = rule("KW_LOG_DD", withCarefulSkippers("log_dd"));
 const KW_NULLTERM = rule("KW_NULLTERM", withCarefulSkippers("null-term"));
 const KW_MUT = rule("KW_MUT", withCarefulSkippers("mut"));
 const KW_FOR = rule("KW_FOR", withCarefulSkippers("for"));
+const KW_ENUM = rule("KW_ENUM", withCarefulSkippers("enum"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -85,6 +86,7 @@ const typeval_atom = declare();
 const type_callable = declare();
 const map_entry_for = declare();
 const map_entry_semiless = declare();
+const constraint_enum = declare();
 
 const symbol_path = rule("symbol_path", mapData(
 	multi(
@@ -191,7 +193,7 @@ hardval.define(rule("hardval", or(
 		SYMBOL,
 		(data) => ({
 			type: "type_enum",
-			sym: data.substring(1),
+			hardsym: data.substring(1),
 		}),
 	),
 	mapData( // to be honest i'm not sure if variable access should be a hardval, it makes me reconsider whether pointers should also be normalized to maps.
@@ -586,6 +588,60 @@ const constraint_map_braced_bb = rule("constraint_map_braced_bb", or(
 	constraint_map_braced_singleline_bb,
 ));
 
+const constraint_enum_braced_multiline = rule("constraint_enum_braced_multiline", mapData(
+	join(
+		KW_ENUM,
+		LBRACE,
+		MANDATORY_NEWLINE,
+		opt_multi(
+			mapData(
+				join(SYMBOL, SEMI),
+				(data) => data[0],
+			),
+		),
+		RBRACE,
+	),
+	(data) => ({
+		type: "type_enum",
+		syms: data[3].map(sym => sym.substring(1)),
+	}),
+));
+
+const constraint_enum_braced_singleline = rule("constraint_enum_braced_singleline", mapData(
+	join(
+		KW_ENUM,
+		LBRACE,
+		opt(
+			join(
+				SYMBOL,
+				opt_multi(join(COMMA, SYMBOL)),
+			),
+		),
+		RBRACE,
+	),
+	(data) => {
+		const syms = [];
+
+		if (data[2] !== undefined) {
+			syms.push(data[2][0].substring(1));
+
+			for (const [, sym] of data[2][1]) {
+				syms.push(sym.substring(1));
+			}
+		}
+
+		return {
+			type: "type_enum",
+			syms,
+		};
+	},
+));
+
+const constraint_enum_braced = rule("constraint_enum_braced", or(
+	constraint_enum_braced_multiline,
+	constraint_enum_braced_singleline,
+));
+
 const constraint_map_tupled = rule("constraint_map_tupled", mapData(
 	join(
 		LPAREN,
@@ -740,7 +796,12 @@ const type_ptr_named = rule("type_ptr_named", mapData(
 	},
 ));
 
-const type_first = rule("type_first", or(
+constraint_enum.define(rule("constraint_enum", or(
+	constraint_enum_braced_multiline,
+	constraint_enum_braced_singleline,
+)));
+
+const type_first = rule("type_first", or( // cannot include constraint_enum here due to precedence reasons
 	type_ptr_named,
 	type_named,
 ));
@@ -767,6 +828,7 @@ typeval_atom.define(rule("typeval_atom", or(
 		}),
 	),
 	type_first,
+	constraint_enum,
 	hardval,
 	constraint_map,
 	// mapData( // have no idea if grammar can accept this consistently

@@ -486,9 +486,12 @@ SmoothValue evaluate_structval(
 		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
 		struct_value = igc.builder.CreateInsertValue(struct_value, enum_val, 0);
 
+		auto v_map = std::make_shared<TypeMap>();
+		v_map->leaf_type = std::make_shared<Type>(type);
+
 		return SmoothValue{
 			struct_value,
-			type,
+			v_map,
 			true,
 		};
 	}

@@ -119,4 +119,11 @@ create() -> { ; this comment works
 	log("Enum dump:");
 	log_d(boolean);
 	log_d(type);
+	
+	new_boolean := enum {
+		:false;
+		:true;
+	} :true;
+	
+	log_d(new_boolean);
 }
