@@ -1,171 +1,29 @@
-#include <algorithm>
-#include <bit>
 #include <cstdio>
 #include <cstdlib>
 #include <variant>
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "merge_smooth_value.hpp"
-#include "is_eq_type_pointer.hpp"
-#include "is_eq_type_rotten.hpp"
+#include "merge_type_map.hpp"
 #include "t_types.hpp"
+#include "t_smooth.hpp"
 
-SmoothValue merge_smooth_value(
+std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	IrGenCtx& igc,
-	const SmoothValue& smooth_a,
-	const SmoothValue& smooth_b
+	std::shared_ptr<SmoothStructval> structval_a,
+	std::shared_ptr<SmoothStructval> structval_b
 ) {
-	auto p_v_map_a = std::get_if<std::shared_ptr<TypeMap>>(&smooth_a.type);
-	auto p_v_map_b = std::get_if<std::shared_ptr<TypeMap>>(&smooth_b.type);
+	auto p_v_map_a = std::get_if<std::shared_ptr<TypeMap>>(&structval_a->type);
+	auto p_v_map_b = std::get_if<std::shared_ptr<TypeMap>>(&structval_b->type);
 	
 	if (!p_v_map_a || !p_v_map_b) {
 		fprintf(stderr, "only makes sense to merge two maps for now, really i don't think there should ever be non-map as a smooth_value.\n");
 		exit(1);
 	}
-	
-	const TypeMap& map_a = **p_v_map_a;
-	const TypeMap& map_b = **p_v_map_b;
-	
-	std::shared_ptr<Type> updated_leaf_type = nullptr;
-	llvm::Value* updated_leaf_value = nullptr;
-	
-	if (!map_a.execution_sequence.empty() || !map_b.execution_sequence.empty()) {
-		fprintf(stderr, "Instructoins should not be present, expected to be processed already by this point.\n");
-		exit(1);
-	}
-	
-	if (map_a.call_input_type != nullptr && map_b.call_input_type != nullptr) {
-		fprintf(stderr, "Merge not implemented.\n");
-		exit(1);
-	}
-	
-	if (map_a.call_output_type != nullptr && map_b.call_output_type != nullptr) {
-		fprintf(stderr, "Merge not implemented.\n");
-		exit(1);
-	}
-	
-	if (!map_a.sym_inputs.empty() && !map_b.sym_inputs.empty()) {
-		fprintf(stderr, "Merge not implemented!\n");
-		exit(1);
-	}
-	
-	if (map_a.leaf_type != nullptr && map_b.leaf_type != nullptr) {
-		auto p_v_enum_a = std::get_if<std::shared_ptr<TypeEnum>>(map_a.leaf_type.get());
-		auto p_v_enum_b = std::get_if<std::shared_ptr<TypeEnum>>(map_b.leaf_type.get());
 
-		if (p_v_enum_a && p_v_enum_b) {
-			const TypeEnum& enum_a = **p_v_enum_a;
-			const TypeEnum& enum_b = **p_v_enum_b;
+	std::shared_ptr<TypeMap> merged = merge_type_map(*p_v_map_a, *p_v_map_b);
 
-			auto v_merged_enum = std::make_shared<TypeEnum>();
-
-			for (const auto& sym : enum_a.syms) {
-				v_merged_enum->syms.push_back(sym);
-			}
-
-			for (const auto& sym : enum_b.syms) {
-				bool already_present = false;
-
-				for (const auto& existing : v_merged_enum->syms) {
-					if (existing == sym) {
-						already_present = true;
-						break;
-					}
-				}
-
-				if (!already_present) {
-					v_merged_enum->syms.push_back(sym);
-				}
-			}
-
-			if (enum_a.hardsym.has_value() && enum_b.hardsym.has_value()) {
-				if (enum_a.hardsym.value() != enum_b.hardsym.value()) {
-					fprintf(stderr, "no, cannot combine two enum syms simultaneously %s and %s.\n", enum_a.hardsym.value().c_str(), enum_b.hardsym.value().c_str());
-					exit(1);
-				}
-
-				v_merged_enum->hardsym = enum_a.hardsym;
-			} else if (enum_a.hardsym.has_value()) {
-				v_merged_enum->hardsym = enum_a.hardsym;
-			} else if (enum_b.hardsym.has_value()) {
-				v_merged_enum->hardsym = enum_b.hardsym;
-			}
-
-			updated_leaf_type = std::make_shared<Type>(v_merged_enum);
-			
-			// as merging enums will cause indies to change, we have to recompute here.
-			// really I need to find a unified place for producing values properly, but for now this will do.
-
-			if (v_merged_enum->hardsym.has_value()) {
-				const std::string& hardsym = v_merged_enum->hardsym.value();
-				auto it = std::find(v_merged_enum->syms.begin(), v_merged_enum->syms.end(), hardsym);
-				uint32_t enum_idx = (uint32_t) std::distance(v_merged_enum->syms.begin(), it);
-				uint32_t bit_width = (uint32_t) std::bit_width(v_merged_enum->syms.size());
-				llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
-				updated_leaf_value = llvm::ConstantInt::get(int_type, enum_idx);
-			}
-		}
-
-		auto p_v_rotten_a = std::get_if<std::shared_ptr<TypeRotten>>(map_a.leaf_type.get());
-		auto p_v_rotten_b = std::get_if<std::shared_ptr<TypeRotten>>(map_b.leaf_type.get());
-		
-		if (p_v_rotten_a && p_v_rotten_b) {
-			const TypeRotten& rotten_a = **p_v_rotten_a;
-			const TypeRotten& rotten_b = **p_v_rotten_b;
-			
-			if (!is_eq_type_rotten(rotten_a, rotten_b)) {
-				fprintf(stderr, "Rotten conflict could not be dealth with: %s -vs- %s\n", rotten_a.type_str.c_str(), rotten_b.type_str.c_str());
-				exit(1);
-			}
-		}
-		
-		auto p_v_pointer_a = std::get_if<std::shared_ptr<TypePointer>>(map_a.leaf_type.get());
-		auto p_v_pointer_b = std::get_if<std::shared_ptr<TypePointer>>(map_b.leaf_type.get());
-		
-		if (p_v_pointer_a && p_v_pointer_b) {
-			const TypePointer& pointer_a = **p_v_pointer_a;
-			const TypePointer& pointer_b = **p_v_pointer_b;
-			
-			if (!is_eq_type_pointer(pointer_a, pointer_b)) {
-				fprintf(stderr, "Pointer conflict, two pointers are not equivalent.\n");
-				exit(1);
-			}
-		}
-		
-		fprintf(stderr, "Cannot merge conflicting leaf types or unhandled leaf types.\n");
-	}
-	
-	auto p_merged = std::make_shared<TypeMap>(map_b);
-
-	if (updated_leaf_type != nullptr) {
-		p_merged->leaf_type = updated_leaf_type;
-	} else if (map_a.leaf_type != nullptr) {
-		p_merged->leaf_type = map_a.leaf_type;
-	}
-	
-	if (map_a.call_input_type != nullptr) {
-		p_merged->call_input_type = map_a.call_input_type;
-	}
-	
-	if (map_a.call_output_type != nullptr) {
-		p_merged->call_output_type = map_a.call_output_type;
-	}
-	
-	if (!map_a.sym_inputs.empty()) {
-		p_merged->sym_inputs = map_a.sym_inputs;
-	}
-	
-	// todo: consider sym_inputs
-	
-	llvm::Value* struct_outcome = smooth_b.struct_value;
-
-	if (updated_leaf_value != nullptr && smooth_b.has_leaf) {
-		struct_outcome = igc.builder.CreateInsertValue(smooth_b.struct_value, updated_leaf_value, 0);
-	}
-
-	return SmoothValue{
-		struct_outcome,
-		p_merged,
-		smooth_b.has_leaf,
-	};
+	return std::make_shared<SmoothStructval>(SmoothStructval{
+		merged,
+		structval_b->value,
+		structval_b->has_leaf,
+	});
 }

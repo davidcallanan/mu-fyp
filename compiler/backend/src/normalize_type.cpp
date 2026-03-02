@@ -6,6 +6,12 @@
 #include <memory>
 #include "normalize_type.hpp"
 #include "demote_underlying.hpp"
+#include "merge_underlying_type.hpp"
+#include "rotten_int_info.hpp"
+#include "rotten_float_info.hpp"
+#include "get_underlying_type.hpp"
+#include "total_needed_bits_addit.hpp"
+#include "total_needed_bits_multi.hpp"
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
@@ -55,14 +61,14 @@ Type normalize_type(
 		
 		return std::make_shared<TypePointer>(TypePointer{
 			std::make_shared<Type>(target_type),
-			nullptr,
+			std::nullopt,
 		});
 	}
 	
 	if (type == "type_map") {
 		TypeMap result;
-		result.leaf_type = nullptr;
-		result.leaf_hardval = nullptr;
+		result.leaf_type = std::nullopt;
+		result.leaf_hardval = std::nullopt;
 		
 		if (typeval.contains("leaf_type") && !typeval["leaf_type"].is_null()) {
 			const auto& leaf_type_data = typeval["leaf_type"];
@@ -82,7 +88,7 @@ Type normalize_type(
 				
 				auto v_rotten = std::make_shared<TypeRotten>();
 				v_rotten->type_str = leaf_type_data["trail"];
-				result.leaf_type = std::make_shared<Type>(v_rotten);
+				result.leaf_type = Type(v_rotten);
 			} else {
 				fprintf(stderr, "Type given was not handled, got %s\n", leaf_type_type.c_str());
 				exit(1);
@@ -107,7 +113,7 @@ Type normalize_type(
 				
 				auto v_int = std::make_shared<HardvalInteger>();
 				v_int->value = hardval_data["value"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(v_int);
+				result.leaf_hardval = Hardval(v_int);
 			} else if (hardval_type == "hardval_float") {
 				if (!hardval_data.contains("value")) {
 					fprintf(stderr, "Expected .value\n");
@@ -116,16 +122,27 @@ Type normalize_type(
 				
 				auto v_float = std::make_shared<HardvalFloat>();
 				v_float->value = hardval_data["value"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(v_float);
+				result.leaf_hardval = Hardval(v_float);
 			} else if (hardval_type == "hardval_string") {
 				if (!hardval_data.contains("value")) {
 					fprintf(stderr, "Expected .value\n");
 					exit(1);
 				}
-				
+
+				if (!result.leaf_type.has_value()) {
+					auto v_rotten = std::make_shared<TypeRotten>();
+					v_rotten->type_str = "u8";
+					
+					auto v_pointer = std::make_shared<TypePointer>();
+					v_pointer->target = std::make_shared<Type>(Type(v_rotten));
+					v_pointer->hardval = std::nullopt;
+					
+					result.leaf_type = Type(v_pointer);
+				}
+
 				auto v_string = std::make_shared<HardvalString>();
 				v_string->value = hardval_data["value"].get<std::string>();
-				result.leaf_hardval = std::make_shared<Hardval>(v_string);
+				result.leaf_hardval = Hardval(v_string);
 			} else {
 				fprintf(stderr, "Unhandled situation %s\n", hardval_type.c_str());
 				exit(1);
@@ -382,6 +399,7 @@ Type normalize_type(
 		if (typeval.contains("hardsym")) {
 			std::string hardsym = typeval["hardsym"].get<std::string>();
 			v_enum->hardsym = hardsym;
+			v_enum->is_instantiated = true;
 			v_enum->syms.push_back(hardsym);
 		}
 
@@ -415,11 +433,13 @@ Type normalize_type(
 
 				auto v_enum_with_hardsym = std::make_shared<TypeEnum>();
 				v_enum_with_hardsym->hardsym = sym;
+				v_enum_with_hardsym->is_instantiated = true;
 				v_enum_with_hardsym->syms.push_back(sym);
 
 				auto v_merged = std::make_shared<TypeMerged>();
 				v_merged->types.push_back(target);
 				v_merged->types.push_back(v_enum_with_hardsym);
+				v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(target, Type(v_enum_with_hardsym)));
 
 				return v_merged;
 			}
@@ -441,7 +461,58 @@ Type normalize_type(
 			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
 			v_expr_multi->ops.push_back(op);
 		}
-		
+
+		if (v_expr_multi->ops.empty()) {
+			fprintf(stderr, "this is quite bizrree.\n");
+			exit(1);
+		}
+
+		std::vector<uint32_t> bits;
+		std::optional<bool> is_float;
+		char prefix = 'i';
+
+		for (const auto& op : v_expr_multi->ops) {
+			Type underlying = get_underlying_type(*op.operand);
+			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
+			
+			if (!p_v_rotten) {
+				fprintf(stderr, "cannot multiply something non-rotten\n");
+				exit(1);
+			}
+
+			if (auto info = rotten_int_info(*p_v_rotten)) {
+				if (is_float.has_value() && is_float.value()) {
+					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
+					exit(1);
+				}
+				
+				is_float = false;
+				prefix = info->prefix;
+				bits.push_back(info->bits);
+			} else if (auto info = rotten_float_info(*p_v_rotten)) {
+				if (is_float.has_value() && !is_float.value()) {
+					fprintf(stderr, "do not mix int and float (got float after int)\n");
+					exit(1);
+				}
+				
+				is_float = true;
+				bits.push_back(info->bits);
+			} else {
+				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting multiplication)\n");
+				exit(1);
+			}
+		}
+
+		auto rotten_outcome = std::make_shared<TypeRotten>();
+
+		if (is_float.value()) {
+			rotten_outcome->type_str = "f" + std::to_string(*std::max_element(bits.begin(), bits.end()));
+		} else {
+			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(total_needed_bits_multi(bits));
+		}
+
+		v_expr_multi->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
+
 		return v_expr_multi;
 	}
 
@@ -454,8 +525,83 @@ Type normalize_type(
 			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
 			v_expr_addit->ops.push_back(op);
 		}
-		
+
+		if (v_expr_addit->ops.empty()) {
+			fprintf(stderr, "this is not good outcome.\n");
+			exit(1);
+		}
+
+		std::vector<uint32_t> bits;
+		std::optional<bool> is_float;
+		char prefix = 'i';
+
+		for (const auto& op : v_expr_addit->ops) {
+			Type underlying = get_underlying_type(*op.operand);
+			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
+			
+			if (!p_v_rotten) {
+				fprintf(stderr, "cannot add something non-rotten\n");
+				exit(1);
+			}
+
+			if (auto info = rotten_int_info(*p_v_rotten)) {
+				if (is_float.has_value() && is_float.value()) {
+					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
+					exit(1);
+				}
+				
+				is_float = false;
+				prefix = info->prefix;
+				bits.push_back(info->bits);
+			} else if (auto info = rotten_float_info(*p_v_rotten)) {
+				if (is_float.has_value() && !is_float.value()) {
+					fprintf(stderr, "do not mix int and float (got float after int)\n");
+					exit(1);
+				}
+				
+				is_float = true;
+				bits.push_back(info->bits);
+			} else {
+				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting addition)\n");
+				exit(1);
+			}
+		}
+
+		auto rotten_outcome = std::make_shared<TypeRotten>();
+
+		if (is_float.value()) {
+			rotten_outcome->type_str = "f" + std::to_string(*std::max_element(bits.begin(), bits.end()));
+		} else {
+			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(total_needed_bits_addit(bits));
+		}
+
+		v_expr_addit->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
+
 		return v_expr_addit;
+	}
+	
+	if (type == "expr_logical_and") {
+		auto v_expr_logical_and = std::make_shared<TypeExprLogicalAnd>();
+
+		for (const auto& op_data : typeval["ops"]) {
+			OpLogical op;
+			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			v_expr_logical_and->ops.push_back(op);
+		}
+
+		return v_expr_logical_and;
+	}
+
+	if (type == "expr_logical_or") {
+		auto v_expr_logical_or = std::make_shared<TypeExprLogicalOr>();
+
+		for (const auto& op_data : typeval["ops"]) {
+			OpLogical op;
+			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			v_expr_logical_or->ops.push_back(op);
+		}
+
+		return v_expr_logical_or;
 	}
 	
 	if (type == "type_constrained") {
@@ -492,7 +638,7 @@ Type normalize_type(
 			
 			TypeMap& v_2 = **p_v_2;
 			
-			if (v_2.leaf_hardval == nullptr) {
+			if (!v_2.leaf_hardval.has_value()) {
 				fprintf(stderr, "For now constrained pointers must have definitive value associated with them\n");
 				exit(1);
 			}
@@ -518,6 +664,7 @@ Type normalize_type(
 			
 			v_merged->types.push_back(constraint_1);
 			v_merged->types.push_back(constraint_2);
+			v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(constraint_1, constraint_2));
 			
 			return v_merged;
 		}
@@ -526,6 +673,7 @@ Type normalize_type(
 		
 		v_merged->types.push_back(constraint_1);
 		v_merged->types.push_back(constraint_2);
+		v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(constraint_1, constraint_2));
 		
 		return v_merged;
 	}

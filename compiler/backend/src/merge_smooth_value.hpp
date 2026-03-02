@@ -1,10 +1,10 @@
 #pragma once
 
 #include "t_ctx.hpp"
-#include "t_smooth_value.hpp"
+#include "t_smooth.hpp"
 
-SmoothValue merge_smooth_value(
+std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	IrGenCtx& igc,
-	const SmoothValue& smooth_a,
-	const SmoothValue& smooth_b
+	std::shared_ptr<SmoothStructval> structval_a,
+	std::shared_ptr<SmoothStructval> structval_b
 );

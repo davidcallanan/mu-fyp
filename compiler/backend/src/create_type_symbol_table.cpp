@@ -28,7 +28,7 @@ TypeSymbolTable::TypeSymbolTable() {
 		
 		auto rotten = std::make_shared<TypeRotten>();
 		rotten->type_str = leaf_type;
-		map->leaf_type = std::make_shared<Type>(rotten);
+		map->leaf_type = Type(rotten);
 		
 		map->call_input_type = nullptr;
 		map->call_output_type = nullptr;
@@ -121,7 +121,7 @@ std::optional<UnderlyingType> TypeSymbolTable::get(const std::string &trail) {
 			
 			auto rotten = std::make_shared<TypeRotten>();
 			rotten->type_str = key;
-			map->leaf_type = std::make_shared<Type>(rotten);
+			map->leaf_type = Type(rotten);
 			
 			map->call_input_type = nullptr;
 			map->call_output_type = nullptr;

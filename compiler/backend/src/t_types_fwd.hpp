@@ -25,6 +25,9 @@ struct TypeVarAssign;
 struct TypeCallWithSym;
 struct TypeExprMulti;
 struct TypeExprAddit;
+struct TypeExprLogicalAnd;
+struct TypeExprLogicalOr;
+struct TypeVoid;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -42,7 +45,10 @@ using Type = std::variant<
 	std::shared_ptr<TypeVarAssign>,
 	std::shared_ptr<TypeCallWithSym>,
 	std::shared_ptr<TypeExprMulti>,
-	std::shared_ptr<TypeExprAddit>
+	std::shared_ptr<TypeExprAddit>,
+	std::shared_ptr<TypeExprLogicalAnd>,
+	std::shared_ptr<TypeExprLogicalOr>,
+	std::shared_ptr<TypeVoid>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.

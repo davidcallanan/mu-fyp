@@ -58,7 +58,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 
-\fancyhead[LE]{\color{headergray}\sffamily\bfseries Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules}
+\fancyhead[LE]{\color{headergray}\sffamily\bfseries Essence C - A new programming language}
 \fancyhead[RO]{\color{headergray}\sffamily\bfseries\nouppercase{\leftmark}}
 
 \fancyfoot[C]{\sffamily\thepage}
@@ -80,7 +80,9 @@
   \setstretch{1.125}
   \centering
   
-  {\large\textbf{Studying link-time optimizations in programming language development to facilitate the continuum of static and dynamic modules}\par}
+  {\color[HTML]{8b008b}\LARGE\textbf{Essence C}\par\vspace{1cm}}
+  
+  {\large\textbf{A new programming language to advance link-time optimizations by faciliating the continuum of static and dynamic modules.}\par}
   
   \vspace{1.5cm}
   
@@ -94,7 +96,7 @@
   
   \vfill
   
-  \includegraphics[width=0.5\textwidth]{mu_full.png}
+  \includegraphics[width=0.45\textwidth]{mu_full.png}
   
   \vfill
   
@@ -112,6 +114,8 @@
   
   {\textbf{Supervisor: Dr. Phil Maguire}\par}
   
+  \vspace{1cm}
+  
 \end{titlepage}
 
 \newpage
@@ -122,6 +126,7 @@
 
 \thispagestyle{empty}
 
+
 \section*{Declaration}
 \addcontentsline{toc}{section}{Declaration}
 
@@ -129,16 +134,25 @@ I hereby certify that this material, which I now submit for assessment on the pr
 
 I hereby acknowledge and accept that this thesis may be distributed to future final year students, as an example of the standard expected of final year projects.
 
+
 \vspace{2cm}
 
 Signed: \rule{5cm}{0.4pt} \hfill Date: \rule{3cm}{0.4pt}
 
 \vspace{2cm}
 
+\null
+\newpage
+\thispagestyle{empty}
+
+
 \section*{Acknowledgements}
 \addcontentsline{toc}{section}{Acknowledgements}
 
-I would like to thank my parents/guardians/siblings/classmate/friends for their \ldots
+A massive thanks to Dr. Phil Maguire, friends, and peers for inflicting levels of motivation I might never reciprocate.
+
+\vfill
+\null
 
 \newpage
 
@@ -239,11 +253,15 @@ TODO
 
 \section{Design Elements}
 
+\subsection{Choice of Language}
+
+The languages selected for this project were JavaScript and C++. While JavaScript has been my go-to language before classes were even a thing, the primary LLVM API is sadly exposed through C++. Other language bindings exist, but do not appear mature enough. It would not have been smart to gamble a project of this calibre on the stability of such bindings. JavaScript was still suitable for the parsing phase, as my pre-existing parsing library was already written in JavaScript. The speed of compilation is mostly irrelevant, as this does not impact the performance of the compiled artifacts. Thus minimal effort was wasted on such a triviality.
+
 \subsection{Unification of Modules and Classes}
 
-Languages have historically offered various features like classes, modules, packages, and so on, that have much overlap in their functionality. One of the core design decisions was to unify these elements into a single system that consists of a smaller unit called a "map" (which bares some resemblence with Rust- and go-like structs), and a larger organizational unit called a "module". Most importantly, every module still uses a map for instance-management purposes, and so the same capabilities are available whether or not a program is split into more modules or not. This differs from languages like C, where separate linkage units has an impact on the final prograsm. The decision for this unification stems from Rust's philosophy of "zero-cost abstractions", an acknowledgement that organizational differences in a program that aids with design and iteration should not impact the performance of the final artifact.
+Languages have historically offered various features like classes, modules, packages, and so on, that have much overlap in their functionality. One of the core design decisions was to unify these elements into a single system that consists of a smaller unit called a ``map'' (which bares some resemblence with Rust- and Go-like structs), and a larger organizational unit called a ``module''. Most importantly, every module still uses a map for instance-management purposes, and so the same capabilities are available whether or not a program is split into more modules or not. This differs from languages like C, where the choice to have separate compilation units has an impact on the final program [ref]. The decision for this unification was inspired by Rust's philosophy of ``zero-cost abstractions'' [ref], an acknowledgement that organizational differences in a program that aid with design and iteration should not impact the performance of the final artifact.
 
-\subsection{Map Enum Equivalence}
+\subsection{Map-Enum Equivalence}
 
 Three features in programming languages worth considering are structs (or classes), functions (or methods), and enums (specifically, tagged unions). Structs and functions have been unified into a single feature called a "map".
 
@@ -279,7 +297,7 @@ For precedence reasons, we have four separate rules: additive crystal -> additiv
 
 \subsection{Mutability}
 
-LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus variables are entirely implemented using stack allocations.
+LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus variables are entirely implemented using stack allocations. This saved an estimated week of development time.
 
 \subsection{Tooling and Infrastructure}
 
@@ -295,7 +313,7 @@ As the language has strict semantics, the backend has no need to recover from il
 
 \subsection{Debugging}
 
-While the primary mechanism of performing external communication is to link with external code via the C ABI (which may be LLVM IR), debugging functionality is often preferable within the language directly in case that there are issues with the interoperability layer itself. Thus, two basic logging functions were implemented, ``log'' and ``log\_d''. The former takes a null-terminated ascii string and prints this output in an implementation-specific manner. The latter takes an arbitrarily-sized value (like an integer or pointer) and prints its raw binary representation (in 64-bit chunks), including both its hex representation, ascii representation, and decimal representation. In this specificic language implementation, the external ``puts'' function was seletcted to implement this functionality, available in many environments. Todo: A flag was implemented to disable ``puts'' usage in case the environment does not support it, in which case, logs are dropped.
+While the primary mechanism of performing external communication is to link with external code via the C ABI (which may be LLVM IR), debugging functionality is often preferable within the language directly in case there are issues with the interoperability layer proper. Thus, two basic logging functions were implemented, ``log'' and ``log\_d''. The former takes a null-terminated ascii string and prints this output in an implementation-specific manner. The latter takes an arbitrarily-sized value (like an integer or a byte array) and prints its raw binary representation (in 64-bit chunks), including both its hex representation, ascii representation, and decimal representation. The implementation of this functionality was chosen to be implementation-specific. In the prototype implementation, the external ``puts'' function was selected to implement this functionality, available in many environments. In case the environment does not support it, a dummy no-op implementation can be defined, effectively dropping any logs.
 
 \chapter{Evaluation}
 

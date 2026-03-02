@@ -11,7 +11,6 @@ struct ValueSymbolTableEntry {
 	llvm::Value* alloca_ptr;
 	llvm::Type* ir_type;
 	Type type;
-	bool has_leaf;
 	bool is_mut;
 };
 

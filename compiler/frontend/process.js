@@ -76,6 +76,8 @@ const STRING_BB = rule("STRING_BB", withBareboneSkippers(mapData(/^"((?:[^"\\\r\
 const PLUS = rule("PLUS", withCarefulSkippers("+"));
 const MINUS = rule("MINUS", withCarefulSkippers("-"));
 const DIV = rule("DIV", withCarefulSkippers("/"));
+const AND = rule("AND", withCarefulSkippers("&&"));
+const OR = rule("OR", withCarefulSkippers("||"));
 
 // PARSER RULES
 
@@ -296,55 +298,48 @@ const expr25 = rule("expr25", or(
 	typeval_atom,
 ));
 
-const expr30 = rule("expr30", or( // multiplicative pistol
-	mapData(
-		join(expr25, multi(join(or(ASTERISK, DIV), expr25))),
-		(data) => {
-			if (data[1].length === 0) {
-				return data[0];
-			}
+const expr30 = rule("expr30", mapData( // multiplicative pistol
+	join(expr25, opt_multi(join(or(ASTERISK, DIV), expr25))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
 
-			return ({
-				type: "expr_multi",
-				ops: [{ op: "*", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
-			});
-		},
-	),
-	expr25,
+		return ({
+			type: "expr_multi",
+			ops: [{ op: "*", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
+		});
+	},
 ));
 
 const expr35 = rule("expr35", or( // multiplicative crystal
 	mapData(
-		multi(join(or(ASTERISK, DIV), expr25)), // in unary case, we skip to expr25 to ignore binary case
+		// we demand >= 2 asterisk because to distinguish with pointer.
+		join(join(or(ASTERISK, DIV), expr25), multi(join(or(ASTERISK, DIV), expr25))), // in unary case, we skip to expr25 to ignore binary case
 		(data) => {
-			if (data.length === 1) {
-				return data[0][1];
-			}
+			const combined = [data[0], ...data[1]];
 
 			return ({
 				type: "expr_multi",
-				ops: data.map(([op, operand]) => ({ op, operand })),
+				ops: combined.map(([op, operand]) => ({ op, operand })),
 			});
 		},
 	),
 	expr30,
 ));
 
-const expr40 = rule("expr40", or( // additive pistol
-	mapData(
-		join(expr35, multi(join(or(PLUS, MINUS), expr35))),
-		(data) => {
-			if (data[1].length === 0) {
-				return data[0];
-			}
+const expr40 = rule("expr40", mapData( // additive pistol
+	join(expr35, opt_multi(join(or(PLUS, MINUS), expr35))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
 
-			return ({
-				type: "expr_addit",
-				ops: [{ op: "+", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
-			});
-		},
-	),
-	expr35,
+		return ({
+			type: "expr_addit",
+			ops: [{ op: "+", operand: data[0] }, ...data[1].map(([op, operand]) => ({ op, operand }))],
+		});
+	},
 ));
 
 const expr45 = rule("expr45", or( // additive crystal
@@ -364,8 +359,70 @@ const expr45 = rule("expr45", or( // additive crystal
 	expr40,
 ));
 
+const expr50 = rule("expr50", mapData( // logical AND pistol
+	join(expr45, opt_multi(join(AND, expr45))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_logical_and",
+			ops: [{ operand: data[0] }, ...data[1].map(([_op, operand]) => ({ operand }))],
+		});
+	},
+));
+
+const expr55 = rule("expr55", or( // logical AND crystal
+	mapData(
+		multi(join(AND, expr45)), // in unary case, we skip to expr45 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_logical_and",
+				ops: data.map(([_op, operand]) => ({ operand })),
+			});
+		},
+	),
+	expr50,
+));
+
+const expr60 = rule("expr60", mapData( // logical OR pistol
+	join(expr55, opt_multi(join(OR, expr55))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_logical_or",
+			ops: [{ operand: data[0] }, ...data[1].map(([_op, operand]) => ({ operand }))],
+		});
+	},
+));
+
+const expr65 = rule("expr65", or( // logical OR crystal
+	mapData(
+		multi(join(OR, expr55)), // in unary case, we skip to expr55 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_logical_or",
+				ops: data.map(([_op, operand]) => ({ operand })),
+			});
+		},
+	),
+	expr60,
+));
+
 const expr75 = rule("expr75", mapData(join(
-	expr45,
+	expr65,
 	opt_multi(SYMBOL_BARE),
 ), (data) => {
 	let result = data[0];

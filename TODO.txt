@@ -1,6 +1,5 @@
 LANGUAGE FEATURES:
-add values to enums
-add built-in boolean enum
+add values to enums (or bypass this for now with a simpler approach by using one side of the map enum equivalence)
 make enums encode boolean and do logical stuff
 add logical expressions
 add comparison expressions
@@ -9,9 +8,9 @@ add break keyword
 add type modifications (via @)
 add call_with_map
 add comptime llvm/c abi
-add log_f, log_i, log_u, log_p for debugging purposes
 
 MAIN GOALS:
 add module system
 add optimizations
 add evaluation
+maybe a kernel test case of writing characters to the screen (one by one) to show inlining performance diff of direct assembly execution? (or find some kernel-related thing that requires an assembly instruction).

@@ -2,8 +2,8 @@
 #include "is_subset_type.hpp"
 
 bool is_subset_type_map(const TypeMap& map_a, const TypeMap& map_b) {
-	bool a_has_leaf = map_a.leaf_type != nullptr || map_a.leaf_hardval != nullptr;
-	bool a_needs_leaf = map_b.leaf_type != nullptr || map_b.leaf_hardval != nullptr;
+	bool a_has_leaf = map_a.leaf_type.has_value() || map_a.leaf_hardval.has_value();
+	bool a_needs_leaf = map_b.leaf_type.has_value() || map_b.leaf_hardval.has_value();
 
 	if (a_needs_leaf && !a_has_leaf) {
 		return false;

@@ -6,7 +6,9 @@
 #include "process_map_body.hpp"
 #include "evaluate_structval.hpp"
 #include "t_instructions.hpp"
-#include "t_smooth_value.hpp"
+#include "t_smooth.hpp"
+#include "llvm_value.hpp"
+#include "smooth_type.hpp"
 #include "create_value_symbol_table.hpp"
 
 void process_map_body(
@@ -16,7 +18,7 @@ void process_map_body(
 	for (const auto& instruction : body.execution_sequence) {
 		if (auto p_v_expr = std::get_if<std::shared_ptr<InstructionExpr>>(&instruction)) {
 			const auto& v_expr = *p_v_expr;
-			evaluate_structval(igc, *v_expr->expr);
+			evaluate_smooth(igc, *v_expr->expr);
 		}
 		
 		if (auto p_v_sym = std::get_if<std::shared_ptr<InstructionSym>>(&instruction)) {
@@ -25,15 +27,15 @@ void process_map_body(
 			std::string map_sym_var_name = "ms_" + v_sym->name;
 			std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_sym_var_name;
 			
-			SmoothValue smooth = evaluate_structval(igc, *v_sym->typeval);
-			llvm::Value* alloca = igc.builder.CreateAlloca(smooth.struct_value->getType(), nullptr, scoped_alloca_name);
-			igc.builder.CreateStore(smooth.struct_value, alloca);
+			Smooth smooth = evaluate_smooth(igc, *v_sym->typeval);
+			llvm::Value* value = llvm_value(smooth);
+			llvm::Value* alloca = igc.builder.CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
+			igc.builder.CreateStore(value, alloca);
 			
 			ValueSymbolTableEntry entry{
 				alloca,
-				smooth.struct_value->getType(),
-				smooth.type,
-				smooth.has_leaf,
+				value->getType(),
+				smooth_type(smooth), // maybe in the future we'll change how this works
 				false, // syms, when treated as variables, are always immutable.
 			};
 			

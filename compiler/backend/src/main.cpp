@@ -349,10 +349,12 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 
 		Type normalized = normalize_type(description, symbol_table);
 		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized);
+		
 		if (!p_v_map) {
 			fprintf(stderr, "description of create must be map, not something else.\n");
 			exit(1);
 		}
+		
 		TypeMap v_map = **p_v_map;
 
 		if (v_map.call_output_type == nullptr) {
