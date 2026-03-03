@@ -301,7 +301,9 @@ Smooth evaluate_smooth(
 		}
 
 		if (bit_width == 0) {
+			const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, leaf_smooth);
 			fprintf(stderr, "cannot print this thing because its size is undeterminable\n");
+			fprintf(stderr, "leaf_smooth is %s\n", name);
 			exit(1);
 		}
 
@@ -413,13 +415,11 @@ Smooth evaluate_smooth(
 		
 		Smooth smooth = evaluate_smooth(igc, *v_var_walrus->typeval);
 
-		llvm::Value* value;
-
 		if (is_structwrappable(smooth)) {
-			value = structwrap(igc, smooth)->value;
-		} else {
-			value = llvm_value(smooth);
+			smooth = structwrap(igc, smooth);
 		}
+
+		llvm::Value* value = llvm_value(smooth);
 
 		llvm::Value* alloca = igc.builder.CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
 		igc.builder.CreateStore(value, alloca);

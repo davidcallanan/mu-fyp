@@ -249,11 +249,13 @@ Terrible PIMPLE idiom. Headers of headers.
 
 \subsection{Module loading in operating system kernels}
 
+It was found that the potential inefficiencies of dynamically loaded modules were already considered by Linux developers, and boutique infrastructure was developed to mitigate this to an extent.
+
 \subsection{Link-time optimizations}
 
 Traditionally, many optimizations were performed at the language level, before the program was compiled to object files. For instance, inlining could not be performed at link-time because there was insufficient information in the object files to reason about the semantics of the program. While dedicated link-time optimizations were introduced, their scope was limited for this reason.
 
-However, LLVM IR sits in between the level of abstraction of source code and object files, and maintains higher-level semantics. By keeping the program in this intermediate representation longer (and treating this as modern object files), recent developments have made link-time optimizations more powerful, allowing for, for instance, inlining across module boundaries.
+However, LLVM IR sits in between the level of abstraction of source code and object files, and maintains higher-level semantics. By keeping the program in this intermediate representation longer (and treating this as modern object files), recent developments have made link-time optimizations more powerful, allowing, for instance, for inlining across module boundaries.
 
 
 
@@ -298,6 +300,21 @@ Recall Rust-like enums (tagged unions) where a symbol (:foo\_bar) is associated 
 A syntactical ambiguirty arises. If we write map:foo\_bar("hello"), are we calling the map with a symbol (a bare enum) and then calling the resulting map with ("hello"), or, are we calling the map with a fully populated enum? The solution is to unify these two approaches, by demanding that all maps obey map-enum equivalence, that is, that calling a map with a symbol and then another map, is equivalent to calling the map with the fully populated enum. This bears partial resemblance with currying. What's amazing now is that populated enums are really just pre-curried symbols. The vast majority of code written by the programmer comes from maps and symbols.
 
 \subsection{Type-Value Unification}
+
+Old-fashioned languages like C treat types and values as entirely distinct.
+
+In the traditional sense, a type offers two functions:
+- It details the runtime representation of the data, i.e. the possible runtime values that may be encoded and how many bits of data are needed.
+- It provides a constraint to the programmer themself, preventing the programmer from using values that the code is not built for.
+
+It turns out that it may be appropriate for these two intents to diverge. This results in two separate notions of a type:
+
+- **Logical Type:** A set of allowable values. A constraint of what theoretical values are permissible, i.e. subject the programmer's intended business logic.
+- **Encoding Type:** A bijection between a set of values and a set of bit patterns. This allows types to be designed and abstracted independent of the encoding used.
+
+In this sense, a value is just a singleton logical type.
+
+
 
 encoding value vs theoretical value.
 
