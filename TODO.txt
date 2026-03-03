@@ -1,7 +1,5 @@
 LANGUAGE FEATURES:
 add values to enums (or bypass this for now with a simpler approach by using one side of the map enum equivalence)
-make enums encode boolean and do logical stuff
-add logical expressions
 add comparison expressions
 and if statement
 add break keyword

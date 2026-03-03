@@ -133,7 +133,12 @@ create() -> { ; this comment works
 	
 	log_d(actual_boolean);
 	
-	actual_boolean = :false;
+	actual_boolean = bool :false;
 	
 	log_d(actual_boolean);
+	
+	logical_test_a :=
+		|| actual_boolean
+		|| actual_boolean
+	;
 }

@@ -16,6 +16,7 @@
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
+#include "preinstantiated_types.hpp"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -623,6 +624,8 @@ Type normalize_type(
 			v_expr_logical_and->ops.push_back(op);
 		}
 
+		v_expr_logical_and->underlying_type = std::make_shared<Type>(Type(type_bool));
+
 		return v_expr_logical_and;
 	}
 
@@ -634,6 +637,8 @@ Type normalize_type(
 			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
 			v_expr_logical_or->ops.push_back(op);
 		}
+
+		v_expr_logical_or->underlying_type = std::make_shared<Type>(Type(type_bool));
 
 		return v_expr_logical_or;
 	}

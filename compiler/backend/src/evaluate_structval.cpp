@@ -488,11 +488,11 @@ Smooth evaluate_smooth(
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {
 		const auto& v_enum = *p_v_enum;
 
-		if (!v_enum->is_instantiated || !v_enum->hardsym.has_value()) {
+		if (!v_enum->is_instantiated && !v_enum->hardsym.has_value()) {
 			return std::make_shared<SmoothEnum>(SmoothEnum{ type, nullptr });
 		}
 
-		uint32_t bit_width = (uint32_t) std::bit_width(v_enum->syms.size());
+		uint32_t bit_width = (uint32_t) std::bit_width(v_enum->syms.size() - 1);
 		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
 		
 		// if (!v_enum->hardsym.has_value()) {
@@ -679,11 +679,16 @@ Smooth evaluate_smooth(
 
 		for (const auto& op : v_expr_logical_and.ops) {
 			Smooth operand_smooth = evaluate_smooth(igc, *op.operand);
-			Smooth value_smooth = extract_leaf(igc, operand_smooth, true);
-			llvm::Value* actual_value = llvm_value(value_smooth);
+
+			if (!std::get_if<std::shared_ptr<SmoothEnum>>(&operand_smooth)) {
+				fprintf(stderr, "non-enusm not permitted for logical AND.\n");
+				exit(1);
+			}
+
+			llvm::Value* actual_value = llvm_value(operand_smooth);
 
 			if (!actual_value->getType()->isIntegerTy(1)) {
-				fprintf(stderr, "Tried to perform logical AND on something that wasn't intish.\n");
+				fprintf(stderr, "Tried to perform logical AND on something that wasn't intish of size 1.\n");
 				exit(1);
 			}
 
@@ -706,11 +711,16 @@ Smooth evaluate_smooth(
 
 		for (const auto& op : v_expr_logical_or.ops) {
 			Smooth operand_smooth = evaluate_smooth(igc, *op.operand);
-			Smooth value_smooth = extract_leaf(igc, operand_smooth, true);
-			llvm::Value* actual_value = llvm_value(value_smooth);
+
+			if (!std::get_if<std::shared_ptr<SmoothEnum>>(&operand_smooth)) {
+				fprintf(stderr, "non-enum not permitted for logical OR.\n");
+				exit(1);
+			}
+
+			llvm::Value* actual_value = llvm_value(operand_smooth);
 
 			if (!actual_value->getType()->isIntegerTy(1)) {
-				fprintf(stderr, "Tried to perform logical OR on something that wasn't intish.\n");
+				fprintf(stderr, "Tried to perform logical OR on something that wasn't intish of size 1.\n");
 				exit(1);
 			}
 

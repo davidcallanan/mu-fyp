@@ -37,7 +37,7 @@ std::shared_ptr<SmoothEnum> merge_smooth_enum(
 		auto it = std::find(v_enum_merged->syms.begin(), v_enum_merged->syms.end(), hardsym);
 		
 		uint32_t enum_idx = (uint32_t) std::distance(v_enum_merged->syms.begin(), it);
-		uint32_t bit_width = (uint32_t) std::bit_width(v_enum_merged->syms.size());
+		uint32_t bit_width = (uint32_t) std::bit_width(v_enum_merged->syms.size() - 1);
 		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
 		merged_value = llvm::ConstantInt::get(int_type, enum_idx);
 	}

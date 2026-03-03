@@ -4,6 +4,7 @@
 #include <variant>
 #include "get_underlying_type.hpp"
 #include "t_types.hpp"
+#include "preinstantiated_types.hpp"
 
 // there are three scenarios:
 // a. the node is already the most underlying type: return the same
@@ -43,15 +44,15 @@ Type get_underlying_type(const Type& type) {
 	}
 
 	if (std::holds_alternative<std::shared_ptr<TypeLog>>(type)) {
-		return std::make_shared<TypeVoid>();
+		return type_void;
 	}
 
 	if (std::holds_alternative<std::shared_ptr<TypeLogD>>(type)) {
-		return std::make_shared<TypeVoid>();
+		return type_void;
 	}
 
 	if (std::holds_alternative<std::shared_ptr<TypeLogDd>>(type)) {
-		return std::make_shared<TypeVoid>();
+		return type_void;
 	}
 
 	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
