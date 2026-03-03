@@ -1,8 +1,17 @@
 #include "is_subset_type_enum.hpp"
 
 bool is_subset_type_enum(const TypeEnum& enum_a, const TypeEnum& enum_b) {
-	if (enum_b.hardsym.has_value()) {
-		if (!enum_a.hardsym.has_value() || enum_a.hardsym.value() != enum_b.hardsym.value()) {
+	if (enum_a.hardsym.has_value()) {
+		bool found = false;
+
+		for (const auto& sym : enum_b.syms) {
+			if (sym == enum_a.hardsym.value()) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
 			return false;
 		}
 	}
