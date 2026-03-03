@@ -142,7 +142,19 @@ create() -> { ; this comment works
 		|| bool :true
 	;
 	
+	logical_test_b := 
+		&& actual_boolean
+		&& bool :true
+	;
+	
+	logical_test_c := 
+		&& bool :true
+		&& bool :true
+	;
+	
 	log("Logical tests:");
 	
 	log_d(logical_test_a);
+	log_d(logical_test_b);
+	log_d(logical_test_c);
 }
