@@ -40,6 +40,13 @@ std::shared_ptr<SmoothEnum> merge_smooth_enum(
 		uint32_t bit_width = (uint32_t) std::bit_width(v_enum_merged->syms.size() - 1);
 		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
 		merged_value = llvm::ConstantInt::get(int_type, enum_idx);
+	} else if (enum_a->value != nullptr && enum_b->value != nullptr) {
+		fprintf(stderr, "Impossible to merge two enums that have different values that are unknown at compile-time. Only types can be merged like this.\n");
+		exit(1);
+	} else if (enum_a->value != nullptr) {
+		merged_value = enum_a->value;
+	} else if (enum_b->value != nullptr) {
+		merged_value = enum_b->value;
 	}
 
 	return std::make_shared<SmoothEnum>(SmoothEnum{

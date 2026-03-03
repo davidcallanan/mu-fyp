@@ -40,7 +40,11 @@ struct TypeRotten {
 
 struct TypeEnum {
 	bool is_instantiated; // to distinguish between no hardsym vs unknown (runtime) hardsym.
-	// wait, i should wrap in an overlying type instead of using an is_instantiated
+	// wait, i should wrap in an overlying type instead of using an is_instantiated eventually (we'll see).
+	// is_instantiated and hardsym are mutually exclusive.
+	// hardsym - exact constant is known at compile-time;
+	// is_instantiated - value is known at runtime;
+	// neitehr hardsym nor is_instantiated - it is just an enum type "enum { ... }", not an actual value.
 	std::optional<std::string> hardsym; // this is a restrictive constraint, when merging, we imagine any value that satisfies ALL.
 	std::vector<std::string> syms; // this is a permissive constraint, when merging, imagine any value that satisfies ANY.
 };

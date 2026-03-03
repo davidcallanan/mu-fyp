@@ -309,10 +309,17 @@ Smooth evaluate_smooth(
 		}
 
 		if (bit_width == 0) {
-			const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, message_smooth);
-			fprintf(stderr, "cannot print this thing because its size is undeterminable\n");
-			fprintf(stderr, "message_smooth is %s\n", name);
-			exit(1);
+			llvm::Value* error_str = igc.builder.CreateGlobalStringPtr("[undeterminable size]");
+			igc.builder.CreateCall(igc.puts_func, { error_str });
+			
+			llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
+			llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
+			
+			return std::make_shared<SmoothStructval>(SmoothStructval{
+				type,
+				struct_value,
+				false,
+			});
 		}
 
 		if (leaf_type->isPointerTy()) {

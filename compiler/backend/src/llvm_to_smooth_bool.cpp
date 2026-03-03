@@ -10,12 +10,11 @@ std::shared_ptr<SmoothEnum> llvm_to_smooth_bool(
 ) {
 	auto smooth_enum_false = std::get<std::shared_ptr<SmoothEnum>>(evaluate_smooth(igc, Type(type_false)));
 	auto smooth_enum_true = std::get<std::shared_ptr<SmoothEnum>>(evaluate_smooth(igc, Type(type_true)));
-	auto smooth_enum_bool = std::get<std::shared_ptr<SmoothEnum>>(evaluate_smooth(igc, Type(type_bool)));
 
 	llvm::Value* of_interest = igc.builder.CreateSelect(value, smooth_enum_true->value, smooth_enum_false->value);
 
 	return std::make_shared<SmoothEnum>(SmoothEnum{
-		smooth_enum_bool->type,
+		Type(type_bool),
 		of_interest,
 	});
 }
