@@ -290,8 +290,16 @@ Smooth evaluate_smooth(
 		const auto& v_log_d = *p_v_log_d;
 
 		Smooth message_smooth = evaluate_smooth(igc, *v_log_d->message);
-		Smooth leaf_smooth = extract_leaf(igc, message_smooth, true);
-		llvm::Value* leaf = llvm_value(leaf_smooth);
+
+		llvm::Value* leaf;
+
+		if (auto p_v_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&message_smooth)) {
+			leaf = (*p_v_enum)->value;
+		} else {
+			Smooth leaf_smooth = extract_leaf(igc, message_smooth, true);
+			leaf = llvm_value(leaf_smooth);
+		}
+
 		llvm::Type* leaf_type = leaf->getType();
 
 		uint64_t bit_width = leaf_type->getPrimitiveSizeInBits();
@@ -301,9 +309,9 @@ Smooth evaluate_smooth(
 		}
 
 		if (bit_width == 0) {
-			const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, leaf_smooth);
+			const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, message_smooth);
 			fprintf(stderr, "cannot print this thing because its size is undeterminable\n");
-			fprintf(stderr, "leaf_smooth is %s\n", name);
+			fprintf(stderr, "message_smooth is %s\n", name);
 			exit(1);
 		}
 

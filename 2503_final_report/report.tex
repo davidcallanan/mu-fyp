@@ -375,6 +375,10 @@ While the primary mechanism of performing external communication is to link with
 
 Determining the maximum bits needed to hold an integer is an important optimization. While LLVM may be able to detect certain constraints about numbers, much of the compiler information is lost at this point that a modern programming language might be interested in tracking. For example, software verification languages may keep track of exact min and max values for an integer type, which is tracked extensively as the type system navigates the codebase. For non-integer types, an optimal type system implementation might allow the user to use formal logic to keep track of the theoretically-smallest set of runtime possibilities (a provably accurate picture of the possible values that can be assigned at runtime, with no wasted space).
 
+\subsection{Development Environment}
+
+reproducibility. Docker. WSL + NixOS options.
+
 \chapter{Evaluation}
 
 \subsection{Manual Snapshot Testing}
