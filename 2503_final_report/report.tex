@@ -26,6 +26,9 @@
 \usepackage{fancyhdr}
 \usepackage{lastpage}
 
+
+\usepackage{pdfpages}
+
 \usepackage{titlesec}
 \titleformat{\chapter}[hang]
   {\normalfont\huge\bfseries}
@@ -197,6 +200,21 @@ Success will be evidenced by the following deliverables:
 	\item A final written report detailing the research, design, implementation and evaluation of the project.
 \end{enumerate}
 
+\section{Use of Generative AI}
+
+Two notable GenAI tools have been used to assist with the research and development of this project.
+
+\begin{enumerate}
+
+\item The first is \href{https://t3.chat}{t3.chat}, a web application that consolidates numerous large language models into a streamlined chat interface \cite{t3chat}. The user can experiment with different models to understand which models are best suited for the task at hand.
+Both research and programming tasks have benefited from the use of this tool.
+The tool was primarily used to steer the work in the right direction, and to identify the concepts, libraries and resources through which further research could be conducted. For transparency, all LLM prompts have been included in \textbf{Appendix C}. It was found that the tool provided a simple JSON export facility to allow for programmatic filtration of relevant chats.
+
+\item The second is the tab-complete feature of \href{https://github.com/features/copilot}{GitHub Copilot}. This tool has encouraged rapid development and iteration through its behaving as a glorified autocomplete. From experience, the tool's context is severely limited, forcing the developer to have genuine knowledge of the codebase and its architecture. This is beneficial for projects that require significant unique input from the developer, in contrast to rehash projects that benefit more directly from LLM assistance.
+
+\end{enumerate}
+
+Some experimentation with GitHub Copilot agent mode was conducted, with notable issues identified. Firstly, the development speed was impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there was a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool was suspended.
 
 \chapter{Technical Background}
 
@@ -263,9 +281,23 @@ Languages have historically offered various features like classes, modules, pack
 
 \subsection{Map-Enum Equivalence}
 
-Three features in programming languages worth considering are structs (or classes), functions (or methods), and enums (specifically, tagged unions). Structs and functions have been unified into a single feature called a "map".
+There are three features in programming languages that share an ermegent goal. Consider structs (or classes), functions (or methods), and enums (specifically, tagged unions).
 
-One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters.
+Firstly, Essence C unifies structs and functions into a single feature called a "map". This takes inspiration from \href{https://en.wikipedia.org/wiki/Pure_mathematics}{Pure Mathematics}, where the pattern of notational definitions is often used for multiple purposes -- functions ($f(x)$), operations ($x + y$), subscripts ($x_n$), accessors ($\star_G$). Little special treatment is given to these different cases, as all could be denoted with function-like syntax ($f(x), +(x,y), x(n), \star(G)$).
+
+In Essence C, there are no struct accessors like ``.first\_name''. Rather, a struct is a "map" that takes in a symbol (e.g. ``:first\_name'') as its only parameter and returns the member from its internal storage. These semantics are not so bizarre, as the technique to store data alongside functions (often known as closures) is already commonplace. When a "map" has no virtual methods, its behaving as a struct results in the same low-level data representation. 
+
+Insert beautiful diagram here.
+
+Furthermore, tuples are syntactic sugar for maps, adding positional syntax. One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters. It's maps all the way down.
+
+Next, Essence C unifies maps and enums via our so-called Map-Enum Equivalence techniqyuue.
+
+\subsection{Type-Value Unification}
+
+encoding value vs theoretical value.
+
+both the concept unified, and then the syntax is unified too.
 
 \subsection{Additional benefit of inlining: interacting with existing languages without indirection.}
 
@@ -291,7 +323,10 @@ The syntax was designed to follow the crystal/pistol pattern, some terminology d
   \item Pistol: A binary tree of operations (like how existing languages handle multiplication and division).
 \end{itemize}
 
-For precedence reasons, we have four separate rules: additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
+For precedence reasons, we have eight separate rules: OR crystal -> OR pistol -> AND crystal -> 
+AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
+
+More details on this pattern can be gathered by viewing my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
   
 \section{Implementation}
 
@@ -309,7 +344,7 @@ Since parsers try a vast number of rules and are inherently recursive, the logs 
 
 \subsection{Defensive Programming}
 
-As the language has strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. This could be due to semantic violations in the user's code, or due to bugs in the compiler itself.
+As Essence C is designed with strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. Such errors could originate from semantic violations in the user's code, or due to subtle bugs in the compiler itself; either way, the issues can be traced effectively. Naturally, not all subtleties can be pre-envisioned, so this was done on a best-effort basis to avoid comprising development speed.
 
 \subsection{Debugging}
 
@@ -346,7 +381,28 @@ Prior to this project I had already developed a simple parsing library in JavaSc
 \end{enumerate}
 
 
+\newpage
 
+\printbibliography[title=References]
+
+\appendix
+
+
+\includepdf[
+    pages={1},
+    frame, 
+    scale=0.65, 
+    pagecommand={\thispagestyle{plain}
+\section{Appendix: Interim Report}}
+]{../2511_interim_report/report.pdf}
+
+
+\includepdf[
+    pages={2-5},
+    frame, 
+    scale=0.75, 
+    pagecommand={\thispagestyle{plain}}
+]{../2511_interim_report/report.pdf}
 
 \label{LastPage}
 \end{document}

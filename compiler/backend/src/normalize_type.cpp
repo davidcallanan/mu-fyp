@@ -9,6 +9,7 @@
 #include "merge_underlying_type.hpp"
 #include "rotten_int_info.hpp"
 #include "rotten_float_info.hpp"
+#include "extract_map_leaf.hpp"
 #include "get_underlying_type.hpp"
 #include "total_needed_bits_addit.hpp"
 #include "total_needed_bits_multi.hpp"
@@ -472,7 +473,7 @@ Type normalize_type(
 		char prefix = 'i';
 
 		for (const auto& op : v_expr_multi->ops) {
-			Type underlying = get_underlying_type(*op.operand);
+			Type underlying = get_underlying_type(extract_map_leaf(*op.operand, true));
 			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
 			
 			if (!p_v_rotten) {
@@ -536,7 +537,7 @@ Type normalize_type(
 		char prefix = 'i';
 
 		for (const auto& op : v_expr_addit->ops) {
-			Type underlying = get_underlying_type(*op.operand);
+			Type underlying = get_underlying_type(extract_map_leaf(*op.operand, true));
 			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
 			
 			if (!p_v_rotten) {
