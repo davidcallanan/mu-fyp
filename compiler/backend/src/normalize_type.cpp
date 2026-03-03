@@ -16,6 +16,8 @@
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
 
 using json = nlohmann::json;
 
@@ -111,7 +113,32 @@ Type normalize_type(
 					fprintf(stderr, "Expected .value\n");
 					exit(1);
 				}
-				
+
+				if (!result.leaf_type.has_value()) { // this is duplicating logic, but it's too difficult to get the code working without forcing the leaf_type early on.
+					const std::string& value_str = hardval_data["value"].get_ref<const std::string&>();
+					bool is_negative = !value_str.empty() && value_str[0] == '-';
+					std::string digits = is_negative ? value_str.substr(1) : value_str;
+					
+					uint32_t scratchy_bits = (uint32_t)(digits.size() * 4) + 1;
+					llvm::APInt ap_value(scratchy_bits, digits.c_str(), 10);
+
+					int bits_needed = 0;
+
+					if (is_negative) {
+						bits_needed = ap_value.getActiveBits() + 1; // i'm not entirely sure if this is correct.
+					} else {
+						bits_needed = ap_value.getActiveBits();
+
+						if (bits_needed == 0) {
+							bits_needed = 1;
+						}
+					}
+
+					auto v_rotten = std::make_shared<TypeRotten>();
+					v_rotten->type_str = (is_negative ? "i" : "u") + std::to_string(bits_needed);
+					result.leaf_type = Type(v_rotten);
+				}
+
 				auto v_int = std::make_shared<HardvalInteger>();
 				v_int->value = hardval_data["value"].get<std::string>();
 				result.leaf_hardval = Hardval(v_int);
@@ -120,7 +147,13 @@ Type normalize_type(
 					fprintf(stderr, "Expected .value\n");
 					exit(1);
 				}
-				
+
+				if (!result.leaf_type.has_value()) {
+					auto v_rotten = std::make_shared<TypeRotten>();
+					v_rotten->type_str = "f64"; // I don't have time to sort this, assuming all rottens are 64-bit floats which is fine for now.
+					result.leaf_type = Type(v_rotten);
+				}
+
 				auto v_float = std::make_shared<HardvalFloat>();
 				v_float->value = hardval_data["value"].get<std::string>();
 				result.leaf_hardval = Hardval(v_float);

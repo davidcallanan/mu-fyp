@@ -175,7 +175,7 @@ The logic of computer software is primarily expressed using programming language
 
 \section{Motivation}
 
-
+Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively will depend on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Reducing duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments only (e.g. JavaScript, web-based and React.js environments), leaving low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for rhe lack of training.
 
 \section{Methodology}
 
@@ -187,7 +187,7 @@ The structure of this thesis is organized to reflect this methodology. Chapter 2
 
 \section{Success Criteria}
 
-Success will be evidenced by the following deliverables:
+Success is evidenced by the following deliverables:
 
 \begin{enumerate}
 	\item A functional prototype compiler that implements the designed module system;
@@ -197,7 +197,7 @@ Success will be evidenced by the following deliverables:
 	\item An implementation of link-time optimization techniques that leverage the designed module system;
 	\item An evaluation of the effectiveness of these optimizations through the benchmarking of sample programs;
 	\item A monorepo containing extensive git history, demonstrating ongoing development progress;
-	\item A final written report detailing the research, design, implementation and evaluation of the project.
+	\item A final written report (that you are reading) detailing the research, design, implementation and evaluation of the project.
 \end{enumerate}
 
 \section{Use of Generative AI}
@@ -346,9 +346,13 @@ Since parsers try a vast number of rules and are inherently recursive, the logs 
 
 As Essence C is designed with strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. Such errors could originate from semantic violations in the user's code, or due to subtle bugs in the compiler itself; either way, the issues can be traced effectively. Naturally, not all subtleties can be pre-envisioned, so this was done on a best-effort basis to avoid comprising development speed.
 
-\subsection{Debugging}
+\subsection{Debugging Primitives}
 
 While the primary mechanism of performing external communication is to link with external code via the C ABI (which may be LLVM IR), debugging functionality is often preferable within the language directly in case there are issues with the interoperability layer proper. Thus, two basic logging functions were implemented, ``log'' and ``log\_d''. The former takes a null-terminated ascii string and prints this output in an implementation-specific manner. The latter takes an arbitrarily-sized value (like an integer or a byte array) and prints its raw binary representation (in 64-bit chunks), including both its hex representation, ascii representation, and decimal representation. The implementation of this functionality was chosen to be implementation-specific. In the prototype implementation, the external ``puts'' function was selected to implement this functionality, available in many environments. In case the environment does not support it, a dummy no-op implementation can be defined, effectively dropping any logs.
+
+\subsection{Bit-width Analysis}
+
+Determining the maximum bits needed to hold an integer is an important optimization. While LLVM may be able to detect certain constraints about numbers, much of the compiler information is lost at this point that a modern programming language might be interested in tracking. For example, software verification languages may keep track of exact min and max values for an integer type, which is tracked extensively as the type system navigates the codebase. For non-integer types, an optimal type system implementation might allow the user to use formal logic to keep track of the theoretically-smallest set of runtime possibilities (a provably accurate picture of the possible values that can be assigned at runtime, with no wasted space).
 
 \chapter{Evaluation}
 
@@ -356,7 +360,12 @@ TODO
 
 \chapter{Conclusion}
 
-TODO
+Given the time constraints for this project, the evaluation only scratched the surface. One would want to spend the following time:
+
+\begin{itemize}
+  \item 200 more hours on this.
+  \item 200 more hours on that.
+\end{itemize}
 
 \subsection{Contribution to state-of-the-art}
 

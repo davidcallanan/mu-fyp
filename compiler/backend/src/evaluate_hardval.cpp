@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <variant>
@@ -17,7 +18,7 @@ llvm::Value* evaluate_hardval(
 		const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
 		const std::string& value_str = p_v_int->value;
 		
-		int bits_needed;
+		int bits_needed = 0;
 		
 		if (!type_str.empty()) {
 			if (type_str[0] != 'i' && type_str[0] != 'u') {
@@ -27,14 +28,17 @@ llvm::Value* evaluate_hardval(
 			
 			bits_needed = std::stoi(type_str.substr(1));
 		} else {
-			bool is_negative = (!value_str.empty() && value_str[0] == '-');
+			bool is_negative = !value_str.empty() && value_str[0] == '-';
 			std::string digits = is_negative ? value_str.substr(1) : value_str;
-			
+
+			// BCD encoding reminds us that 4 bits is conservative for each digit.
+			uint32_t scratchy_bits = (uint32_t)(digits.size() * 4) + 1;
+
 			if (is_negative) {
-				llvm::APInt ap_value(128, digits.c_str(), 10);
+				llvm::APInt ap_value(scratchy_bits, digits.c_str(), 10);
 				bits_needed = ap_value.getActiveBits() + 1;
 			} else {
-				llvm::APInt ap_value(128, digits.c_str(), 10);
+				llvm::APInt ap_value(scratchy_bits, digits.c_str(), 10);
 				bits_needed = ap_value.getActiveBits();
 				
 				if (bits_needed == 0) {
