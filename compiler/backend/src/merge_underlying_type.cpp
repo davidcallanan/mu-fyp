@@ -6,6 +6,8 @@
 #include "get_underlying_type.hpp"
 #include "is_eq_type_rotten.hpp"
 #include "is_eq_type_pointer.hpp"
+#include "rotten_float_info.hpp"
+#include "rotten_int_info.hpp"
 #include "t_types.hpp"
 
 Type merge_underlying_type(Type type_a, Type type_b) {
@@ -34,6 +36,20 @@ Type merge_underlying_type(Type type_a, Type type_b) {
 		const TypeRotten& rotten_b = **p_rotten_b;
 
 		if (!is_eq_type_rotten(rotten_a, rotten_b)) {
+			auto float_a = rotten_float_info(*p_rotten_a);
+			auto float_b = rotten_float_info(*p_rotten_b);
+
+			if (float_a && float_b) {
+				return float_a->bits >= float_b->bits ? underlying_a : underlying_b;
+			}
+
+			auto int_a = rotten_int_info(*p_rotten_a);
+			auto int_b = rotten_int_info(*p_rotten_b);
+
+			if (int_a && int_b && int_a->prefix == int_b->prefix) {
+				return int_a->bits >= int_b->bits ? underlying_a : underlying_b;
+			}
+
 			fprintf(stderr, "Rotten conflict could not be dealth with: %s -vs- %s\n", rotten_a.type_str.c_str(), rotten_b.type_str.c_str());
 			exit(1);
 		}

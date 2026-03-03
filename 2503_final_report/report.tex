@@ -291,7 +291,11 @@ Insert beautiful diagram here.
 
 Furthermore, tuples are syntactic sugar for maps, adding positional syntax. One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters. It's maps all the way down.
 
-Next, Essence C unifies maps and enums via our so-called Map-Enum Equivalence techniqyuue.
+Next, Essence C unifies maps and enums via the so-called Map-Enum Equivalence technique.
+
+Recall Rust-like enums (tagged unions) where a symbol (:foo\_bar) is associated with some data (:foo\_bar("hello")).
+
+A syntactical ambiguirty arises. If we write map:foo\_bar("hello"), are we calling the map with a symbol (a bare enum) and then calling the resulting map with ("hello"), or, are we calling the map with a fully populated enum? The solution is to unify these two approaches, by demanding that all maps obey map-enum equivalence, that is, that calling a map with a symbol and then another map, is equivalent to calling the map with the fully populated enum. This bears partial resemblance with currying. What's amazing now is that populated enums are really just pre-curried symbols. The vast majority of code written by the programmer comes from maps and symbols.
 
 \subsection{Type-Value Unification}
 
@@ -356,7 +360,31 @@ Determining the maximum bits needed to hold an integer is an important optimizat
 
 \chapter{Evaluation}
 
-TODO
+\subsection{Manual Snapshot Testing}
+
+Throughout the development cycle, manual testing was conducted by compiling sample source files and inspecting the terminal output after running the final executable. This mirrors the snapshot testing philosophy commonly implemented in web-development projects (although accomplished in a less automated fashion here), where input/output consistency is checked before each commit. Down the road, this strategy could be extended to a full test suite that prevents all sorts of regressions. One could take this a step further by checking consistency in the compiled LLVM IR code itself, but this is typically only done when a language reaches a pivotal level of maturity; the compiler is in too much flux at this point for this technique to have any merit.
+
+\subsection{User Acceptance Testing}
+
+Four students from Maynooth University were tasked with implementing a program in the language. Each student was asked to provide positive and negative feedback of the solution.
+
+The users were given the following code with no explanation, but were allowed to ask me questions.
+
+The following table includes a summary of the feedback and questions.
+
+table
+4 entries (student A, student B, student C, student D)
+each entry contains 2 columns, qeustoin and answer.
+
+one row per questoin:
+- What is the sample program doing?
+- What semantic or syntactic element of the sample program strikes you the most, and why?
+- Implement a program that does blah. Provide one point of positive feedback about the language.
+- Provide one harsh criticism about the language.
+
+\subsection{Benchmarking}
+
+
 
 \chapter{Conclusion}
 
