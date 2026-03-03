@@ -11,6 +11,7 @@ It is unlikely that any additional extension features would be worked on, as tha
 ## Build
 
 - `vsce package`
+- Alternatively: `pnpx @vscode/vsce package`
 
 ## Install
 

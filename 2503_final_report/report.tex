@@ -17,11 +17,13 @@
 \usepackage{graphicx}
 \usepackage{capt-of}
 \usepackage{float}
+\usepackage{tikz}
 
 \usepackage{array}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{tabularx}
+\usepackage{longtable}
 
 \usepackage{fancyhdr}
 \usepackage{lastpage}
@@ -83,23 +85,29 @@
   \setstretch{1.125}
   \centering
   
-  {\color[HTML]{8b008b}\LARGE\textbf{Essence C}\par\vspace{1cm}}
+  \begin{tikzpicture}
+    \clip (0,0) circle (1cm);
+    \node at (0,0) {\includegraphics[height=2cm]{logo.png}};
+    \draw[line width=2pt] (0,0) circle (1cm);
+  \end{tikzpicture}\par\vspace{0.3cm}
+
+  {\color[HTML]{8b008b}\LARGE\textbf{Essence C}\par\vspace{0.7cm}}
   
   {\large\textbf{A new programming language to advance link-time optimizations by faciliating the continuum of static and dynamic modules.}\par}
   
-  \vspace{1.5cm}
+  \vspace{0.7cm}
   
   {\bfseries David Callanan\par}
   {\bfseries 21444104\par}
   
-  \vspace{1cm}
+  \vspace{0.7cm}
   
   {Final Year Project -- 2026\par}
   {B.Sc. Single Honours in Computational Thinking\par}
   
   \vfill
   
-  \includegraphics[width=0.45\textwidth]{mu_full.png}
+  \includegraphics[width=0.4\textwidth]{mu_full.png}
   
   \vfill
   
@@ -365,7 +373,7 @@ Since parsers try a vast number of rules and are inherently recursive, the logs 
 
 \subsection{Defensive Programming}
 
-As Essence C is designed with strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. Such errors could originate from semantic violations in the user's code, or due to subtle bugs in the compiler itself; either way, the issues can be traced effectively. Naturally, not all subtleties can be pre-envisioned, so this was done on a best-effort basis to avoid comprising development speed.
+As Essence C is designed with strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. Such errors could originate from semantic violations in the user's code, or due to subtle bugs in the compiler itself; either way, the issues can be traced effectively. Naturally, not all subtleties can be pre-envisioned, so this was done on a best-effort basis to avoid compromising development speed.
 
 \subsection{Debugging Primitives}
 
@@ -393,17 +401,60 @@ Four students from Maynooth University were tasked with implementing a program i
 
 The users were given the following code with no explanation, but were allowed to ask me questions.
 
-The following table includes a summary of the feedback and questions.
-
-table
-4 entries (student A, student B, student C, student D)
-each entry contains 2 columns, qeustoin and answer.
-
-one row per questoin:
-- What is the sample program doing?
-- What semantic or syntactic element of the sample program strikes you the most, and why?
-- Implement a program that does blah. Provide one point of positive feedback about the language.
-- Provide one harsh criticism about the language.
+\renewcommand{\arraystretch}{1.4}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{5.5cm}|>{\raggedright\arraybackslash}p{\dimexpr\textwidth-5.5cm-4\tabcolsep-2\arrayrulewidth\relax}|}
+\caption{Feedback survey}\label{tab:uat} \\
+\hline
+\textbf{Question} & \textbf{Answer} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Question} & \textbf{Answer} \\
+\hline
+\endhead
+\hline
+\endfoot
+\multicolumn{2}{|l|}{\textbf{Student A}} \\
+\hline
+What is the sample program doing? & [Answer] \\
+\hline
+What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+\hline
+Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+\hline
+Provide one harsh criticism about the language. & [Answer] \\
+\hline
+\multicolumn{2}{|l|}{\textbf{Student B}} \\
+\hline
+What is the sample program doing? & [Answer] \\
+\hline
+What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+\hline
+Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+\hline
+Provide one harsh criticism about the language. & [Answer] \\
+\hline
+\multicolumn{2}{|l|}{\textbf{Student C}} \\
+\hline
+What is the sample program doing? & [Answer] \\
+\hline
+What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+\hline
+Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+\hline
+Provide one harsh criticism about the language. & [Answer] \\
+\hline
+\multicolumn{2}{|l|}{\textbf{Student D}} \\
+\hline
+What is the sample program doing? & [Answer] \\
+\hline
+What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+\hline
+Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+\hline
+Provide one harsh criticism about the language. & [Answer] \\
+\hline
+\end{longtable}
 
 \subsection{Benchmarking}
 

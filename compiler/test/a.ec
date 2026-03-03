@@ -114,11 +114,11 @@ create() -> { ; this comment works
 	log_dd(str5, 5);
 	
 	boolean := :true;
-	type := :foo_bar_baz;
+	type_ := :foo_bar_baz;
 	
 	log("Enum dump:");
 	log_d(boolean);
-	log_d(type);
+	log_d(type_);
 	
 	new_boolean := enum {
 		:false;
