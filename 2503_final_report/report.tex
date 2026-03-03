@@ -385,6 +385,8 @@ reproducibility. Docker. WSL + NixOS options.
 
 Throughout the development cycle, manual testing was conducted by compiling sample source files and inspecting the terminal output after running the final executable. This mirrors the snapshot testing philosophy commonly implemented in web-development projects (although accomplished in a less automated fashion here), where input/output consistency is checked before each commit. Down the road, this strategy could be extended to a full test suite that prevents all sorts of regressions. One could take this a step further by checking consistency in the compiled LLVM IR code itself, but this is typically only done when a language reaches a pivotal level of maturity; the compiler is in too much flux at this point for this technique to have any merit.
 
+Much of the snapshot testing was performed using the language's data logging facility which prints the hexidecimal, ascii, and decimal values of arbitrarily-sized binary sequences. This allows straightforward investigation of any runtime values, whether that be integers, floats, pointers, strings, enums, and so on.
+
 \subsection{User Acceptance Testing}
 
 Four students from Maynooth University were tasked with implementing a program in the language. Each student was asked to provide positive and negative feedback of the solution.

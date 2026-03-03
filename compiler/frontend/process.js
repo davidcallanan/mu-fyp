@@ -298,8 +298,25 @@ const expr25 = rule("expr25", or(
 	typeval_atom,
 ));
 
+const expr27 = rule("expr27", mapData(join(
+	expr25,
+	opt_multi(SYMBOL_BARE),
+), (data) => {
+	let result = data[0];
+
+	for (const sym of data[1]) {
+		result = {
+			type: "expr_call_with_sym",
+			target: result,
+			sym: sym.substring(1),
+		};
+	}
+
+	return result;
+}));
+
 const expr30 = rule("expr30", mapData( // multiplicative pistol
-	join(expr25, opt_multi(join(or(ASTERISK, DIV), expr25))),
+	join(expr27, opt_multi(join(or(ASTERISK, DIV), expr27))),
 	(data) => {
 		if (data[1].length === 0) {
 			return data[0];
@@ -315,7 +332,7 @@ const expr30 = rule("expr30", mapData( // multiplicative pistol
 const expr35 = rule("expr35", or( // multiplicative crystal
 	mapData(
 		// we demand >= 2 asterisk because to distinguish with pointer.
-		join(join(or(ASTERISK, DIV), expr25), multi(join(or(ASTERISK, DIV), expr25))), // in unary case, we skip to expr25 to ignore binary case
+		join(join(or(ASTERISK, DIV), expr27), multi(join(or(ASTERISK, DIV), expr27))), // in unary case, we skip to expr27 to ignore binary case
 		(data) => {
 			const combined = [data[0], ...data[1]];
 
@@ -421,22 +438,7 @@ const expr65 = rule("expr65", or( // logical OR crystal
 	expr60,
 ));
 
-const expr75 = rule("expr75", mapData(join(
-	expr65,
-	opt_multi(SYMBOL_BARE),
-), (data) => {
-	let result = data[0];
-	
-	for (const sym of data[1]) {
-		result = {
-			type: "expr_call_with_sym",
-			target: result,
-			sym: sym.substring(1),
-		};
-	}
-	
-	return result;
-}));
+const expr75 = rule("expr75", expr65);
 
 const expr85 = rule("expr85", or(
 	expr_var_walrus,
