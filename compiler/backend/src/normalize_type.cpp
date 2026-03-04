@@ -296,6 +296,44 @@ Type normalize_type(
 					continue;
 				}
 
+				if (instruction_type == "instruction_if") {
+					auto v_if = std::make_shared<InstructionIf>();
+
+					if (!instruction_data.contains("branches") || !instruction_data["branches"].is_array()) {
+						fprintf(stderr, ".branches missing.\n");
+						exit(1);
+					}
+
+					for (const auto& branch : instruction_data["branches"]) {
+						InstructionIf_Branch actual_branch;
+
+						if (!branch.contains("body")) {
+							fprintf(stderr, "Branch lacks a .body.\n");
+							exit(1);
+						}
+
+						if (branch.contains("condition") && !branch["condition"].is_null()) {
+							Type condition = normalize_type(branch["condition"], symbol_table);
+							actual_branch.condition = std::make_shared<Type>(condition);
+						}
+
+						Type body = normalize_type(branch["body"], symbol_table);
+						auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&body);
+
+						if (!p_v_map) {
+							fprintf(stderr, "frontend did not produce a map here.\n");
+							exit(1);
+						}
+
+						actual_branch.body = *p_v_map;
+						v_if->branches.push_back(actual_branch);
+					}
+
+					result.execution_sequence.push_back(v_if);
+					
+					continue;
+				}
+
 				fprintf(stderr, "Not recognized instructoin type: %s\n", instruction_type.c_str());
 				exit(1);
 			}

@@ -42,6 +42,8 @@ const KW_NULLTERM = rule("KW_NULLTERM", withCarefulSkippers("null-term"));
 const KW_MUT = rule("KW_MUT", withCarefulSkippers("mut"));
 const KW_FOR = rule("KW_FOR", withCarefulSkippers("for"));
 const KW_ENUM = rule("KW_ENUM", withCarefulSkippers("enum"));
+const KW_IF = rule("KW_IF", withCarefulSkippers("if"));
+const KW_ELSE = rule("KW_ELSE", withCarefulSkippers("else"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -87,6 +89,7 @@ const typeval = declare();
 const typeval_atom = declare();
 const type_callable = declare();
 const map_entry_for = declare();
+const map_entry_if = declare();
 const map_entry_semiless = declare();
 const constraint_enum = declare();
 
@@ -514,8 +517,51 @@ map_entry_for.define(rule("map_entry_for", mapData(
 	}),
 )));
 
+map_entry_if.define(rule("map_entry_if", mapData(
+	join(
+		KW_IF,
+		LPAREN,
+		typeval,
+		RPAREN,
+		constraint_map_braced_multiline,
+		opt_multi(mapData(
+			join(
+				KW_ELSE,
+				KW_IF,
+				LPAREN,
+				typeval,
+				RPAREN,
+				constraint_map_braced_multiline
+			),
+			(data) => ({
+				condition: data[3],
+				body: data[5],
+			}),
+		)),
+		opt(mapData(
+			join(
+				KW_ELSE,
+				constraint_map_braced_multiline,
+			),
+			(data) => data[1],
+		)),
+	),
+	(data) => ({
+		type: "instruction_if",
+		branches: [
+			{ condition: data[2], body: data[4] },
+			...data[5].map((branch) => ({ condition: branch.condition, body: branch.body })),
+			...(data[6] !== undefined ? [{ condition: undefined, body: data[6] }] : []),
+		],
+	}),
+)));
+
 map_entry_semiless.define(rule("map_entry_semiless", or(
 	mapData(map_entry_for, (data) => ({
+		type: "instruction",
+		data,
+	})),
+	mapData(map_entry_if, (data) => ({
 		type: "instruction",
 		data,
 	})),

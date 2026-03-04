@@ -157,4 +157,29 @@ create() -> { ; this comment works
 	log_d(logical_test_a);
 	log_d(logical_test_b);
 	log_d(logical_test_c);
+	
+	if (bool :true) {
+		log("Scenario 1A");
+	} else if (bool :false) {
+		log("Scenario 1B");
+	} else {
+		log("Scenario 1C");
+	}
+	
+	
+	if (bool :false) {
+		log("Scenario 2A");
+	} else if (bool :true) {
+		log("Scenario 2B");
+	} else {
+		log("Scenario 2C");
+	}
+	
+	if (bool :false) {
+		log("Scenario 3A");
+	} else if (bool :false) {
+		log("Scenario 3B");
+	} else {
+		log("Scenario 3C");
+	}
 }

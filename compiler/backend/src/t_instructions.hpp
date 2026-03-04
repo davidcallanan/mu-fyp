@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 #include "t_instructions_fwd.hpp"
 #include "t_types_fwd.hpp"
 
@@ -16,5 +17,14 @@ struct InstructionExpr {
 
 struct InstructionFor {
 	std::shared_ptr<TypeMap> body;
+};
+
+struct InstructionIf_Branch {
+	std::shared_ptr<Type> condition;
+	std::shared_ptr<TypeMap> body;
+};
+
+struct InstructionIf {
+	std::vector<InstructionIf_Branch> branches;
 };
 

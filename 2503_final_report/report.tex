@@ -365,6 +365,10 @@ Recall Rust-like enums (tagged unions) where a symbol (:foo\_bar) is associated 
 
 A syntactical ambiguirty arises. If we write map:foo\_bar("hello"), are we calling the map with a symbol (a bare enum) and then calling the resulting map with ("hello"), or, are we calling the map with a fully populated enum? The solution is to unify these two approaches, by demanding that all maps obey map-enum equivalence, that is, that calling a map with a symbol and then another map, is equivalent to calling the map with the fully populated enum. This bears partial resemblance with currying. What's amazing now is that populated enums are really just pre-curried symbols. The vast majority of code written by the programmer now comes from maps and symbols.
 
+\subsection{Body-Map Unification}
+
+
+
 \subsection{Type-Value Unification}
 
 Old-fashioned languages like C treat types and values as entirely distinct.
@@ -414,7 +418,17 @@ For precedence reasons, we have eight separate rules: OR crystal -> OR pistol ->
 AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
 
 More details on this pattern can be gathered by viewing my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
-  
+
+\subsection{Module Resolution}
+
+\subsection{Constant By Default}
+
+\subsection{No Standard Library}
+
+With kernel development as the primary target audience for this language, the language should be freestanding and not have any external dependencies. In kernel development, it does not make sense to have built-in functions for most features, as the kernel developer is expected to implement all features themselves (printing, keyboard input, memory allocation, etc.) by communicating directly with the hardware using assembly instructions. Thus, the language only externs one function, ``puts'' , for logging purposes. This function is easy enough to implement early on in kernel development, but the developer can also choose to use a no-op and avoid logging, if they so please.
+
+Rather than a standard library, first class integration with LLVM IR and the C ABI was implemented. This means the code can interact with any code written outside the language, preventing the need for the developer to migrate existing code to Essence C.
+
 \section{Implementation}
 
 \subsection{Mutability}

@@ -64,5 +64,76 @@ void process_map_body(
 			new_igc.builder.CreateBr(block_start);
 			igc.builder.SetInsertPoint(block_end);
 		}
+
+		if (auto p_v_if = std::get_if<std::shared_ptr<InstructionIf>>(&instruction)) {
+			const auto& v_if = *p_v_if;
+
+			llvm::Function* current_func = igc.builder.GetInsertBlock()->getParent();
+			llvm::BasicBlock* block_end = llvm::BasicBlock::Create(igc.context, "if_END", current_func);
+
+			bool fallthrough_done = false;
+
+			for (size_t i = 0; i < v_if->branches.size(); i++) {
+				const auto& branch = v_if->branches[i];
+
+				llvm::BasicBlock* block_then = llvm::BasicBlock::Create(igc.context, "if_BRANCH", current_func);
+
+				if (branch.condition != nullptr) { // exact condition given (each condition is a fallthrough so this may be an "if" or an "else if")
+					Smooth condition_smooth = evaluate_smooth(igc, *branch.condition);
+
+					if (!std::get_if<std::shared_ptr<SmoothEnum>>(&condition_smooth)) {
+						fprintf(stderr, "the if statement must take in an enum, please convert your data to a bool!\n");
+						exit(1);
+					}
+
+					llvm::Value* condition_value = llvm_value(condition_smooth);
+
+					if (!condition_value->getType()->isIntegerTy(1)) {
+						fprintf(stderr, "\"if\" must take an enum of 1 bit of size (a bool), not some other enum.\n");
+						exit(1);
+					}
+
+					llvm::BasicBlock* block_next = llvm::BasicBlock::Create(igc.context, "if_PROGRESS", current_func);
+					igc.builder.CreateCondBr(condition_value, block_then, block_next);
+					igc.builder.SetInsertPoint(block_then);
+
+					std::shared_ptr<ValueSymbolTable> inner_value_table = std::make_shared<ValueSymbolTable>(
+						create_value_symbol_table(igc.value_table.get())
+					);
+
+					IrGenCtx fresh_igc = igc;
+					fresh_igc.value_table = inner_value_table;
+
+					process_map_body(fresh_igc, *branch.body);
+
+					fresh_igc.builder.CreateBr(block_end);
+					igc.builder.SetInsertPoint(block_next);
+				} else { // no condition means fallthrough, effectively means "else" or "if (true)" in the context of "if" statements.
+					igc.builder.CreateBr(block_then);
+					igc.builder.SetInsertPoint(block_then);
+
+					std::shared_ptr<ValueSymbolTable> brand_new_value_table = std::make_shared<ValueSymbolTable>(
+						create_value_symbol_table(igc.value_table.get())
+					);
+
+					IrGenCtx inner_igc = igc;
+					inner_igc.value_table = brand_new_value_table;
+
+					process_map_body(inner_igc, *branch.body);
+
+					inner_igc.builder.CreateBr(block_end);
+					
+					fallthrough_done = true;
+					
+					break;
+				}
+			}
+
+			if (!fallthrough_done) {
+				igc.builder.CreateBr(block_end);
+			}
+			
+			igc.builder.SetInsertPoint(block_end);
+		}
 	}
 }
