@@ -182,4 +182,16 @@ create() -> { ; this comment works
 	} else {
 		log("Scenario 3C");
 	}
+	
+	mut i := 0;
+	
+	for {
+		log("test");
+		
+		i = i + 1;
+		
+		if (i == 10) {
+			break;
+		}
+	}
 }

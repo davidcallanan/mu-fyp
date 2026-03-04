@@ -1,7 +1,6 @@
 LANGUAGE FEATURES:
 add values to enums (or bypass this for now with a simpler approach by using one side of the map enum equivalence)
 add comparison expressions
-and if statement
 add break keyword
 add type modifications (via @)
 add call_with_map

@@ -100,6 +100,13 @@ struct TypeExprAddit {
 	std::shared_ptr<Type> underlying_type;
 };
 
+struct TypeCompare {
+	std::string operator_;
+	std::shared_ptr<Type> operand_a;
+	std::shared_ptr<Type> operand_b;
+	std::shared_ptr<Type> underlying_type;
+};
+
 struct OpLogical {
 	std::shared_ptr<Type> operand;
 };

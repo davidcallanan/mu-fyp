@@ -373,6 +373,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 			puts_func,
 			log_data_func,
 			log_data_deref_func,
+			nullptr,
 		};
 		
 		process_map_body(igc, *v_map.call_output_type);

@@ -44,6 +44,7 @@ const KW_FOR = rule("KW_FOR", withCarefulSkippers("for"));
 const KW_ENUM = rule("KW_ENUM", withCarefulSkippers("enum"));
 const KW_IF = rule("KW_IF", withCarefulSkippers("if"));
 const KW_ELSE = rule("KW_ELSE", withCarefulSkippers("else"));
+const KW_BREAK = rule("KW_BREAK", withCarefulSkippers("break"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -80,6 +81,12 @@ const MINUS = rule("MINUS", withCarefulSkippers("-"));
 const DIV = rule("DIV", withCarefulSkippers("/"));
 const AND = rule("AND", withCarefulSkippers("&&"));
 const OR = rule("OR", withCarefulSkippers("||"));
+const EQ = rule("EQ", withCarefulSkippers("=="));
+const NEQ = rule("NEQ", withCarefulSkippers("!="));
+const LTE = rule("LTE", withCarefulSkippers("<="));
+const GTE = rule("GTE", withCarefulSkippers(">="));
+const LT = rule("LT", withCarefulSkippers("<"));
+const GT = rule("GT", withCarefulSkippers(">"));
 
 // PARSER RULES
 
@@ -90,6 +97,7 @@ const typeval_atom = declare();
 const type_callable = declare();
 const map_entry_for = declare();
 const map_entry_if = declare();
+const map_entry_break = declare();
 const map_entry_semiless = declare();
 const constraint_enum = declare();
 
@@ -379,8 +387,24 @@ const expr45 = rule("expr45", or( // additive crystal
 	expr40,
 ));
 
+const expr47 = rule("expr47", mapData(
+	join(expr45, opt(join(or(EQ, NEQ, LTE, GTE, LT, GT), expr45))),
+	(data) => {
+		if (data[1] === undefined) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_compare",
+			operator: data[1][0],
+			operand_a: data[0],
+			operand_b: data[1][1],
+		});
+	},
+));
+
 const expr50 = rule("expr50", mapData( // logical AND pistol
-	join(expr45, opt_multi(join(AND, expr45))),
+	join(expr47, opt_multi(join(AND, expr47))),
 	(data) => {
 		if (data[1].length === 0) {
 			return data[0];
@@ -395,7 +419,7 @@ const expr50 = rule("expr50", mapData( // logical AND pistol
 
 const expr55 = rule("expr55", or( // logical AND crystal
 	mapData(
-		multi(join(AND, expr45)), // in unary case, we skip to expr45 to ignore binary case
+		multi(join(AND, expr47)), // in unary case, we skip to expr47 to ignore binary case
 		(data) => {
 			if (data.length === 1) {
 				return data[0][1];
@@ -467,6 +491,10 @@ const map_entry = rule("map_entry", or(
 		data,
 	})),
 	mapData(map_entry_expr, (data) => ({
+		type: "instruction",
+		data,
+	})),
+	mapData(map_entry_break, (data) => ({
 		type: "instruction",
 		data,
 	})),
@@ -553,6 +581,13 @@ map_entry_if.define(rule("map_entry_if", mapData(
 			...data[5].map((branch) => ({ condition: branch.condition, body: branch.body })),
 			...(data[6] !== undefined ? [{ condition: undefined, body: data[6] }] : []),
 		],
+	}),
+)));
+
+map_entry_break.define(rule("map_entry_break", mapData(
+	KW_BREAK,
+	() => ({
+		type: "instruction_break",
 	}),
 )));
 

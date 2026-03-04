@@ -25,6 +25,10 @@
 #include "is_structwrappable.hpp"
 #include "smooth_type.hpp"
 #include "llvm_to_smooth.hpp"
+#include "build_compare.hpp"
+#include "rotten_int_info.hpp"
+#include "rotten_float_info.hpp"
+#include "extract_map_leaf.hpp"
 
 static bool determine_has_leaf(const Type& type) {
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -190,6 +194,7 @@ Smooth evaluate_smooth(
 		
 		IrGenCtx map_igc = igc;
 		map_igc.value_table = map_value_table;
+		// map_igc.block_break = nullptr;
 		
 		process_map_body(map_igc, map);
 		
@@ -541,32 +546,55 @@ Smooth evaluate_smooth(
 	if (auto p_v_expr_multi = std::get_if<std::shared_ptr<TypeExprMulti>>(&type)) {
 		const auto& v_expr_multi = **p_v_expr_multi;
 		llvm::Value* result = nullptr;
-		bool is_float = false; // we will not allow combining int and float operations implicitely.
+		std::optional<bool> is_float; // we will not allow combining int and float operations implicitely.
+		char prefix = 'i';
 
 		for (const auto& op_numeric : v_expr_multi.ops) {
 			Smooth smooth = evaluate_smooth(igc, *op_numeric.operand);
 			Smooth value_smooth = extract_leaf(igc, smooth, true);
 
-			if (true
-				&& std::get_if<std::shared_ptr<SmoothInt>>(&value_smooth) == nullptr
-				&& std::get_if<std::shared_ptr<SmoothFloat>>(&value_smooth) == nullptr
-			) {
+			Type operand_underlying = get_underlying_type(extract_map_leaf(*op_numeric.operand, true));
+			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&operand_underlying);
+
+			if (!p_v_rotten) {
+				fprintf(stderr, "cannot multiply something non-rotten\n");
 				fprintf(stderr, "Cannot do multiplication on things that aren't integer or float.\n");
 				exit(1);
 			}
 
-			bool is_this_one_float = std::get_if<std::shared_ptr<SmoothFloat>>(&value_smooth) != nullptr;
-			llvm::Value* value = llvm_value(value_smooth);
+			bool is_this_one_float;
 
-			if (result == nullptr) {
-				is_float = is_this_one_float;
-				result = is_float ? llvm::ConstantFP::get(value->getType(), 1.0) : llvm::ConstantInt::get(value->getType(), 1);
-			} else if (is_this_one_float != is_float) {
-				fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+			if (auto info = rotten_int_info(*p_v_rotten)) {
+				if (is_float.has_value() && is_float.value()) {
+					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
+					fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+					exit(1);
+				}
+				
+				is_float = false;
+				prefix = info->prefix;
+				is_this_one_float = false;
+			} else if (auto info = rotten_float_info(*p_v_rotten)) {
+				if (is_float.has_value() && !is_float.value()) {
+					fprintf(stderr, "do not mix int and float (got float after int)\n");
+					fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+					exit(1);
+				}
+				
+				is_float = true;
+				is_this_one_float = true;
+			} else {
+				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting multiplication)\n");
 				exit(1);
 			}
 
-			if (!is_float) { // i don't care about floats for now.
+			llvm::Value* value = llvm_value(value_smooth);
+
+			if (result == nullptr) {
+				result = is_float.value() ? llvm::ConstantFP::get(value->getType(), 1.0) : llvm::ConstantInt::get(value->getType(), 1);
+			}
+
+			if (!is_float.value()) { // i don't care about floats for now.
 				uint32_t result_bits = result->getType()->getIntegerBitWidth();
 				uint32_t value_bits = value->getType()->getIntegerBitWidth();
 				
@@ -578,9 +606,9 @@ Smooth evaluate_smooth(
 			}
 
 			if (op_numeric.op == "*") {
-				result = is_float ? igc.builder.CreateFMul(result, value) : igc.builder.CreateMul(result, value);
+				result = is_float.value() ? igc.builder.CreateFMul(result, value) : igc.builder.CreateMul(result, value);
 			} else if (op_numeric.op == "/") {
-				result = is_float ? igc.builder.CreateFDiv(result, value) : igc.builder.CreateSDiv(result, value);
+				result = is_float.value() ? igc.builder.CreateFDiv(result, value) : igc.builder.CreateSDiv(result, value);
 				// todo: is signed division appropriate in all cases? probably need to adjust this.
 			} else {
 				fprintf(stderr, "Some bizarre operator was encountered %s (multiplicative)\n", op_numeric.op.c_str());
@@ -593,7 +621,18 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		if (is_float) {
+		uint32_t actual_bits = result->getType()->getPrimitiveSizeInBits();
+		auto rotten_outcome = std::make_shared<TypeRotten>();
+
+		if (is_float.value()) {
+			rotten_outcome->type_str = "f" + std::to_string(actual_bits);
+		} else {
+			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(actual_bits);
+		}
+
+		(*p_v_expr_multi)->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
+
+		if (is_float.value()) {
 			return std::make_shared<SmoothFloat>(SmoothFloat{
 				type,
 				result,
@@ -609,32 +648,55 @@ Smooth evaluate_smooth(
 	if (auto p_v_expr_addit = std::get_if<std::shared_ptr<TypeExprAddit>>(&type)) {
 		const auto& v_expr_addit = **p_v_expr_addit;
 		llvm::Value* result = nullptr;
-		bool is_float = false;
+		std::optional<bool> is_float;
+		char prefix = 'i';
 
 		for (const auto& op_numeric : v_expr_addit.ops) {
 			Smooth smooth = evaluate_smooth(igc, *op_numeric.operand);
 			Smooth value_smooth = extract_leaf(igc, smooth, true);
 
-			if (true
-				&& std::get_if<std::shared_ptr<SmoothInt>>(&value_smooth) == nullptr
-				&& std::get_if<std::shared_ptr<SmoothFloat>>(&value_smooth) == nullptr
-			) {
+			Type operand_underlying = get_underlying_type(extract_map_leaf(*op_numeric.operand, true));
+			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&operand_underlying);
+
+			if (!p_v_rotten) {
+				fprintf(stderr, "cannot add something non-rotten\n");
 				fprintf(stderr, "Cannot do addition on data that isn't integer or float.\n");
 				exit(1);
 			}
 
-			bool is_this_one_float = std::get_if<std::shared_ptr<SmoothFloat>>(&value_smooth) != nullptr;
+			bool is_this_one_float;
+
+			if (auto info = rotten_int_info(*p_v_rotten)) {
+				if (is_float.has_value() && is_float.value()) {
+					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
+					fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+					exit(1);
+				}
+				
+				is_float = false;
+				prefix = info->prefix;
+				is_this_one_float = false;
+			} else if (auto info = rotten_float_info(*p_v_rotten)) {
+				if (is_float.has_value() && !is_float.value()) {
+					fprintf(stderr, "do not mix int and float (got float after int)\n");
+					fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
+					exit(1);
+				}
+				
+				is_float = true;
+				is_this_one_float = true;
+			} else {
+				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting addition)\n");
+				exit(1);
+			}
+			
 			llvm::Value* value = llvm_value(value_smooth);
 
 			if (result == nullptr) {
-				is_float = is_this_one_float;
-				result = is_float ? llvm::ConstantFP::get(value->getType(), 0.0) : llvm::ConstantInt::get(value->getType(), 0);
-			} else if (is_this_one_float != is_float) {
-				fprintf(stderr, "The compiler does not support implicit combining of ints and float operations.\n");
-				exit(1);
+				result = is_float.value() ? llvm::ConstantFP::get(value->getType(), 0.0) : llvm::ConstantInt::get(value->getType(), 0);
 			}
 
-			if (!is_float) { // dont care about floats for now.
+			if (!is_float.value()) { // dont care about floats for now.
 				uint32_t result_bits = result->getType()->getIntegerBitWidth();
 				uint32_t value_bits = value->getType()->getIntegerBitWidth();
 				
@@ -646,9 +708,9 @@ Smooth evaluate_smooth(
 			}
 
 			if (op_numeric.op == "+") {
-				result = is_float ? igc.builder.CreateFAdd(result, value) : igc.builder.CreateAdd(result, value);
+				result = is_float.value() ? igc.builder.CreateFAdd(result, value) : igc.builder.CreateAdd(result, value);
 			} else if (op_numeric.op == "-") {
-				result = is_float ? igc.builder.CreateFSub(result, value) : igc.builder.CreateSub(result, value);
+				result = is_float.value() ? igc.builder.CreateFSub(result, value) : igc.builder.CreateSub(result, value);
 			} else {
 				fprintf(stderr, "Some bizarre operator was encountered %s (additive)\n", op_numeric.op.c_str());
 				exit(1);
@@ -660,7 +722,18 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		if (is_float) {
+		uint32_t actual_bits = result->getType()->getPrimitiveSizeInBits();
+		auto rotten_outcome = std::make_shared<TypeRotten>();
+
+		if (is_float.value()) {
+			rotten_outcome->type_str = "f" + std::to_string(actual_bits);
+		} else {
+			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(actual_bits);
+		}
+
+		(*p_v_expr_addit)->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
+
+		if (is_float.value()) {
 			return std::make_shared<SmoothFloat>(SmoothFloat{
 				type,
 				result,
@@ -671,6 +744,20 @@ Smooth evaluate_smooth(
 			type,
 			result,
 		});
+	}
+
+	if (auto p_v_compare = std::get_if<std::shared_ptr<TypeCompare>>(&type)) {
+		const auto& v_compare = **p_v_compare;
+
+		Smooth a_smooth = evaluate_smooth(igc, *v_compare.operand_a);
+		llvm::Value* a = llvm_value(a_smooth);
+
+		Smooth b_smooth = evaluate_smooth(igc, *v_compare.operand_b);
+		llvm::Value* b = llvm_value(b_smooth);
+
+		llvm::Value* cmp = build_compare(igc, a, b, v_compare.operator_);
+
+		return llvm_to_smooth_bool(igc, cmp);
 	}
 
 	if (auto p_v_expr_logical_and = std::get_if<std::shared_ptr<TypeExprLogicalAnd>>(&type)) {

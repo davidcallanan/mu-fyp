@@ -4,6 +4,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/BasicBlock.h"
 #include "create_type_symbol_table.hpp"
 #include "create_value_symbol_table.hpp"
 
@@ -16,4 +17,5 @@ struct IrGenCtx {
 	llvm::FunctionCallee& puts_func;
 	llvm::Function* log_data_func;
 	llvm::Function* log_data_deref_func;
+	llvm::BasicBlock* block_break;
 };

@@ -7,12 +7,7 @@
 #include "normalize_type.hpp"
 #include "demote_underlying.hpp"
 #include "merge_underlying_type.hpp"
-#include "rotten_int_info.hpp"
-#include "rotten_float_info.hpp"
-#include "extract_map_leaf.hpp"
 #include "get_underlying_type.hpp"
-#include "total_needed_bits_addit.hpp"
-#include "total_needed_bits_multi.hpp"
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
@@ -334,6 +329,14 @@ Type normalize_type(
 					continue;
 				}
 
+				if (instruction_type == "instruction_break") {
+					auto v_break = std::make_shared<InstructionBreak>();
+					
+					result.execution_sequence.push_back(v_break);
+					
+					continue;
+				}
+
 				fprintf(stderr, "Not recognized instructoin type: %s\n", instruction_type.c_str());
 				exit(1);
 			}
@@ -540,52 +543,6 @@ Type normalize_type(
 			exit(1);
 		}
 
-		std::vector<uint32_t> bits;
-		std::optional<bool> is_float;
-		char prefix = 'i';
-
-		for (const auto& op : v_expr_multi->ops) {
-			Type underlying = get_underlying_type(extract_map_leaf(*op.operand, true));
-			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
-			
-			if (!p_v_rotten) {
-				fprintf(stderr, "cannot multiply something non-rotten\n");
-				exit(1);
-			}
-
-			if (auto info = rotten_int_info(*p_v_rotten)) {
-				if (is_float.has_value() && is_float.value()) {
-					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
-					exit(1);
-				}
-				
-				is_float = false;
-				prefix = info->prefix;
-				bits.push_back(info->bits);
-			} else if (auto info = rotten_float_info(*p_v_rotten)) {
-				if (is_float.has_value() && !is_float.value()) {
-					fprintf(stderr, "do not mix int and float (got float after int)\n");
-					exit(1);
-				}
-				
-				is_float = true;
-				bits.push_back(info->bits);
-			} else {
-				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting multiplication)\n");
-				exit(1);
-			}
-		}
-
-		auto rotten_outcome = std::make_shared<TypeRotten>();
-
-		if (is_float.value()) {
-			rotten_outcome->type_str = "f" + std::to_string(*std::max_element(bits.begin(), bits.end()));
-		} else {
-			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(total_needed_bits_multi(bits));
-		}
-
-		v_expr_multi->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
-
 		return v_expr_multi;
 	}
 
@@ -603,52 +560,6 @@ Type normalize_type(
 			fprintf(stderr, "this is not good outcome.\n");
 			exit(1);
 		}
-
-		std::vector<uint32_t> bits;
-		std::optional<bool> is_float;
-		char prefix = 'i';
-
-		for (const auto& op : v_expr_addit->ops) {
-			Type underlying = get_underlying_type(extract_map_leaf(*op.operand, true));
-			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying);
-			
-			if (!p_v_rotten) {
-				fprintf(stderr, "cannot add something non-rotten\n");
-				exit(1);
-			}
-
-			if (auto info = rotten_int_info(*p_v_rotten)) {
-				if (is_float.has_value() && is_float.value()) {
-					fprintf(stderr, "do not mix int and float like this (got int after float).\n");
-					exit(1);
-				}
-				
-				is_float = false;
-				prefix = info->prefix;
-				bits.push_back(info->bits);
-			} else if (auto info = rotten_float_info(*p_v_rotten)) {
-				if (is_float.has_value() && !is_float.value()) {
-					fprintf(stderr, "do not mix int and float (got float after int)\n");
-					exit(1);
-				}
-				
-				is_float = true;
-				bits.push_back(info->bits);
-			} else {
-				fprintf(stderr, "some other rotten type was used that is not numerical (not supporting addition)\n");
-				exit(1);
-			}
-		}
-
-		auto rotten_outcome = std::make_shared<TypeRotten>();
-
-		if (is_float.value()) {
-			rotten_outcome->type_str = "f" + std::to_string(*std::max_element(bits.begin(), bits.end()));
-		} else {
-			rotten_outcome->type_str = std::string(1, prefix) + std::to_string(total_needed_bits_addit(bits));
-		}
-
-		v_expr_addit->underlying_type = std::make_shared<Type>(Type(rotten_outcome));
 
 		return v_expr_addit;
 	}
@@ -679,6 +590,17 @@ Type normalize_type(
 		v_expr_logical_or->underlying_type = std::make_shared<Type>(Type(type_bool));
 
 		return v_expr_logical_or;
+	}
+	
+	if (type == "expr_compare") {
+		auto v_compare = std::make_shared<TypeCompare>();
+
+		v_compare->operator_ = typeval["operator"].get<std::string>();
+		v_compare->operand_a = std::make_shared<Type>(normalize_type(typeval["operand_a"], symbol_table));
+		v_compare->operand_b = std::make_shared<Type>(normalize_type(typeval["operand_b"], symbol_table));
+		v_compare->underlying_type = std::make_shared<Type>(Type(type_bool));
+
+		return v_compare;
 	}
 	
 	if (type == "type_constrained") {

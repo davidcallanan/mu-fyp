@@ -13,6 +13,7 @@ const ignored_paths = new Set([
 	"pnpm-lock.yaml",
 	".gitignore",
 	".vscodeignore",
+	"json.hpp"
 ]);
 
 const ignored_extensions = new Set([

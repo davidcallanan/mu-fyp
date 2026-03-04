@@ -27,6 +27,7 @@ struct TypeExprMulti;
 struct TypeExprAddit;
 struct TypeExprLogicalAnd;
 struct TypeExprLogicalOr;
+struct TypeCompare;
 struct TypeVoid;
 
 // Forward declaration impossible without pointer indirection, typical C++.
@@ -48,6 +49,7 @@ using Type = std::variant<
 	std::shared_ptr<TypeExprAddit>,
 	std::shared_ptr<TypeExprLogicalAnd>,
 	std::shared_ptr<TypeExprLogicalOr>,
+	std::shared_ptr<TypeCompare>,
 	std::shared_ptr<TypeVoid>
 >;
 

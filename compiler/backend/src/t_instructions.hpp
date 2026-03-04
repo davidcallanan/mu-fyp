@@ -28,3 +28,5 @@ struct InstructionIf {
 	std::vector<InstructionIf_Branch> branches;
 };
 
+struct InstructionBreak {
+};

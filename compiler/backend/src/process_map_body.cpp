@@ -58,6 +58,7 @@ void process_map_body(
 
 			IrGenCtx new_igc = igc;
 			new_igc.value_table = new_value_table;
+			new_igc.block_break = block_end;
 
 			process_map_body(new_igc, *v_for->body);
 
@@ -134,6 +135,22 @@ void process_map_body(
 			}
 			
 			igc.builder.SetInsertPoint(block_end);
+		}
+		
+		if (auto p_v_break = std::get_if<std::shared_ptr<InstructionBreak>>(&instruction)) {
+			if (igc.block_break == nullptr) {
+				fprintf(stderr, "You are only permitted to use break when a break target is known (i.e. inside a for loop)\n");
+				exit(1);
+			}
+
+			igc.builder.CreateBr(igc.block_break);
+
+			llvm::Function* current_func = igc.builder.GetInsertBlock()->getParent();
+			llvm::BasicBlock* deadblock = llvm::BasicBlock::Create(igc.context, "__DeadBlock__", current_func); // the idea behind this is to have a block in case the user writes some code after the break. but the code would be dead code and eliminator by the optimizer.
+			
+			igc.builder.SetInsertPoint(deadblock);
+			
+			return;
 		}
 	}
 }
