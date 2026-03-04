@@ -183,7 +183,7 @@ The logic of computer software is primarily expressed using programming language
 
 \section{Motivation}
 
-Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively will depend on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Reducing duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments only (e.g. JavaScript, web-based and React.js environments), leaving low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for rhe lack of training.
+Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively will depend on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and React.js environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for rhe lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software.
 
 \section{Methodology}
 
@@ -255,9 +255,65 @@ However, two primary concerns of interest are still evident:
 
 Terrible PIMPLE idiom. Headers of headers.
 
-\subsection{Module loading in operating system kernels}
+\subsection{Module loading in the Linux kernel}
 
-It was found that the potential inefficiencies of dynamically loaded modules were already considered by Linux developers, and boutique infrastructure was developed to mitigate this to an extent.
+It was found that the potential inefficiencies of dynamically loaded modules were already considered by the Linux kernel developers, and boutique infrastructure was developed to partially mitigate this.
+
+The Linux kernel benefits from their ``static\_call'' system, which uses a combination of C macros, custom compilation/linking steps, and runtime logic to patch function calls to be more efficient. Any calls that may need to be dynamically swapped at runtime can engage with the ``static\_call'' system to improve performance and automate the repetetive assembly logic. The process is summarized below.
+
+\subsubsection{Macro system}
+
+Each static-call function is implemented using the ``DEFINE\_STATIC\_CALL'' macro, which takes in (1) a handle name, and (2) a pointer to the initial implementation for this handle. This macro is used at the top-level. Then, the programmer can use the ``static\_call\_update'' macro at any point, taking in the same parameters, to alter the implementation for a particular handle at runtime. Alas, the programmer can use the ``static\_call'' macro to invoke the handle like a traditional function. Here is some example pseudo-code:
+
+\begin{verbatim}
+void implementation_a(int value) { ... }
+void implementation_b(int value) { ... }
+
+DEFINE_STATIC_CALL(foo, implementation_a);
+
+void main() {
+  static_call(foo)(27);
+  static_call_update(foo, implementation_b);
+  static_call(foo)(27);
+}
+\end{verbatim}
+
+The ``static\_call'' macro also uses the inline assembly ``.pushsection'' and ``.popsection'' directives to temporarily relocate the code to a unified object section that can be picked up in the custom compilation step.
+
+A crucial takeaway is that the lack of direct language support has forced the need for a custom macro setup. Understandably, programmers in different codebases may not be so adamant to commit resources to such a setup in the same way the Linux kernel developers have.
+
+\subsubsection{Custom compilation step (objtool)}
+
+The kernel needs to remember where the call sites are when the implementation is swapped at runtime. To achieve this, the kernel includes an extra build step that investigates the aforementioned object section to locate all relevant call sites. It then builds up a table that can be inspected at runtime to ensure no call sites are missed. There are many more intricacies that are not mentioned and have not been studied in too much detail.
+
+If you explore the source code for the Linux kernel, you will come across the \href{https://github.com/torvalds/linux/blob/master/include/linux/static_call_types.h}{static\_call\_types.h} file, containing the following:
+
+\begin{verbatim}
+/*
+ * The static call site table needs to be created by external tooling (objtool
+ * or a compiler plugin).
+ */
+struct static_call_site {
+	   s32 addr;
+	   s32 key;
+};
+\end{verbatim}
+
+\subsubsection{Trampoline solution}
+
+The easy solution to alter the implementation of a function at runtime is to use a trampoline (an extra dynamic jump instruction that is resolved at runtime). This is slow and is merely a backup option.
+
+Insert diagram.
+
+\subsubsection{Inlining solution}
+
+Great news, inlining refers to the trampoline call, not inlining the function body itself.
+
+(Well not so great news, but at least there is more merit to this project).
+
+\subsubsection{Spectre}
+
+Mention spectre.
 
 \subsection{Link-time optimizations}
 
@@ -275,7 +331,9 @@ However, LLVM IR sits in between the level of abstraction of source code and obj
 
 \chapter{The Problem}
 
-TODO
+\subsection {Indirect Calls}
+
+The core of the problem is removing indirection.
 
 \chapter{The Solution}
 
