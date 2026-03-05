@@ -66,7 +66,7 @@
 \fancyhead[LE]{\color{headergray}\sffamily\bfseries Essence C - A new programming language}
 \fancyhead[RO]{\color{headergray}\sffamily\bfseries\nouppercase{\leftmark}}
 
-\fancyfoot[C]{\sffamily\thepage}
+\fancyfoot[C]{\sffamily Page \thepage\ of \pageref*{LastPage}}
 
 \renewcommand{\chaptermark}[1]{\markboth{Chapter \thechapter\ -- #1}{}}
 
@@ -161,6 +161,8 @@ Signed: \rule{5cm}{0.4pt} \hfill Date: \rule{3cm}{0.4pt}
 \addcontentsline{toc}{section}{Acknowledgements}
 
 A massive thanks to Dr. Phil Maguire, friends, and peers for inflicting levels of motivation I might never reciprocate.
+
+A brief thanks to Anthropic for their powerful GenAI models, though other models were preferred due to cost.
 
 \vfill
 \null
@@ -329,7 +331,9 @@ However, LLVM IR sits in between the level of abstraction of source code and obj
 
 \section{Technical Material}
 
-\subsection{LLVM intermediatea representation}
+\subsection{LLVM Intermediate Representation}
+
+LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages thanks to ABI interoperability (including some recent improvements \cite{llvminterop}). Furthermore, the extensive optimization passes shared amongst languages targetting LLVM \cite{llvmoptim} should make \textit{Essence C} directly comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was also noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (useful in kernel development \cite{inlinekern}). Additionally, LLVM benefits greatly from intermodular optimizations at link-time \cite{llvmlto}, because its intermediate representation (IR) preserves the necessary higher-level constructs. Critically, the LLVM API exposes a powerful interface to programatically manipulate existing LLVM IR files \cite{llvmtransformations} \cite{llvmpasses}. It follows that inlined compatibility wrappers can be generated to minimize optimization barriers between compilation units originating from languages other than \textit{Essence C}.
 
 \chapter{The Problem (900)}
 
