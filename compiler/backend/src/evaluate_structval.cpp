@@ -29,6 +29,7 @@
 #include "rotten_int_info.hpp"
 #include "rotten_float_info.hpp"
 #include "extract_map_leaf.hpp"
+#include "preinstantiated_smooths.hpp"
 
 static bool determine_has_leaf(const Type& type) {
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -146,6 +147,10 @@ static Smooth access_member(
 				actual_map,
 				final_pointer, // todo: is this the actual struct
 				true,
+				std::make_shared<SmoothPointer>(SmoothPointer{
+					unclear_type,
+					extracted,
+				}),
 			});
 		}
 
@@ -198,25 +203,28 @@ Smooth evaluate_smooth(
 		
 		process_map_body(map_igc, map);
 		
+		std::optional<Smooth> leaf = std::nullopt;
 		std::vector<llvm::Type*> member_types;
 		std::vector<llvm::Value*> member_values;
 		
-		if (map.leaf_hardval.has_value()) {
-			const Hardval& hardval = map.leaf_hardval.value();
-			
-			std::string type_str = "";
-			
-			if (map.leaf_type.has_value()) {
-				auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&map.leaf_type.value());
+		if (map.leaf_hardval.has_value() && !map.leaf_type.has_value()) {
+			fprintf(stderr, "Since refactor, this is a major invariant violation.\n");
+			exit(1);
+		}
+		
+		if (map.leaf_type.has_value()) {
+			leaf = evaluate_smooth(igc, map.leaf_type.value());
+
+			if (map.leaf_hardval.has_value()) {
+				// now consistently using the central merging system here for hardvals.
 				
-				if (p_v_rotten) {
-					type_str = (*p_v_rotten)->type_str;
-				}
+				Smooth hardval_smooth = evaluate_hardval(map_igc, map.leaf_hardval.value(), map.leaf_type.value());
+				
+				leaf = merge_smooth(igc, leaf.value(), hardval_smooth);
+				llvm::Value* leaf_value = llvm_value(leaf.value());
+				member_types.push_back(leaf_value->getType());
+				member_values.push_back(leaf_value);
 			}
-			
-			llvm::Value* leaf_value = evaluate_hardval(map_igc, hardval, type_str);
-			member_types.push_back(leaf_value->getType());
-			member_values.push_back(leaf_value);
 		}
 		
 		for (const auto& [sym_name, sym_type] : map.sym_inputs) {
@@ -250,6 +258,7 @@ Smooth evaluate_smooth(
 			type,
 			struct_value,
 			determine_has_leaf(type),
+			leaf,
 		});
 	}
 	
@@ -261,11 +270,13 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 		
-		llvm::Value* ptr = evaluate_hardval(igc, pointer.hardval.value());
+		// might be thinking when on earth would a pointer be assigned to a hardval,
+		// but don't forget string literals.
+		Smooth ptr = evaluate_hardval(igc, pointer.hardval.value(), type);
 		
 		return std::make_shared<SmoothPointer>(SmoothPointer{
 			type,
-			ptr,
+			llvm_value(ptr),
 		});
 	}
 	
@@ -281,14 +292,7 @@ Smooth evaluate_smooth(
 			igc.builder.CreateCall(igc.puts_func, { llvm_value(leaf_smooth) });
 		}
 		
-		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
-		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-		
-		return std::make_shared<SmoothStructval>(SmoothStructval{
-			type,
-			struct_value,
-			false,
-		});
+		return smooth_void(igc);
 	}
 	
 	if (auto p_v_log_d = std::get_if<std::shared_ptr<TypeLogD>>(&type)) {
@@ -317,14 +321,7 @@ Smooth evaluate_smooth(
 			llvm::Value* error_str = igc.builder.CreateGlobalStringPtr("[undeterminable size]");
 			igc.builder.CreateCall(igc.puts_func, { error_str });
 			
-			llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
-			llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-			
-			return std::make_shared<SmoothStructval>(SmoothStructval{
-				type,
-				struct_value,
-				false,
-			});
+			return smooth_void(igc);
 		}
 
 		if (leaf_type->isPointerTy()) {
@@ -368,14 +365,7 @@ Smooth evaluate_smooth(
 			igc.builder.CreateCall(igc.log_data_func, { chunk, bl, br });
 		}
 
-		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
-		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-		
-		return std::make_shared<SmoothStructval>(SmoothStructval{
-			type,
-			struct_value,
-			false,
-		});
+		return smooth_void(igc);
 	}
 	
 	if (auto p_v_log_dd = std::get_if<std::shared_ptr<TypeLogDd>>(&type)) {
@@ -417,14 +407,7 @@ Smooth evaluate_smooth(
 
 		igc.builder.CreateCall(igc.log_data_deref_func, { ptr, byte_count });
 
-		llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
-		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
-
-		return std::make_shared<SmoothStructval>(SmoothStructval{
-			type,
-			struct_value,
-			false,
-		});
+		return smooth_void(igc);
 	}
 	
 	if (auto p_v_var_walrus = std::get_if<std::shared_ptr<TypeVarWalrus>>(&type)) {

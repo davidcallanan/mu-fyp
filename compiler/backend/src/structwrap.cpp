@@ -3,6 +3,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "structwrap.hpp"
+#include "t_smooth.hpp"
 #include "t_types.hpp"
 
 std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth) {
@@ -24,6 +25,10 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 			Type(v_map),
 			struct_value,
 			true,
+			std::make_shared<SmoothPointer>(SmoothPointer{
+				v_pointer->type, // todo: is this the right type.
+				igc.builder.CreateExtractValue(struct_value, 0),
+			}),
 		});
 	}
 
@@ -41,6 +46,10 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 			Type(v_map),
 			struct_value,
 			true,
+			std::make_shared<SmoothInt>(SmoothInt{
+				v_int->type,
+				igc.builder.CreateExtractValue(struct_value, 0),
+			}),
 		});
 	}
 
@@ -58,6 +67,10 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 			Type(v_map),
 			struct_value,
 			true,
+			std::make_shared<SmoothFloat>(SmoothFloat{
+				v_float->type,
+				igc.builder.CreateExtractValue(struct_value, 0),
+			}),
 		});
 	}
 

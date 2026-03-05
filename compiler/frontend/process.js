@@ -490,11 +490,11 @@ const map_entry = rule("map_entry", or(
 		type: "instruction",
 		data,
 	})),
-	mapData(map_entry_expr, (data) => ({
+	mapData(map_entry_break, (data) => ({
 		type: "instruction",
 		data,
 	})),
-	mapData(map_entry_break, (data) => ({
+	mapData(map_entry_expr, (data) => ({
 		type: "instruction",
 		data,
 	})),

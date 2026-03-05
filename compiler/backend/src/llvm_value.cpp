@@ -21,7 +21,11 @@ llvm::Value* llvm_value(const Smooth& smooth) {
 	if (auto p = std::get_if<std::shared_ptr<SmoothFloat>>(&smooth)) {
 		return (*p)->value;
 	}
-	
+
+	if (auto p = std::get_if<std::shared_ptr<SmoothVoid>>(&smooth)) {
+		return (*p)->value;
+	}
+
 	fprintf(stderr, "This kind of a smooth does not have llvm value associated with it.");
 	exit(1);
 }

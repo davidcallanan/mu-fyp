@@ -5,15 +5,27 @@
 #include <string>
 #include "evaluate_hardval.hpp"
 #include "t_hardval.hpp"
+#include "t_types.hpp"
+#include "t_smooth.hpp"
+#include "get_underlying_type.hpp"
+#include "llvm_to_smooth.hpp"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Constants.h"
 
-llvm::Value* evaluate_hardval(
+Smooth evaluate_hardval(
 	IrGenCtx& igc,
 	const Hardval& hardval,
-	const std::string& type_str
+	Type type
 ) {
+	Type underlying = get_underlying_type(type);
+
+	std::string type_str = "";
+
+	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying)) {
+		type_str = (*p_v_rotten)->type_str;
+	}
+
 	if (std::holds_alternative<std::shared_ptr<HardvalInteger>>(hardval)) {
 		const auto& p_v_int = std::get<std::shared_ptr<HardvalInteger>>(hardval);
 		const std::string& value_str = p_v_int->value;
@@ -50,7 +62,7 @@ llvm::Value* evaluate_hardval(
 		llvm::APInt ap_int(bits_needed, value_str.c_str(), 10);
 		llvm::Value* const_value = llvm::ConstantInt::get(igc.context, ap_int);
 		
-		return const_value;
+		return llvm_to_smooth(type, const_value);
 	}
 	
 	if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
@@ -85,13 +97,13 @@ llvm::Value* evaluate_hardval(
 		llvm::APFloat ap_float(float_type->getFltSemantics(), p_v_float->value);
 		llvm::Value* const_value = llvm::ConstantFP::get(igc.context, ap_float);
 		
-		return const_value;
+		return llvm_to_smooth(type, const_value);
 	}
 	
 	if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
 		const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
 		llvm::Value* str_const = igc.builder.CreateGlobalStringPtr(p_v_string->value);
-		return str_const;
+		return llvm_to_smooth(type, str_const);
 	}
 	
 	fprintf(stderr, "Unhandled evaluation logic for hardval\n");

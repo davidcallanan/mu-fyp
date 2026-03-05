@@ -1,12 +1,12 @@
 #pragma once
 
-#include <string>
-#include "llvm/IR/Value.h"
 #include "t_hardval_fwd.hpp"
+#include "t_types_fwd.hpp"
+#include "t_smooth_fwd.hpp"
 #include "t_ctx.hpp"
 
-llvm::Value* evaluate_hardval(
+Smooth evaluate_hardval(
 	IrGenCtx& igc,
 	const Hardval& hardval,
-	const std::string& type_str = ""
+	Type type
 );

@@ -1,6 +1,7 @@
 #include "extract_leaf.hpp"
 #include "get_underlying_type.hpp"
 #include "is_structwrappable.hpp"
+#include "rotten_float_info.hpp"
 #include "structwrap.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
@@ -17,6 +18,12 @@ Smooth extract_leaf(IrGenCtx& igc, Smooth smooth, bool be_permissive) {
 			fprintf(stderr, "Bad programmer - check for .has_leaf first!\n");
 			exit(1);
 		}
+
+		if (v_structval->leaf.has_value()) {
+			return v_structval->leaf.value();
+		}
+		
+		// legacy system below in case something goes wrong - can possibly delete this code once i've confirmed the entire codebase has migrated to the new system.
 
 		Type underlying = get_underlying_type(v_structval->type);
 		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&underlying);

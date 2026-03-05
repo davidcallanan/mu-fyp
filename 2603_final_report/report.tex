@@ -168,6 +168,8 @@ A massive thanks to Dr. Phil Maguire, friends, and peers for inflicting levels o
 \newpage
 
 \begin{abstract}
+  
+  (max 250)
 
 The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code once that is agnostic to the linking strategy. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries.
 
@@ -175,7 +177,7 @@ The logic of computer software is primarily expressed using programming language
 
 \newpage
 
-\chapter{Introduction}
+\chapter{Introduction (930)}
 
 \section{Overview}
 
@@ -224,7 +226,7 @@ The tool was primarily used to steer the work in the right direction, and to ide
 
 Some experimentation with GitHub Copilot agent mode was conducted, with notable issues identified. Firstly, the development speed was impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there was a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool was suspended.
 
-\chapter{Technical Background}
+\chapter{Technical Background (1400)}
 
 \section{Literature Review}
 
@@ -335,7 +337,7 @@ However, LLVM IR sits in between the level of abstraction of source code and obj
 
 The core of the problem is removing indirection.
 
-\chapter{The Solution}
+\chapter{The Solution (2810)}
 
 \section{Design Elements}
 
@@ -374,13 +376,18 @@ A syntactical ambiguirty arises. If we write map:foo\_bar("hello"), are we calli
 Old-fashioned languages like C treat types and values as entirely distinct.
 
 In the traditional sense, a type offers two functions:
-- It details the runtime representation of the data, i.e. the possible runtime values that may be encoded and how many bits of data are needed.
-- It provides a constraint to the programmer themself, preventing the programmer from using values that the code is not built for.
+
+\begin{itemize}
+\item It details the runtime representation of the data, i.e. the possible runtime values that may be encoded and how many bits of data are needed.
+\item It provides a constraint to the programmer themself, preventing the programmer from using values that the code is not built for.
+\end{itemize}
 
 It turns out that it may be appropriate for these two intents to diverge. This results in two separate notions of a type:
 
-- **Logical Type:** A set of allowable values. A constraint of what theoretical values are permissible, i.e. subject the programmer's intended business logic.
-- **Encoding Type:** A bijection between a set of values and a set of bit patterns. This allows types to be designed and abstracted independent of the encoding used.
+\begin{itemize}
+\item \textbf{Logical Type:} A set of allowable values. A constraint of what theoretical values are permissible, i.e. subject the programmer's intended business logic.
+\item \textbf{Encoding Type:} A bijection between a set of values and a set of bit patterns. This allows types to be designed and abstracted independent of the encoding used.
+\end{itemize}
 
 In this sense, a value is just a singleton logical type.
 
@@ -431,6 +438,24 @@ Rather than a standard library, first class integration with LLVM IR and the C A
 
 \section{Implementation}
 
+\subsection{Parsing}
+
+Prior to this project I had already developed a simple parsing library in JavaScript, which allows for:
+
+\begin{enumerate}
+	\item Parsing terminal rules using regular expressions.
+	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{enumerate}
+	\item ``or'' making rule optional
+	\item ``join'' sequencing rules
+	\item ``multi'' repeating rules zero or more times
+	\item ``opt'' making rule optional
+	\end{enumerate}
+	\item Map parsed data to custom structures using the ``mapData'' function.
+\end{enumerate}
+
+
+
+
 \subsection{Mutability}
 
 LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus, variables are entirely implemented using stack allocations. This saved an estimated week of development time.
@@ -471,7 +496,7 @@ Early on in development, I was adamment to ensure a fully reproducible build env
 
 
 
-\chapter{Evaluation}
+\chapter{Evaluation (930)}
 
 \section{Manual Snapshot Testing}
 
@@ -542,9 +567,9 @@ Provide one harsh criticism about the language. & [Answer] \\
 
 \section{Benchmarking}
 
+\section{Validation}
 
-
-\chapter{Conclusion}
+\chapter{Conclusion (930)}
 
 Given the time constraints for this project, the evaluation only scratched the surface. One would want to spend the following time:
 
@@ -559,22 +584,6 @@ Given the time constraints for this project, the evaluation only scratched the s
 - built in language constructs to avoid likes of kernel static\_call
 - continuum of dispatch, not just static vs dynamic, but by merging the notion of class instances (and fusing classes and modules), if we detect multiple instances we can switch to an even more dynamic dispatch mechanism.
 - more efficient inter-language interoperability
-
-\chapter{Parsing Library}
-
-Prior to this project I had already developed a simple parsing library in JavaScript, which allows for:
-
-\begin{enumerate}
-	\item Parsing terminal rules using regular expressions.
-	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{enumerate}
-	\item ``or'' making rule optional
-	\item ``join'' sequencing rules
-	\item ``multi'' repeating rules zero or more times
-	\item ``opt'' making rule optional
-	\end{enumerate}
-	\item Map parsed data to custom structures using the ``mapData'' function.
-\end{enumerate}
-
 
 \newpage
 

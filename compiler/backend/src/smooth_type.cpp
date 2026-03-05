@@ -1,4 +1,5 @@
 #include "smooth_type.hpp"
+#include "preinstantiated_types.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 
@@ -21,6 +22,10 @@ Type smooth_type(Smooth smooth) {
 
 	if (auto p_v_float = std::get_if<std::shared_ptr<SmoothFloat>>(&smooth)) {
 		return (*p_v_float)->type;
+	}
+
+	if (std::get_if<std::shared_ptr<SmoothVoid>>(&smooth)) {
+		return Type(type_void);
 	}
 
 	fprintf(stderr, "The particular smooth does not have a type associated with it (programmer bug?)\n");

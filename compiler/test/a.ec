@@ -183,14 +183,17 @@ create() -> { ; this comment works
 		log("Scenario 3C");
 	}
 	
-	mut i := 0;
+	mut i := u64 0;
 	
 	for {
-		log("test");
+		log("Hello from a loop.");
 		
 		i = i + 1;
 		
-		if (i == 10) {
+		log_d(i);
+		
+		if (i >= 10) {
+			log("breaking...");
 			break;
 		}
 	}

@@ -128,7 +128,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.essencec",
-					"match": "\\b(in|if|else|for|return|import|forwarding|create)\\b"
+					"match": "\\b(in|if|else|for|return|import|forwarding|create|break)\\b"
 				},
 				{
 					"name": "keyword.modifier.essencec",
