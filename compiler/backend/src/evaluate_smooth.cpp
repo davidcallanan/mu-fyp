@@ -379,26 +379,7 @@ Smooth evaluate_smooth(
 	}
 	
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&type)) {
-		const auto& v_rotten = *p_v_rotten;
-
-		const bool is_float = (false
-			|| v_rotten->type_str == "f16"
-			|| v_rotten->type_str == "f32"
-			|| v_rotten->type_str == "f64"
-			|| v_rotten->type_str == "f128"
-		);
-
-		if (is_float) {
-			return std::make_shared<SmoothFloat>(SmoothFloat{
-				type,
-				nullptr,
-			});
-		}
-
-		return std::make_shared<SmoothInt>(SmoothInt{
-			type,
-			nullptr,
-		});
+		return smooth_void(igc, type);
 	}
 
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {

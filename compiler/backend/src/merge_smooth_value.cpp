@@ -13,6 +13,7 @@
 #include "get_underlying_type.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
+#include "happy_smooth.hpp"
 
 std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	IrGenCtx& igc,
@@ -36,7 +37,11 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		if (is_type_singletonish(type_merged->leaf_type.value())) {
 			smooth_leaf = evaluate_singletonish(igc, type_merged->leaf_type.value());
 		} else {
-			smooth_leaf = merge_smooth(igc, extract_leaf(igc, Smooth(structval_a)), extract_leaf(igc, Smooth(structval_b)));
+			smooth_leaf = happy_smooth(
+				igc,
+				merge_smooth(igc, extract_leaf(igc, Smooth(structval_a)), extract_leaf(igc, Smooth(structval_b))),
+				type_merged->leaf_type.value()
+			);
 		}
 
 		auto underlying = get_underlying_type(smooth_type(smooth_leaf.value()));
