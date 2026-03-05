@@ -4,7 +4,7 @@
 #include <memory>
 #include "llvm/IR/BasicBlock.h"
 #include "process_map_body.hpp"
-#include "evaluate_structval.hpp"
+#include "evaluate_smooth.hpp"
 #include "t_instructions.hpp"
 #include "t_smooth.hpp"
 #include "llvm_value.hpp"

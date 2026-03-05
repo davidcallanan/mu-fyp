@@ -5,7 +5,7 @@
 #include "create_type_symbol_table.hpp"
 #include "create_value_symbol_table.hpp"
 #include "evaluate_hardval.hpp"
-#include "evaluate_structval.hpp"
+#include "evaluate_smooth.hpp"
 #include "process_map_body.hpp"
 #include "normalize_type.hpp"
 #include "promote_to_underlying.hpp"

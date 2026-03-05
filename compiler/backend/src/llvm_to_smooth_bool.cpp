@@ -1,5 +1,5 @@
 #include "llvm_to_smooth_bool.hpp"
-#include "evaluate_structval.hpp"
+#include "evaluate_smooth.hpp"
 #include "t_types.hpp"
 #include "t_smooth.hpp"
 #include "preinstantiated_types.hpp"

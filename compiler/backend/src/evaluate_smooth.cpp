@@ -7,7 +7,7 @@
 #include <string>
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "evaluate_structval.hpp"
+#include "evaluate_smooth.hpp"
 #include "evaluate_hardval.hpp"
 #include "t_hardval.hpp"
 #include "t_types.hpp"
@@ -30,8 +30,10 @@
 #include "rotten_float_info.hpp"
 #include "extract_map_leaf.hpp"
 #include "preinstantiated_smooths.hpp"
+#include "access_variable.hpp"
+#include "access_member.hpp"
 
-static bool determine_has_leaf(const Type& type) {
+bool determine_has_leaf(const Type& type) {
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
 		return (*p_v_map)->leaf_type.has_value() || (*p_v_map)->leaf_hardval.has_value();
 	}
@@ -42,123 +44,6 @@ static bool determine_has_leaf(const Type& type) {
 	// }
 	
 	return false;
-}
-
-static Smooth access_variable(
-	IrGenCtx& igc,
-	const Type& node
-) {
-	std::string target_name;
-	std::shared_ptr<Type>* underlying_type = nullptr;
-	
-	if (auto p = std::get_if<std::shared_ptr<TypeVarAccess>>(&node)) {
-		target_name = (*p)->target_name;
-		underlying_type = &(*p)->underlying_type;
-	} else if (auto p = std::get_if<std::shared_ptr<TypeVarWalrus>>(&node)) {
-		target_name = (*p)->name;
-		underlying_type = &(*p)->underlying_type;
-	} else if (auto p = std::get_if<std::shared_ptr<TypeVarAssign>>(&node)) {
-		target_name = (*p)->name;
-		underlying_type = &(*p)->underlying_type;
-	} else {
-		fprintf(stderr, "only TypeVarWalrus, TypeVarAssign, and TypeVarAccess can access a variable!\n");
-		exit(1);
-	}
-	
-	std::string var_name = "m_" + target_name;
-	std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
-	
-	if (!o_entry.has_value()) {
-		std::string sym_var_name = "ms_:" + target_name;
-		o_entry = igc.value_table->get(sym_var_name);
-		
-		if (!o_entry.has_value()) {
-			fprintf(stderr, "This variable %s was not actually present in our value table\n", target_name.c_str());
-			exit(1);
-		}
-	}
-	
-	const ValueSymbolTableEntry& entry = o_entry.value();
-	
-	*underlying_type = std::make_shared<Type>(entry.type);
-	
-	llvm::Value* loaded = igc.builder.CreateLoad(
-		entry.ir_type,
-		entry.alloca_ptr
-	);
-
-	return llvm_to_smooth(entry.type, loaded);
-}
-
-static Smooth access_member(
-	IrGenCtx& igc,
-	std::shared_ptr<SmoothStructval> target_smooth,
-	const std::string& sym
-) {
-	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&target_smooth->type)) {
-		const auto& v_map = *p_v_map;
-		
-		std::string sym_key = ":" + sym;
-		
-		if (v_map->sym_inputs.find(sym_key) == v_map->sym_inputs.end()) {
-			fprintf(stderr, "Symbol %s not really available here", sym.c_str());
-			exit(1);
-		}
-		
-		const Type& unclear_type = *v_map->sym_inputs.at(sym_key);
-		Type sym_type = get_underlying_type(unclear_type);
-		
-		// i know this logic is terrible but performance is not a concern for me.
-		
-		size_t field_index = (target_smooth->has_leaf ? 1 : 0);
-		
-		for (const auto& [sym_name, _] : v_map->sym_inputs) {
-			if (sym_name == sym_key) {
-				break;
-			}
-			
-			field_index++;
-		}
-		
-		llvm::Value* extracted = igc.builder.CreateExtractValue(target_smooth->value, field_index);
-
-		// pointers are typically disallowed on their own, and must be wrapped into a leaf map.
-		// exception is made for syms of maps to prevent infinite recursion.
-		// this is why we must deal with raw pointer here and wrap it back up.
-		// we gradually wrap up pointers as they are used, lazily.
-		
-		if (auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&sym_type)) {
-			fprintf(stderr, "is it even getting here. %s\n", sym.c_str());
-			
-			llvm::StructType* wrapped_pointer = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ extracted->getType() });
-			llvm::Value* final_pointer = llvm::UndefValue::get(wrapped_pointer);
-			final_pointer = igc.builder.CreateInsertValue(final_pointer, extracted, 0);
-
-			auto actual_map = std::make_shared<TypeMap>(TypeMap{
-				unclear_type,
-				std::nullopt,
-				nullptr,
-				nullptr,
-				{},
-				{},
-			});
-
-			return std::make_shared<SmoothStructval>(SmoothStructval{
-				actual_map,
-				final_pointer, // todo: is this the actual struct
-				true,
-				std::make_shared<SmoothPointer>(SmoothPointer{
-					unclear_type,
-					extracted,
-				}),
-			});
-		}
-
-		return llvm_to_smooth(unclear_type, extracted);
-	} else {
-		fprintf(stderr, "Impossible to call a non-map with a symbol, what are you doing?\n");       
-		exit(1);
-	}
 }
 
 // number one rule in this codebase: we never replace a type with its underlying, we keep type informatoin in tact. values respect the types, not the other way around.
