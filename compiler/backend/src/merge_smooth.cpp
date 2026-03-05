@@ -8,6 +8,16 @@
 #include "t_smooth.hpp"
 
 Smooth merge_smooth(IrGenCtx& igc, Smooth smooth_a, Smooth smooth_b) {
+	// todo: i dunno how we are gonna handle merging the types of void
+	
+	if (auto p_v_void_a = std::get_if<std::shared_ptr<SmoothVoid>>(&smooth_a)) {
+		return smooth_b;
+	}
+
+	if (auto p_v_void_b = std::get_if<std::shared_ptr<SmoothVoid>>(&smooth_b)) {
+		return smooth_a;
+	}
+
 	auto p_v_structval_a = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth_a);
 	auto p_v_structval_b = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth_b);
 

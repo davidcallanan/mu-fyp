@@ -1,10 +1,10 @@
 LANGUAGE FEATURES:
 add values to enums (or bypass this for now with a simpler approach by using one side of the map enum equivalence)
-add comparison expressions
-add break keyword
-add type modifications (via @)
+add break keyword (nearly done)
+add type modifications (via @) [not a priority]
 add call_with_map
-add comptime llvm/c abi
+add comptime llvm/c abi [as a hardcoded ct variable, no comptime variables for now? or perhaps that is needed]
+when using C abi, just extract values from struct in order probably
 
 MAIN GOALS:
 add module system

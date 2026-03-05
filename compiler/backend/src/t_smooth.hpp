@@ -33,5 +33,6 @@ struct SmoothFloat {
 };
 
 struct SmoothVoid {
+	std::optional<Type> type;
 	llvm::Value* value;
 };

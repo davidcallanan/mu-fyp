@@ -24,7 +24,11 @@ Type smooth_type(Smooth smooth) {
 		return (*p_v_float)->type;
 	}
 
-	if (std::get_if<std::shared_ptr<SmoothVoid>>(&smooth)) {
+	if (auto p_v_void = std::get_if<std::shared_ptr<SmoothVoid>>(&smooth)) {
+		if ((*p_v_void)->type.has_value()) {
+			return (*p_v_void)->type.value();
+		}
+		
 		return Type(type_void);
 	}
 

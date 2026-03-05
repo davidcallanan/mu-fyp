@@ -266,8 +266,9 @@ Smooth evaluate_smooth(
 		const TypePointer& pointer = **p_v_pointer;
 		
 		if (!pointer.hardval.has_value()) {
-			fprintf(stderr, "Evaluation cannot consist of a pointer that has no definitive value, for now (in future, would make sense to deal with pointer of variable, etc.)\n");
-			exit(1);
+			// fprintf(stderr, "Evaluation cannot consist of a pointer that has no definitive value, for now (in future, would make sense to deal with pointer of variable, etc.)\n");
+			// exit(1);
+			return smooth_void(igc, type);
 		}
 		
 		// might be thinking when on earth would a pointer be assigned to a hardval,
@@ -292,7 +293,7 @@ Smooth evaluate_smooth(
 			igc.builder.CreateCall(igc.puts_func, { llvm_value(leaf_smooth) });
 		}
 		
-		return smooth_void(igc);
+		return smooth_void(igc, type);
 	}
 	
 	if (auto p_v_log_d = std::get_if<std::shared_ptr<TypeLogD>>(&type)) {
@@ -321,7 +322,7 @@ Smooth evaluate_smooth(
 			llvm::Value* error_str = igc.builder.CreateGlobalStringPtr("[undeterminable size]");
 			igc.builder.CreateCall(igc.puts_func, { error_str });
 			
-			return smooth_void(igc);
+			return smooth_void(igc, type);
 		}
 
 		if (leaf_type->isPointerTy()) {
@@ -365,7 +366,7 @@ Smooth evaluate_smooth(
 			igc.builder.CreateCall(igc.log_data_func, { chunk, bl, br });
 		}
 
-		return smooth_void(igc);
+		return smooth_void(igc, type);
 	}
 	
 	if (auto p_v_log_dd = std::get_if<std::shared_ptr<TypeLogDd>>(&type)) {
@@ -407,7 +408,7 @@ Smooth evaluate_smooth(
 
 		igc.builder.CreateCall(igc.log_data_deref_func, { ptr, byte_count });
 
-		return smooth_void(igc);
+		return smooth_void(igc, type);
 	}
 	
 	if (auto p_v_var_walrus = std::get_if<std::shared_ptr<TypeVarWalrus>>(&type)) {
@@ -480,6 +481,29 @@ Smooth evaluate_smooth(
 		return access_variable(igc, type);
 	}
 	
+	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&type)) {
+		const auto& v_rotten = *p_v_rotten;
+
+		const bool is_float = (false
+			|| v_rotten->type_str == "f16"
+			|| v_rotten->type_str == "f32"
+			|| v_rotten->type_str == "f64"
+			|| v_rotten->type_str == "f128"
+		);
+
+		if (is_float) {
+			return std::make_shared<SmoothFloat>(SmoothFloat{
+				type,
+				nullptr,
+			});
+		}
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			nullptr,
+		});
+	}
+
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {
 		const auto& v_enum = *p_v_enum;
 
@@ -805,6 +829,10 @@ Smooth evaluate_smooth(
 		}
 
 		return llvm_to_smooth_bool(igc, result);
+	}
+
+	if (std::get_if<std::shared_ptr<TypeVoid>>(&type)) {
+		return smooth_void(igc, type);
 	}
 
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");
