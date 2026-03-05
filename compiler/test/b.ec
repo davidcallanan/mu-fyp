@@ -4,7 +4,12 @@ forwarding {
 	//banana/vegetable /foo/gravy;
 }
 
+type Bar {};
+type Car {};
+
 @Bar:test:blah27 f32;
+
+type blah::Wah {};
 
 @Bar:foo blah::Wah;
 

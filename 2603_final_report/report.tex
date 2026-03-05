@@ -226,7 +226,7 @@ The tool was primarily used to steer the work in the right direction, and to ide
 
 Some experimentation with GitHub Copilot agent mode was conducted, with notable issues identified. Firstly, the development speed was impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there was a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool was suspended.
 
-\chapter{Technical Background (1400)}
+\chapter{Technical Background (1200)}
 
 \section{Literature Review}
 
@@ -331,7 +331,7 @@ However, LLVM IR sits in between the level of abstraction of source code and obj
 
 \subsection{LLVM intermediatea representation}
 
-\chapter{The Problem}
+\chapter{The Problem (900)}
 
 \section{Indirect Calls}
 
@@ -341,7 +341,7 @@ The core of the problem is removing indirection.
 
 \section{Non-Functional Requirements}
 
-\chapter{The Solution (2810)}
+\chapter{The Solution (2110)}
 
 \section{Design Elements}
 
@@ -431,6 +431,23 @@ AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> m
 More details on this pattern can be gathered by viewing my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
 
 \subsection{Module Resolution}
+
+Some (debatably legacy) approaches to module resolution are:
+
+\begin{itemize}
+\item Use the filesystem alongside symlink functionality to ensure access to the intended modules. This is effective for source code, because, apart from version upgrades, a single build of a project will not have to switch between versions of source code. It may deploy multiple versoins simultaneously, but types to do with source code are fixed. Many developers consider using the filesystem to be a lot of hassle, but this language takes the stance that if a built-in feature that all developers use (a filesystem-based codebase) can handle module resolution for types, then why re-invent the wheel. Thus, Essence C promotes the symlink appraoch for this purpose. This has two consequnences:
+\begin{enumerate}
+  \item Language-level Ownership: A module takes ownership of type dependencies. While a module may elect to use an external package management solution, symlinks, etc. to resolve the interfaces, by the time the dependencies reach the compiler, the compiler treats the interface as under the ownership of that module. This is favourable to those who follow the dependency inversion principle, but may feel foreign to those who delegate type ownership to external systems.
+  \item Monorepos or "Physical" Ownership: Those who like to use monorepos, or like to own their dependencies physically (that is, not just within the language, but as a business, as a larger business function or princoiple), they will have no trouble choosing to bake copies of dependencies into their repo. This is a huge reason that many developers (including myself) switched over to the ``pnpm'' package manager for JavaScript projects.
+\end{enumerate}
+\item Paths: Compare the common use of paths to the Plan 9 operating system. Using paths is arguably messy as it is easy to pollute the global namespace.
+\end{itemize}
+
+One must distinguish instance resolution, source code resolution, and type resolution.
+
+As Essence C wants serious static analysis of modules, passing instances is the only solution for the instance part. Spaghetti is avoided by using the factory approach as detailed in the module system.
+
+However, the language takes a balanced approach when it comes to soruce code and type resolution, allowing you to use internal languages features to control the propogatoin of such dependencies. This allows a library to put the burden of populatoin on the user of the library. While this transfers a certain burden of ownership, is unlocks a flexibility that allows developers to not be inmpacted by personal resolution preferences of developers. This is a trade-off that requires further contemplation.
 
 \subsection{Constant By Default}
 

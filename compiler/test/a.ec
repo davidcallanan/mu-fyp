@@ -54,6 +54,10 @@ type String *u8;
 ; 	:ct ct;
 ; }
 
+type MyService {};
+
+@MyService:name "My Fantastic Service";
+
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;

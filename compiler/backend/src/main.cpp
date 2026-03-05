@@ -472,6 +472,80 @@ static void populate_type_symbol_table(const json& structure, TypeSymbolTable& s
 		Type normalized = normalize_type(entry["definition"], symbol_table);
 		symbol_table.set(trail, promote_to_underlying(normalized));
 	}
+
+	for (const auto& entry : structure) {
+		if (!entry.contains("type") || entry["type"] != "top_extension") {
+			continue;
+		}
+
+		if (!entry.contains("target_type")) {
+			fprintf(stderr, "The .target_type is not present.\n");
+			exit(1);
+		}
+
+		if (!entry.contains("case")) {
+			fprintf(stderr, "The .case is also not present.\n");
+			exit(1);
+		}
+
+		std::string target_type = entry["target_type"].get<std::string>();
+		const json& ext_case = entry["case"];
+		std::string ext_case_type = ext_case["type"].get<std::string>();
+
+		if (ext_case_type == "extension_case_sym") {
+			std::optional<UnderlyingType> existing = symbol_table.get(target_type);
+
+			if (!existing.has_value()) {
+				fprintf(stderr, "Tried to equip a non-existent type alias with an extat. %s\n", target_type.c_str());
+				exit(1);
+			}
+
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&existing.value());
+
+			if (!p_v_map) {
+				fprintf(stderr, "Tried to extend a non-map type with an extat. %s\n", target_type.c_str());
+				exit(1);
+			}
+
+			if (!ext_case.contains("trail") || !ext_case["trail"].is_array()) {
+				fprintf(stderr, "Missing the .trail.\n");
+				exit(1);
+			}
+
+			std::vector<std::string> trail;
+			
+			for (const auto& seg : ext_case["trail"]) {
+				trail.push_back(seg.get<std::string>());
+			}
+
+			std::shared_ptr<TypeMap> the_existing = *p_v_map;
+			
+			for (size_t i = 0; i + 1 < trail.size(); i++) {
+				const std::string& segment = trail[i];
+				
+				if (the_existing->sym_inputs.find(segment) == the_existing->sym_inputs.end()) {
+					the_existing->sym_inputs[segment] = std::make_shared<Type>(std::make_shared<TypeMap>());
+				}
+				
+				auto p_v_map2 = std::get_if<std::shared_ptr<TypeMap>>(the_existing->sym_inputs[segment].get());
+				
+				if (!p_v_map2) {
+					fprintf(stderr, "Nested trail check resulted in non-map %s\n", segment.c_str());
+					exit(1);
+				}
+				
+				the_existing = *p_v_map2;
+			}
+
+			const std::string& leaf_name = trail.back();
+			Type sym_type = normalize_type(ext_case["typeval"], symbol_table);
+			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(sym_type);
+			symbol_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
+		} else {
+			fprintf(stderr, "No more cases are implemented at this time %s\n", ext_case_type.c_str());
+			exit(1);
+		}
+	}
 }
 
 int main(int argc, char* argv[]) {

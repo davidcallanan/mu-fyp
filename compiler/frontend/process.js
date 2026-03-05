@@ -65,6 +65,11 @@ const TYPES_IDENT = rule("TYPES_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+
 const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all))); // identical to TYPES_IDENT for now.
 const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const SYMBOL_TIGHT = rule("SYMBOL_TIGHT", mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
+const SYMBOL_GRAND = rule("SYMBOL_GRAND", withCarefulSkippers(mapData(
+	multi(SYMBOL_TIGHT),
+	(data) => data.map(s => s.substring(1)),
+)));
 const IDENT = rule("IDENT", withCarefulSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
 const IDENT_BB = rule("IDENT_BB", withBareboneSkippers(mapData(/^([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups[0])));
 const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
@@ -1121,45 +1126,30 @@ const top_mod = rule("top_mod", mapData(
 	}),
 ));
 
-const case_ = rule("case", or(
-	mapData(
-		join(
-			symbol_path,
-			type_reference,
-			SEMI,
-		),
-		(data) => ({
-			type: "case",
-			symbol_path: data[0],
-			type_reference: data[1],
-		}),
-	),
-	mapData(
-		join(
-			symbol_path,
-			type_reference,
-			constraint_maybesemi,
-		),
-		(data) => ({
-			type: "case",
-			symbol_path: data[0],
-			type_reference: data[1],
-			constraint: data[2],
-		}),
-	),
+const extension_case_sym = rule("extension_case_sym", mapData(
+	join(SYMBOL_GRAND, typeval, SEMI),
+	(data) => ({
+		type: "extension_case_sym",
+		trail: data[0],
+		typeval: data[1],
+	}),
+));
+	
+const extension_case = rule("extension_case", or(
+	extension_case_sym,
 ));
 
 const top_extension = rule("top_extension", mapData(
 	join(
 		EXTAT,
 		TYPE_IDENT,
-		case_,
+		extension_case,
 	),
 	(data) => ({
 		type: "top_extension",
 		target_type: data[1],
 		case: data[2],
-	})
+	}),
 ));
 
 const top_create = rule("top_create", mapData(
