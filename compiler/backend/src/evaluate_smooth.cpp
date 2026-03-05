@@ -32,6 +32,7 @@
 #include "preinstantiated_smooths.hpp"
 #include "access_variable.hpp"
 #include "access_member.hpp"
+#include "is_type_singletonish.hpp"
 
 bool determine_has_leaf(const Type& type) {
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -113,6 +114,10 @@ Smooth evaluate_smooth(
 		}
 		
 		for (const auto& [sym_name, sym_type] : map.sym_inputs) {
+			if (is_type_singletonish(*sym_type)) {
+				continue;
+			}
+
 			std::string map_sym_var_name = "ms_" + sym_name;
 			std::optional<ValueSymbolTableEntry> o_entry = map_igc.value_table->get(map_sym_var_name);
 			

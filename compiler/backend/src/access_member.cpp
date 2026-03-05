@@ -8,6 +8,8 @@
 #include "t_smooth.hpp"
 #include "get_underlying_type.hpp"
 #include "llvm_to_smooth.hpp"
+#include "is_type_singletonish.hpp"
+#include "evaluate_singletonish.hpp"
 
 Smooth access_member(
 	IrGenCtx& igc,
@@ -26,16 +28,24 @@ Smooth access_member(
 		
 		const Type& unclear_type = *v_map->sym_inputs.at(sym_key);
 		Type sym_type = get_underlying_type(unclear_type);
-		
+
+		if (is_type_singletonish(unclear_type)) {
+			return evaluate_singletonish(igc, unclear_type);
+		}
+
 		// i know this logic is terrible but performance is not a concern for me.
 		
 		size_t field_index = (target_smooth->has_leaf ? 1 : 0);
 		
-		for (const auto& [sym_name, _] : v_map->sym_inputs) {
+		for (const auto& [sym_name, sym_type] : v_map->sym_inputs) {
 			if (sym_name == sym_key) {
 				break;
 			}
-			
+
+			if (is_type_singletonish(*sym_type)) {
+				continue;
+			}
+
 			field_index++;
 		}
 		

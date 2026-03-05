@@ -7,6 +7,8 @@
 #include "t_smooth.hpp"
 #include "create_value_symbol_table.hpp"
 #include "llvm_to_smooth.hpp"
+#include "is_type_singletonish.hpp"
+#include "evaluate_singletonish.hpp"
 
 Smooth access_variable(
 	IrGenCtx& igc,
@@ -45,7 +47,11 @@ Smooth access_variable(
 	const ValueSymbolTableEntry& entry = o_entry.value();
 	
 	*underlying_type = std::make_shared<Type>(entry.type);
-	
+
+	if (is_type_singletonish(entry.type)) {
+		return evaluate_singletonish(igc, entry.type);
+	}
+
 	llvm::Value* loaded = igc.builder.CreateLoad(
 		entry.ir_type,
 		entry.alloca_ptr
