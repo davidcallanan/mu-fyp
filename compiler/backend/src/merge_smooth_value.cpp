@@ -8,6 +8,11 @@
 #include "t_types.hpp"
 #include "t_smooth.hpp"
 #include "llvm/IR/DerivedTypes.h"
+#include "extract_leaf.hpp"
+#include "smooth_type.hpp"
+#include "get_underlying_type.hpp"
+#include "is_type_singletonish.hpp"
+#include "evaluate_singletonish.hpp"
 
 std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	IrGenCtx& igc,
@@ -28,21 +33,32 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	std::optional<Smooth> smooth_leaf = std::nullopt;
 
 	if (structval_a->has_leaf && structval_b->has_leaf) {
-		smooth_leaf = merge_smooth(igc, structval_a->leaf.value(), structval_b->leaf.value());
+		if (is_type_singletonish(type_merged->leaf_type.value())) {
+			smooth_leaf = evaluate_singletonish(igc, type_merged->leaf_type.value());
+		} else {
+			smooth_leaf = merge_smooth(igc, extract_leaf(igc, Smooth(structval_a)), extract_leaf(igc, Smooth(structval_b)));
+		}
+
+		auto underlying = get_underlying_type(smooth_type(smooth_leaf.value()));
+		bool is_leaf_physical = !is_type_singletonish(underlying);
 
 		llvm::StructType* struct_type_orig = llvm::cast<llvm::StructType>(structval_b->value->getType());
 		std::vector<llvm::Type*> field_types(struct_type_orig->element_begin(), struct_type_orig->element_end());
-		
-		field_types[0] = llvm_value(smooth_leaf.value())->getType();
+
+		if (is_leaf_physical) {
+			field_types[0] = llvm_value(smooth_leaf.value())->getType();
+		}
 
 		llvm::StructType* struct_type_new = llvm::StructType::get(igc.context, field_types);
 		llvm::Value* replaced_value = llvm::UndefValue::get(struct_type_new);
 
-		replaced_value = igc.builder.CreateInsertValue(replaced_value, llvm_value(smooth_leaf.value()), 0);
+		if (is_leaf_physical) {
+			replaced_value = igc.builder.CreateInsertValue(replaced_value, llvm_value(smooth_leaf.value()), 0);
+		}
 
 		// currently only taking sym inputs from the b value, not properly merging this stuff yet.
-		
-		for (uint32_t i = 1; i < struct_type_orig->getNumElements(); i++) {
+
+		for (uint32_t i = is_leaf_physical ? 1 : 0; i < struct_type_orig->getNumElements(); i++) {
 			llvm::Value* element = igc.builder.CreateExtractValue(structval_b->value, i);
 			replaced_value = igc.builder.CreateInsertValue(replaced_value, element, i);
 		}

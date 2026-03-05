@@ -27,19 +27,17 @@ void process_map_body(
 			
 			std::string map_sym_var_name = "ms_" + v_sym->name;
 
-			Smooth smooth = evaluate_smooth(igc, *v_sym->typeval);
-			Type our_type = smooth_type(smooth); // maybe in the future we'll change how this works
-
 			ValueSymbolTableEntry entry = [&]() {
-				if (is_type_singletonish(our_type)) {
+				if (is_type_singletonish(*v_sym->typeval)) {
 					return ValueSymbolTableEntry{
 						nullptr,
 						nullptr,
-						our_type,
+						*v_sym->typeval,
 						false, // syms, when treated as variables, are always immutable.
 					};
 				}
 
+				Smooth smooth = evaluate_smooth(igc, *v_sym->typeval);
 				std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_sym_var_name;
 				llvm::Value* value = llvm_value(smooth);
 				llvm::Value* alloca = igc.builder.CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
@@ -48,7 +46,7 @@ void process_map_body(
 				return ValueSymbolTableEntry{
 					alloca,
 					value->getType(),
-					our_type, // maybe in the future we'll change how this works
+					smooth_type(smooth), // maybe in the future we'll change how this works
 					false, // syms, when treated as variables, are always immutable.
 				};
 			}();

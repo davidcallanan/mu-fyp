@@ -2,10 +2,12 @@
 #include "get_underlying_type.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
+#include "is_type_singletonish.hpp"
+#include "evaluate_singletonish.hpp"
 
 // this is such a hacky system and needs to be rid of at some point.
 
-Smooth llvm_to_smooth(const Type& type, llvm::Value* value) {
+Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 	Type underlying = get_underlying_type(type);
 
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying)) {
@@ -46,16 +48,32 @@ Smooth llvm_to_smooth(const Type& type, llvm::Value* value) {
 	}
 
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&underlying)) {
-		bool has_leaf = (false
-			|| (*p_v_map)->leaf_type.has_value()
-			|| (*p_v_map)->leaf_hardval.has_value()
-		);
+		bool has_leaf = (*p_v_map)->leaf_type.has_value();
+		
+		if (true
+			&& (*p_v_map)->leaf_hardval.has_value()
+			&& !(*p_v_map)->leaf_type.has_value()
+		) {
+			fprintf(stderr, "serious invariant violation - new refactor does not support hardval without type.\n");
+			exit(1);
+		}
+
+		std::optional<Smooth> leaf = std::nullopt;
+
+		if (has_leaf) {
+			if (is_type_singletonish((*p_v_map)->leaf_type.value())) {
+				leaf = evaluate_singletonish(igc, (*p_v_map)->leaf_type.value());
+			} else {
+				llvm::Value* leaf_value = igc.builder.CreateExtractValue(value, 0);
+				leaf = llvm_to_smooth(igc, (*p_v_map)->leaf_type.value(), leaf_value);
+			}
+		}
 		
 		return std::make_shared<SmoothStructval>(SmoothStructval{
 			type,
 			value,
 			has_leaf,
-			std::nullopt, // like what do i even populate this with...
+			leaf,
 		});
 	}
 

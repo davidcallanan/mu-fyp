@@ -3,7 +3,12 @@
 
 bool is_type_singletonish(const Type& type) { // is there only one runtime value that the type encodes? if so, can be made static.
 	if (auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&type)) {
-		return (*p_v_pointer)->hardval.has_value();
+		// previously hardval determined whether pointer was singletonish, however this is wrong.
+		// hardval means the underlying data is singletonish, but this has nothing to do with the pointer itself, which may be mutated (e.g. if in a variable).
+		// we kinda just assume pointers can take on any value, and if it genuinely has constant data,
+		// llvm would be good enough at optimizing this (probably fairly common optimization).
+		
+		return false;
 	}
 
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {

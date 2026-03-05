@@ -57,5 +57,5 @@ Smooth access_variable(
 		entry.alloca_ptr
 	);
 
-	return llvm_to_smooth(entry.type, loaded);
+	return llvm_to_smooth(igc, entry.type, loaded);
 }

@@ -5,4 +5,4 @@
 #include "t_types_fwd.hpp"
 #include "llvm/IR/Value.h"
 
-Smooth llvm_to_smooth(const Type& type, llvm::Value* raw);
+Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* raw);

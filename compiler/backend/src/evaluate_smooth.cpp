@@ -33,10 +33,12 @@
 #include "access_variable.hpp"
 #include "access_member.hpp"
 #include "is_type_singletonish.hpp"
+#include "evaluate_singletonish.hpp"
 
-bool determine_has_leaf(const Type& type) {
+bool determine_has_leaf(const Type& type) { // soon this function should be deprecated because it is not relevant to non-maps anymore.
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
-		return (*p_v_map)->leaf_type.has_value() || (*p_v_map)->leaf_hardval.has_value();
+		// return (*p_v_map)->leaf_type.has_value() || (*p_v_map)->leaf_hardval.has_value();
+		return (*p_v_map)->leaf_type.has_value();
 	}
 	
 	// what was I thinking here.
@@ -99,14 +101,19 @@ Smooth evaluate_smooth(
 		}
 		
 		if (map.leaf_type.has_value()) {
-			leaf = evaluate_smooth(igc, map.leaf_type.value());
+			if (is_type_singletonish(map.leaf_type.value())) {
+				leaf = evaluate_singletonish(igc, map.leaf_type.value());
+			} else {
+				leaf = evaluate_smooth(igc, map.leaf_type.value());
 
-			if (map.leaf_hardval.has_value()) {
-				// now consistently using the central merging system here for hardvals.
-				
-				Smooth hardval_smooth = evaluate_hardval(map_igc, map.leaf_hardval.value(), map.leaf_type.value());
-				
-				leaf = merge_smooth(igc, leaf.value(), hardval_smooth);
+				if (map.leaf_hardval.has_value()) {
+					// now consistently using the central merging system here for hardvals.
+					
+					Smooth hardval_smooth = evaluate_hardval(map_igc, map.leaf_hardval.value(), map.leaf_type.value());
+					
+					leaf = merge_smooth(igc, leaf.value(), hardval_smooth);
+				}
+
 				llvm::Value* leaf_value = llvm_value(leaf.value());
 				member_types.push_back(leaf_value->getType());
 				member_values.push_back(leaf_value);

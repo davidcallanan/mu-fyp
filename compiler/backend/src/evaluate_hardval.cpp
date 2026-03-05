@@ -62,7 +62,7 @@ Smooth evaluate_hardval(
 		llvm::APInt ap_int(bits_needed, value_str.c_str(), 10);
 		llvm::Value* const_value = llvm::ConstantInt::get(igc.context, ap_int);
 		
-		return llvm_to_smooth(type, const_value);
+		return llvm_to_smooth(igc, type, const_value);
 	}
 	
 	if (std::holds_alternative<std::shared_ptr<HardvalFloat>>(hardval)) {
@@ -97,13 +97,13 @@ Smooth evaluate_hardval(
 		llvm::APFloat ap_float(float_type->getFltSemantics(), p_v_float->value);
 		llvm::Value* const_value = llvm::ConstantFP::get(igc.context, ap_float);
 		
-		return llvm_to_smooth(type, const_value);
+		return llvm_to_smooth(igc, type, const_value);
 	}
 	
 	if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
 		const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
 		llvm::Value* str_const = igc.builder.CreateGlobalStringPtr(p_v_string->value);
-		return llvm_to_smooth(type, str_const);
+		return llvm_to_smooth(igc, type, str_const);
 	}
 	
 	fprintf(stderr, "Unhandled evaluation logic for hardval\n");

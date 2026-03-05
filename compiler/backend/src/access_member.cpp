@@ -10,6 +10,8 @@
 #include "llvm_to_smooth.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
+#include "smooth_type.hpp"
+#include "is_structval_leaf_physical.hpp"
 
 Smooth access_member(
 	IrGenCtx& igc,
@@ -35,7 +37,7 @@ Smooth access_member(
 
 		// i know this logic is terrible but performance is not a concern for me.
 		
-		size_t field_index = (target_smooth->has_leaf ? 1 : 0);
+		size_t field_index = is_structval_leaf_physical(target_smooth) ? 1 : 0;
 		
 		for (const auto& [sym_name, sym_type] : v_map->sym_inputs) {
 			if (sym_name == sym_key) {
@@ -83,7 +85,7 @@ Smooth access_member(
 			});
 		}
 
-		return llvm_to_smooth(unclear_type, extracted);
+		return llvm_to_smooth(igc, unclear_type, extracted);
 	} else {
 		fprintf(stderr, "Impossible to call a non-map with a symbol, what are you doing?\n");       
 		exit(1);

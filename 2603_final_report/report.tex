@@ -515,6 +515,9 @@ Early on in development, I was adamment to ensure a fully reproducible build env
 
 \subsection{Underlying Type Tracking}
 
+\subsection{Singletonish Optimization}
+
+A custom "singletonish" optimization was implemented that concerns itself with both the module optimizatoin goal (detecting something to be static) and the acknowledgement of the benefits of singleton types (by treating lonely values as singleton types). It also is meets the demands of the map enum equivalence, central to the design of the module system, as it allows different aspects of maps which are inherently static (e.g. the functional nature of maps) to be optimized to a form that behaves like traiditionali programming languages. This means the map-enum equivalence is not just theoretical, but acutually works.
 
 
 \chapter{Evaluation (930)}
