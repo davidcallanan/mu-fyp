@@ -5,12 +5,15 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "evaluate_singletonish.hpp"
+#include "get_underlying_type.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 #include "t_hardval.hpp"
 #include "preinstantiated_smooths.hpp"
 
 Smooth evaluate_singletonish(IrGenCtx& igc, Type type) {
+	type = get_underlying_type(type);
+
 	if (auto p_v_void = std::get_if<std::shared_ptr<TypeVoid>>(&type)) {
 		return smooth_void(igc, type);
 	}

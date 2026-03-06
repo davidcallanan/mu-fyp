@@ -77,6 +77,11 @@ create() -> { ; this comment works
 		:nested {
 			:octopus "This would be really cool if it worked.";	
 		};
+		:star_sign enum {
+			:aries;
+			:taurus;
+			:capricorn;
+		} :capricorn;
 	};
 	
 	foo := object:name2;
@@ -90,6 +95,10 @@ create() -> { ; this comment works
 	log(foo);
 	log(bar);
 	log(access_during_assign := "This is really cool");
+	
+	log("Singletonish optimization test:");
+	log_d(object:star_sign); // should be a constant
+	log_d(object:another_variable); // should be a constant
 	
 	log("Str 5 is:");
 	log(str5);

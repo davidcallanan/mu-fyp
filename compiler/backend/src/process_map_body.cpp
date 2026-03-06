@@ -27,17 +27,21 @@ void process_map_body(
 			
 			std::string map_sym_var_name = "ms_" + v_sym->name;
 
+			// we need to evaluate early here to ensure underlying_types are populated.
+			// this may produce dead-code if the singletonish optimization is applied later, but llvm should eliminate this dead-code for us.
+			Smooth smooth = evaluate_smooth(igc, *v_sym->typeval);
+			Type discovered_type = smooth_type(smooth);
+
 			ValueSymbolTableEntry entry = [&]() {
-				if (is_type_singletonish(*v_sym->typeval)) {
+				if (is_type_singletonish(discovered_type)) {
 					return ValueSymbolTableEntry{
 						nullptr,
 						nullptr,
-						*v_sym->typeval,
+						discovered_type,
 						false, // syms, when treated as variables, are always immutable.
 					};
 				}
 
-				Smooth smooth = evaluate_smooth(igc, *v_sym->typeval);
 				std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_sym_var_name;
 				llvm::Value* value = llvm_value(smooth);
 				llvm::Value* alloca = igc.builder.CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
@@ -46,7 +50,7 @@ void process_map_body(
 				return ValueSymbolTableEntry{
 					alloca,
 					value->getType(),
-					smooth_type(smooth), // maybe in the future we'll change how this works
+					discovered_type, // maybe in the future we'll change how this works
 					false, // syms, when treated as variables, are always immutable.
 				};
 			}();

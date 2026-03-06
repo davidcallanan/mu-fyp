@@ -173,7 +173,7 @@ A brief thanks to Anthropic for their powerful GenAI models, though other models
   
   (max 250)
 
-The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code once that is agnostic to the linking strategy. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries.
+The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code \textit{once}, that is agnostic to the linking strategy. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries.
 
 \end{abstract}
 
@@ -183,11 +183,11 @@ The logic of computer software is primarily expressed using programming language
 
 \section{Overview}
 
-
+This project is concerned with the research and development of a novel programming language, Essence C, that facilitates the continuum of static and dynamic modules in low-level software development. The prototype henceforth discussed is accomplished by designing unique language features and implementing bespoke optimizations pursuant to these features. Kernel development is used as a case study throughout the research phase and evaluation phase alike.
 
 \section{Motivation}
 
-Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively will depend on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and React.js environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for rhe lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software.
+Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively will depend on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and \textit{React.js} environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for the lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software.
 
 \section{Methodology}
 
@@ -515,7 +515,7 @@ Only simple bit-tracking is performed in the prototype compiler. When a hardcode
 
 \subsection{Build Environment}
 
-Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses Node.js and pnpm, which is easy to install on different operating systems, and build scripts are organized in package.json files. However, the C++ portion, consisting of a suite of tools (gcc, cmake (or is it called make), etc), is more difficult to set up. The build scripts for this portion are organized using a Makefile, and the development environment itself is setup using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts (I thought I did use docker in docker, I better check), but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based setup descriptions, which can act as reproducible development enviornments. Thus I set up a repository-level nix script for those on NixOS who want to fast-track the development environment. Thus both the build layer and host interaction layer are highly reproducible.
+Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses \textit{Node.js} and \textit{pnpm}, which are easy to install on different operating systems. Build scripts are then organized into \textit{package.json} files. However, the C++ portion, consisting of a suite of tools (\textit{clang}, \textit{make}, \text{llvm}, etc.), is more difficult to set up consistently. The build scripts for this portion are organized using a Makefile, and the development environment itself is setup using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts (I thought I did use docker in docker, I better check), but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based setup descriptions, which can act as reproducible development enviornments. Thus I set up a repository-level nix script for those on NixOS who want to fast-track the development environment. Thus both the build layer and host interaction layer are highly reproducible.
 
 \subsection{Underlying Type Tracking}
 
@@ -537,6 +537,7 @@ Much of the snapshot testing was performed using the language's data logging fac
 Four students from Maynooth University were tasked with implementing a program in the language. Each student was asked to provide positive and negative feedback of the solution.
 
 The users were given the following code with no explanation, but were allowed to ask me questions.
+
 
 \renewcommand{\arraystretch}{1.4}
 \begin{longtable}{|>{\raggedright\arraybackslash}p{5.5cm}|>{\raggedright\arraybackslash}p{\dimexpr\textwidth-5.5cm-4\tabcolsep-2\arrayrulewidth\relax}|}
@@ -593,7 +594,14 @@ Provide one harsh criticism about the language. & [Answer] \\
 \hline
 \end{longtable}
 
+
+\section{GenAI Comprehension Testing}
+
+With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my YouTube tutorial series [todo], and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported kernel is included in main repository for this project.
+
 \section{Benchmarking}
+
+To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks.
 
 \section{Validation}
 
@@ -614,6 +622,13 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
 - built in language constructs to avoid likes of kernel static\_call
 - continuum of dispatch, not just static vs dynamic, but by merging the notion of class instances (and fusing classes and modules), if we detect multiple instances we can switch to an even more dynamic dispatch mechanism.
 - more efficient inter-language interoperability
+
+\section{Limitations}
+
+\begin{itemize}
+  \item The prototype compiler does not yet support cross-compilation. This means a Windows executable cannot be built from within a Linux build environment, or vice versa. Thus, everything had to be kept to Linux/WSL for now.
+  \item The parser does not produce helpful error messages. Thus, one must either use a pair of eyes to identify syntax errors, or use the bulky \textit{Parser Trace Explorer} to investigate more significant issues.
+\end{itemize}
 
 \newpage
 
