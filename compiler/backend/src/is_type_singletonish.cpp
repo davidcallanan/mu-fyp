@@ -15,7 +15,8 @@ bool is_type_singletonish(const Type& type) { // is there only one runtime value
 	}
 
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&underlying)) {
-		return (*p_v_enum)->hardsym.has_value();
+		// really we need a syms_in_use in the future, because we might have only one "sym in use", but the sym is still encoded as a non-undefined number.
+		return (*p_v_enum)->syms.size() == 1;
 	}
 
 	if (auto p_v_void = std::get_if<std::shared_ptr<TypeVoid>>(&underlying)) {
