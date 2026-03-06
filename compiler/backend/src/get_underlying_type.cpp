@@ -66,6 +66,17 @@ Type get_underlying_type(const Type& type) {
 		return get_underlying_type(*v_call_with_sym->underlying_type);
 	}
 
+	if (auto p_v_call_with_dynamic = std::get_if<std::shared_ptr<TypeCallWithDynamic>>(&type)) {
+		const auto& v_call_with_dynamic = *p_v_call_with_dynamic;
+
+		if (v_call_with_dynamic->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeCallWithDynamic).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_call_with_dynamic->underlying_type);
+	}
+
 	if (auto p_v_expr_multi = std::get_if<std::shared_ptr<TypeExprMulti>>(&type)) {
 		const auto& v_expr_multi = *p_v_expr_multi;
 

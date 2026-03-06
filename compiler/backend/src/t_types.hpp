@@ -85,6 +85,12 @@ struct TypeCallWithSym {
 	std::shared_ptr<Type> underlying_type;
 };
 
+struct TypeCallWithDynamic {
+	std::shared_ptr<Type> target;
+	std::shared_ptr<Type> call_data;
+	std::shared_ptr<Type> underlying_type;
+};
+
 struct OpNumeric {
 	std::string op;
 	std::shared_ptr<Type> operand;

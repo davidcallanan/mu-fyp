@@ -427,6 +427,43 @@ Smooth evaluate_smooth(
 		
 		return access_member(igc, modern_target_smooth, v_call_with_sym->sym);
 	}
+
+	if (auto p_v_call_with_dynamic = std::get_if<std::shared_ptr<TypeCallWithDynamic>>(&type)) {
+		const auto& v_call_with_dynamic = *p_v_call_with_dynamic;
+		
+		Smooth target_smooth = evaluate_smooth(igc, *v_call_with_dynamic->target);
+		Smooth sym_smooth = evaluate_smooth(igc, *v_call_with_dynamic->call_data);
+
+		if (!is_structwrappable(target_smooth)) {
+			fprintf(stderr, "have to call on a structish thing.\n");
+			exit(1);
+		}
+
+		auto p_smooth_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&sym_smooth);
+
+		if (!p_smooth_enum) {
+			fprintf(stderr, "currenty only sym calls are supported.\n");
+			exit(1);
+		}
+
+		const auto& smooth_enum = *p_smooth_enum;
+		auto p_type_enum = std::get_if<std::shared_ptr<TypeEnum>>(&smooth_enum->type);
+
+		// for now we cannot allow dynamic field selection because type is too variable.
+		// i want to solve this down the road using comptime logic where the compiler knows the set of possible types, but one must match the input sym to determine which type is in effect.
+		// each match statement would constraint the possibility and prove to the compiler what the type is.
+		
+		if (!p_type_enum || !(*p_type_enum)->hardsym.has_value()) {
+			fprintf(stderr, "for now : hardsym must be statically provided for dynamic sym call. will be tackled down the road using my so-called \"description\" system.\n");
+			exit(1);
+		}
+
+		const std::string& sym = (*p_type_enum)->hardsym.value();
+		
+		auto improved_smooth = structwrap(igc, target_smooth);
+		
+		return access_member(igc, improved_smooth, sym);
+	}
 	
 	if (auto p_v_expr_multi = std::get_if<std::shared_ptr<TypeExprMulti>>(&type)) {
 		const auto& v_expr_multi = **p_v_expr_multi;

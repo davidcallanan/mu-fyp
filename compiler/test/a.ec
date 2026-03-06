@@ -102,7 +102,7 @@ create() -> { ; this comment works
 	
 	log("Dynamic sym call:");
 	sym_of_interest := :star_sign;
-	; log_d(object sym_of_interest);
+	log_d(object sym_of_interest);
 	
 	log("Str 5 is:");
 	log(str5);

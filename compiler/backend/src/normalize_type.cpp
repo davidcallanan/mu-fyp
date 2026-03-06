@@ -527,6 +527,27 @@ Type normalize_type(
 		
 		return v_call_with_sym;
 	}
+
+	if (type == "expr_call_with_dynamic") {
+		if (!typeval.contains("target")) {
+			fprintf(stderr, "No .target was provoided.\n");
+			exit(1);
+		}
+
+		if (!typeval.contains("call_data")) {
+			fprintf(stderr, "No .call_data was provided.\n");
+			exit(1);
+		}
+
+		Type target = normalize_type(typeval["target"], symbol_table);
+		Type call_data = normalize_type(typeval["call_data"], symbol_table);
+
+		auto v_call_with_dynamic = std::make_shared<TypeCallWithDynamic>();
+		v_call_with_dynamic->target = std::make_shared<Type>(target);
+		v_call_with_dynamic->call_data = std::make_shared<Type>(call_data);
+
+		return v_call_with_dynamic;
+	}
 	
 	if (type == "expr_multi") {
 		auto v_expr_multi = std::make_shared<TypeExprMulti>();

@@ -23,6 +23,7 @@ struct TypeLogDd;
 struct TypeVarWalrus;
 struct TypeVarAssign;
 struct TypeCallWithSym;
+struct TypeCallWithDynamic;
 struct TypeExprMulti;
 struct TypeExprAddit;
 struct TypeExprLogicalAnd;
@@ -45,6 +46,7 @@ using Type = std::variant<
 	std::shared_ptr<TypeVarWalrus>,
 	std::shared_ptr<TypeVarAssign>,
 	std::shared_ptr<TypeCallWithSym>,
+	std::shared_ptr<TypeCallWithDynamic>,
 	std::shared_ptr<TypeExprMulti>,
 	std::shared_ptr<TypeExprAddit>,
 	std::shared_ptr<TypeExprLogicalAnd>,
