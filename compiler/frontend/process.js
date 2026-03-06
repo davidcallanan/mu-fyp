@@ -103,6 +103,7 @@ const type_callable = declare();
 const map_entry_for = declare();
 const map_entry_if = declare();
 const map_entry_break = declare();
+const map_entry_callable = declare();
 const map_entry_semiless = declare();
 const constraint_enum = declare();
 
@@ -547,7 +548,9 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 	),
 	(data) => {
 		const entries = data[2];
-		
+
+		const callable = entries.find(entry => entry.type === "callable");
+
 		const instructions = (entries
 			.filter(entry => entry.type === "instruction")
 			.map(entry => entry.data)
@@ -561,9 +564,12 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 			
 		return {
 			type: "type_map",
+			call_input_identifier: callable?.data.callable.call_input_identifier,
+			call_input_type: callable?.data.callable.call_input_type,
+			call_output_type: callable?.data.callable.call_output_type,
 			sym_inputs,
 			instructions,
-		}
+		};
 	},
 ));
 
@@ -621,6 +627,14 @@ map_entry_break.define(rule("map_entry_break", mapData(
 	}),
 )));
 
+map_entry_callable.define(rule("map_entry_callable", mapData(
+	type_callable,
+	(data) => ({
+		type: "map_entry_callable",
+		callable: data,
+	}),
+)));
+
 map_entry_semiless.define(rule("map_entry_semiless", or(
 	mapData(map_entry_for, (data) => ({
 		type: "instruction",
@@ -628,6 +642,10 @@ map_entry_semiless.define(rule("map_entry_semiless", or(
 	})),
 	mapData(map_entry_if, (data) => ({
 		type: "instruction",
+		data,
+	})),
+	mapData(map_entry_callable, (data) => ({
+		type: "callable",
 		data,
 	})),
 )));
@@ -1008,13 +1026,14 @@ typeval_atom.define(rule("typeval_atom", or(
 )));
 
 type_callable.define(rule("type_callable", mapData(
-	join(typeval_atom, ARROW, typeval_atom),
+	join(opt(IDENT), typeval_atom, ARROW, typeval_atom),
 	(data) => ({
 		type: "type_map",
 		leaf_type: undefined,
-		call_input_type: data[0],
-		call_output_type: data[2],
-		sym_inputs: new Map(), // todo: do i want to switch from object to Map everywhere?
+		call_input_identifier: data[0],
+		call_input_type: data[1],
+		call_output_type: data[3],
+		sym_inputs: {},
 	}),
 )));
 

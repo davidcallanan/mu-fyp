@@ -29,6 +29,7 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				v_pointer->type, // todo: is this the right type.
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
+			nullptr,
 		});
 	}
 
@@ -50,6 +51,7 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				v_int->type,
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
+			nullptr,
 		});
 	}
 
@@ -71,6 +73,7 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				v_float->type,
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
+			nullptr,
 		});
 	}
 

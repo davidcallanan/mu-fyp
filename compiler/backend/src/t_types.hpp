@@ -13,6 +13,7 @@
 struct TypeMap {
 	std::optional<Type> leaf_type;
 	std::optional<Hardval> leaf_hardval;
+	std::optional<std::string> call_input_identifier;
 	std::shared_ptr<TypeMap> call_input_type;
 	std::shared_ptr<TypeMap> call_output_type;
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;

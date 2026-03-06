@@ -76,5 +76,6 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		value_merged,
 		structval_b->has_leaf,
 		smooth_leaf,
+		nullptr, // this is problematic.
 	});
 }

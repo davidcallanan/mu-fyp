@@ -179,31 +179,39 @@ Type normalize_type(
 			}
 		}
 
+		result.call_input_identifier = (false
+			|| !typeval.contains("call_input_identifier")
+			|| typeval["call_input_identifier"].is_null()
+		) ? std::nullopt : std::optional<std::string>(typeval["call_input_identifier"].get<std::string>());
+		
 		result.call_input_type = (false
 			|| !typeval.contains("call_input_type")
 			|| typeval["call_input_type"].is_null()
 		) ? nullptr : [&]() {
 			Type t = normalize_type(typeval["call_input_type"], symbol_table);
-			auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
 			
-			if (!p_map) {
+			if (!p_v_map) {
 				fprintf(stderr, "the input of a callable map must itself be a map\n");
 				exit(1);
 			}
 			
-			return std::make_unique<TypeMap>(**p_map);
+			return std::make_unique<TypeMap>(**p_v_map);
 		}();
+		
 		result.call_output_type = (false
 			|| !typeval.contains("call_output_type")
 			|| typeval["call_output_type"].is_null()
 		) ? nullptr : [&]() {
 			Type t = normalize_type(typeval["call_output_type"], symbol_table);
-			auto p_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
-			if (!p_map) {
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
+			
+			if (!p_v_map) {
 				fprintf(stderr, "the output of a callable map must itself be a map\n");
 				exit(1);
 			}
-			return std::make_unique<TypeMap>(**p_map);
+			
+			return std::make_unique<TypeMap>(**p_v_map);
 		}();
 			
 		if (typeval.contains("sym_inputs")) {

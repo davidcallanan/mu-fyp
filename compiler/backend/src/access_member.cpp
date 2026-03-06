@@ -82,6 +82,7 @@ Smooth access_member(
 					unclear_type,
 					extracted,
 				}),
+				nullptr, // this is problematic.
 			});
 		}
 

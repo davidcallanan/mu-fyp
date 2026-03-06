@@ -34,6 +34,7 @@
 #include "access_member.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
+#include "produce_call_func.hpp"
 
 bool determine_has_leaf(const Type& type) { // soon this function should be deprecated because it is not relevant to non-maps anymore.
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -81,6 +82,9 @@ Smooth evaluate_smooth(
 	
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
 		const TypeMap& map = **p_v_map;
+		
+		llvm::Function* call_func = produce_call_func(igc, *p_v_map);
+		
 		std::shared_ptr<ValueSymbolTable> map_value_table = std::make_shared<ValueSymbolTable>(
 			create_value_symbol_table(igc.value_table.get())
 		);
@@ -156,6 +160,7 @@ Smooth evaluate_smooth(
 			struct_value,
 			determine_has_leaf(type),
 			leaf,
+			call_func,
 		});
 	}
 	
@@ -432,37 +437,66 @@ Smooth evaluate_smooth(
 		const auto& v_call_with_dynamic = *p_v_call_with_dynamic;
 		
 		Smooth target_smooth = evaluate_smooth(igc, *v_call_with_dynamic->target);
-		Smooth sym_smooth = evaluate_smooth(igc, *v_call_with_dynamic->call_data);
+		Smooth data_smooth = evaluate_smooth(igc, *v_call_with_dynamic->call_data);
 
 		if (!is_structwrappable(target_smooth)) {
 			fprintf(stderr, "have to call on a structish thing.\n");
 			exit(1);
 		}
 
-		auto p_smooth_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&sym_smooth);
+		if (auto p_smooth_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&data_smooth)) {
+			const auto& smooth_enum = *p_smooth_enum;
+			auto p_type_enum = std::get_if<std::shared_ptr<TypeEnum>>(&smooth_enum->type);
 
-		if (!p_smooth_enum) {
-			fprintf(stderr, "currenty only sym calls are supported.\n");
+			// for now we cannot allow dynamic field selection because type is too variable.
+			// i want to solve this down the road using comptime logic where the compiler knows the set of possible types, but one must match the input sym to determine which type is in effect.
+			// each match statement would constraint the possibility and prove to the compiler what the type is.
+			
+			if (!p_type_enum || !(*p_type_enum)->hardsym.has_value()) {
+				fprintf(stderr, "for now : hardsym must be statically provided for dynamic sym call. will be tackled down the road using my so-called \"description\" system.\n");
+				exit(1);
+			}
+
+			const std::string& sym = (*p_type_enum)->hardsym.value();
+			
+			auto improved_smooth = structwrap(igc, target_smooth);
+			
+			return access_member(igc, improved_smooth, sym);
+		} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
+			auto actual_target = std::get_if<std::shared_ptr<SmoothStructval>>(&target_smooth);
+
+			if (!actual_target || (*actual_target)->call_func == nullptr) {
+				fprintf(stderr, "cannot do a map call on a target that doesn't support it. - map is not map-callable.");
+				exit(1);
+			}
+
+			Smooth wrapped_up = structwrap(igc, data_smooth);
+			llvm::Value* input_payload = llvm_value(wrapped_up);
+
+			llvm::Value* output_value = igc.builder.CreateCall((*actual_target)->call_func, { input_payload });
+
+			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&(*actual_target)->type);
+			
+			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr) {
+				fprintf(stderr, "somehow target had no appropriate map information.\n");
+				exit(1);
+			}
+
+			Type output_type = Type((*actual_target_type)->call_output_type);
+
+			auto output_smooth = std::make_shared<SmoothStructval>(SmoothStructval{
+				output_type,
+				output_value,
+				false,
+				std::nullopt, // this is problematic.
+				nullptr, // this line is problematic.
+			});
+
+			return Smooth(output_smooth);
+		} else {
+			fprintf(stderr, "currenty only sym calls and map calls are supported.\n");
 			exit(1);
 		}
-
-		const auto& smooth_enum = *p_smooth_enum;
-		auto p_type_enum = std::get_if<std::shared_ptr<TypeEnum>>(&smooth_enum->type);
-
-		// for now we cannot allow dynamic field selection because type is too variable.
-		// i want to solve this down the road using comptime logic where the compiler knows the set of possible types, but one must match the input sym to determine which type is in effect.
-		// each match statement would constraint the possibility and prove to the compiler what the type is.
-		
-		if (!p_type_enum || !(*p_type_enum)->hardsym.has_value()) {
-			fprintf(stderr, "for now : hardsym must be statically provided for dynamic sym call. will be tackled down the road using my so-called \"description\" system.\n");
-			exit(1);
-		}
-
-		const std::string& sym = (*p_type_enum)->hardsym.value();
-		
-		auto improved_smooth = structwrap(igc, target_smooth);
-		
-		return access_member(igc, improved_smooth, sym);
 	}
 	
 	if (auto p_v_expr_multi = std::get_if<std::shared_ptr<TypeExprMulti>>(&type)) {

@@ -214,4 +214,16 @@ create() -> { ; this comment works
 			break;
 		}
 	}
+	
+	actually_callable := {
+		input {
+			:foo u64;
+		} -> {
+			log_d(input:foo);
+		}
+	};
+	
+	; actually_callable {
+	; 	:foo 123;
+	; };
 }

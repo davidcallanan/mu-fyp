@@ -74,6 +74,7 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			value,
 			has_leaf,
 			leaf,
+			nullptr, // this is problematic.
 		});
 	}
 
