@@ -1,4 +1,4 @@
-import { mapData, join, opt, multi, opt_multi, or, declare, trace_print, trace_dump, rule } from "./uoe/ec/blurp.js";
+import { mapData, join, opt, multi, opt_multi, or, declare, trace_print, trace_dump, rule, lookAhead } from "./uoe/ec/blurp.js";
 
 import * as fs from "fs/promises";
 import * as node__path from "path";
@@ -314,18 +314,43 @@ const expr25 = rule("expr25", or(
 	typeval_atom,
 ));
 
+const BAREBONES_AHEAD = rule("BAREBONES_AHEAD", /^(?![ \t\n]*[;+\-*\/&|])/);
+
+const BAREBONES_AHEAD_with_debug = (input) => {
+	const outcome = BAREBONES_AHEAD(input);
+	
+	if (outcome.success) {
+		console.log("BAREBONES_AHEAD passed on:", JSON.stringify(input.substring(0, 32))); 
+	}
+	
+	return outcome;
+};
+
 const expr27 = rule("expr27", mapData(join(
 	expr25,
-	opt_multi(SYMBOL_BARE),
+	opt_multi(or(
+		mapData(SYMBOL_BARE, (data) => ({ mode: "sym", data })),
+		// no way , I forgot I had written a lookAhead function.
+		// this has saved me.
+		mapData(join(lookAhead(BAREBONES_AHEAD_with_debug), expr25), (data) => ({ mode: "dynamic", data: data[1] })),
+	)),
 ), (data) => {
 	let result = data[0];
 
-	for (const sym of data[1]) {
-		result = {
-			type: "expr_call_with_sym",
-			target: result,
-			sym: sym.substring(1),
-		};
+	for (const item of data[1]) {
+		if (item.mode === "sym") {
+			result = {
+				type: "expr_call_with_sym",
+				target: result,
+				sym: item.data.substring(1),
+			};
+		} else {
+			result = {
+				type: "expr_call_with_dynamic",
+				target: result,
+				call_data: item.data,
+			};
+		}
 	}
 
 	return result;
@@ -1338,14 +1363,14 @@ export const process = async (config) => {
 		) {
 			console.error(result);
 			console.log("<start of trace>");
-			trace_print(console.log);
+			// trace_print(console.log);
 			console.log("<end of trace>");
 			
 			const json_path = node__path.join(actual_path, "frontend.trace.json");
 			const text_path = node__path.join(actual_path, "frontend.trace.txt");
 			
-			await trace_dump(async (content) => await fs.writeFile(json_path, content, "utf-8"));
-			await trace_print(async (line) => await fs.appendFile(text_path, line + "\n", "utf-8"))
+			// await trace_dump(async (content) => await fs.writeFile(json_path, content, "utf-8"));
+			// await trace_print(async (line) => await fs.appendFile(text_path, line + "\n", "utf-8"))
 			
 			throw new Error(`Failed to parse.`);
 		}

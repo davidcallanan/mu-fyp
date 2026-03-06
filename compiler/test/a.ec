@@ -100,6 +100,10 @@ create() -> { ; this comment works
 	log_d(object:star_sign); // should be a constant
 	log_d(object:another_variable); // should be a constant
 	
+	log("Dynamic sym call:");
+	sym_of_interest := :star_sign;
+	; log_d(object sym_of_interest);
+	
 	log("Str 5 is:");
 	log(str5);
 	str5 = "New mutated value! I hope this formats well. abc";

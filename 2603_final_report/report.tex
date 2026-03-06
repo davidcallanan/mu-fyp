@@ -351,7 +351,7 @@ The core of the problem is removing indirection.
 
 \subsection{Choice of Language}
 
-The languages selected for this project were JavaScript and C++. While JavaScript has been my go-to language before classes were even a thing, the primary LLVM API is sadly exposed through C++. Other language bindings exist, but do not appear mature enough. It would not have been smart to gamble a project of this calibre on the stability of such bindings. JavaScript was still suitable for the parsing phase, as my pre-existing parsing library was already written in JavaScript. The speed of compilation is mostly irrelevant, as this does not impact the performance of the compiled artifacts. Thus minimal effort was wasted on such a triviality.
+The languages selected for this project were JavaScript and C++. While JavaScript has been my go-to language before classes were even a thing, the primary LLVM API is sadly exposed through C++. Other language bindings exist, but do not appear mature enough. It would not have been smart to gamble a project of this calibre on the stability of such bindings. JavaScript was still suitable for the parsing phase, as my pre-existing parsing library (called \textit{blurp}) was already written in JavaScript. The speed of compilation is mostly irrelevant, as this does not impact the performance of the compiled artifacts. Thus minimal effort was wasted on such a triviality.
 
 \subsection{Unification of Modules and Classes}
 
