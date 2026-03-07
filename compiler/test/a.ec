@@ -64,6 +64,12 @@ type MyService {};
 	log_d(input:foo);
 };
 
+@Mod:name "My Module";
+
+@Mod:do_something {} -> {
+	log_d("Doing something...");	
+};
+
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;
@@ -254,4 +260,8 @@ create() -> { ; this comment works
 	x:print_foo {
 		:foo 678;
 	};
+	
+	log(mod:name);
+	
+	mod:do_something {};
 }

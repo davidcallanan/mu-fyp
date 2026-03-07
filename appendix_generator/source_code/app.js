@@ -13,13 +13,15 @@ const ignored_paths = new Set([
 	"pnpm-lock.yaml",
 	".gitignore",
 	".vscodeignore",
-	"json.hpp"
+	"json.hpp",
+	"routeTree.gen.ts",
 ]);
 
 const ignored_extensions = new Set([
 	".pdf",
 	".png",
 	".tex",
+	".ico",
 ]);
 
 const escape_latex = (text) => {
@@ -37,6 +39,12 @@ const escape_verbatim = (text) => {
 	return (text
 		.replace(/@/g, "@\\char\"40@")
 		.replace(/\\end\{lstlisting\}/g, "@\\textbackslash{}end\{lstlisting\}@")
+		.replace(/★/g, "@$\\bigstar$@")
+		.replace(/▼/g, "@$\\triangledown$@")
+		.replace(/▶/g, "@$\\triangleright$@")
+		.replace(/•/g, "@$\\bullet$@")
+		.replace(/→/g, "@$\\rightarrow$@")
+
 		// .replace(/\\/g, "(*@\\textbackslash{}@*)")
 		// .replace(/%/g, "(*@\\%@*)");
 	);
@@ -250,6 +258,7 @@ const generate_latex = async () => {
 	let latex = "";
 	latex += "% This is an auto-generated appendix using my appendix generator script\n";
 	latex += "% Date of generation: " + new Date().toISOString() + "\n\n";
+	latex += "\\newcommand{\\tighttt}{\\fontsize{8pt}{8pt}\\selectfont\\ttfamily\\pdfliteral direct{-0.3 Tc}}\n\n";
 	latex += "\\lstset{\n";
 	latex += "  breaklines=true,\n";
 	latex += "  breakatwhitespace=false,\n";
@@ -258,6 +267,7 @@ const generate_latex = async () => {
 	latex += "  keepspaces=true,\n";
 	latex += "  showstringspaces=false,\n";
 	latex += "  tabsize=4,\n";
+	latex += "  basicstyle={\\tighttt},\n";
 	latex += "}\n\n";
 
 	let i = 0;
@@ -276,7 +286,7 @@ const generate_latex = async () => {
 		latex += "\\vspace{0.5cm}\n";
 		latex += "\\noindent\\colorbox{lightgray}{\\parbox{\\dimexpr\\textwidth-2\\fboxsep}{\\small\\textbf{" + escaped_path + "}}}\n\n";
 		latex += "\\vspace{0.2cm}\n\n";
-		latex += "\\begin{lstlisting}[language={}, escapechar=@, basicstyle=\\ttfamily\\footnotesize, breaklines=true, breakatwhitespace=false]\n";
+		latex += "\\begin{lstlisting}[language={}, escapechar=@, breaklines=true, breakatwhitespace=false]\n";
 
 		// change to limit how many files are outputted for debugging purposes.
 		if (i <= 999) { // 17

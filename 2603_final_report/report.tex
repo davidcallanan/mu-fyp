@@ -28,6 +28,8 @@
 \usepackage{fancyhdr}
 \usepackage{lastpage}
 
+\usepackage{amssymb}
+
 
 \usepackage{pdfpages}
 
@@ -68,7 +70,7 @@
 
 \fancyfoot[C]{\sffamily Page \thepage\ of \pageref*{LastPage}}
 
-\renewcommand{\chaptermark}[1]{\markboth{Chapter \thechapter\ -- #1}{}}
+\renewcommand{\chaptermark}[1]{\markboth{\chaptertitlename\ \thechapter\ -- #1}{}}
 
 \fancypagestyle{plain}{\pagestyle{fancy}}
 
@@ -638,23 +640,23 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
 
 \newpage
 
-\section{Appendix: Screenshots}
+\chapter{Screenshots}
 
 % \input{appendix_screenshots.tex}
 
 \newpage
 
-\section{Appendix: Source Code}
+\chapter{Source Code}
 
 Included in this appendix is a snapshot of the project repository as of the date of submission of this interim report. The full repository, including the entire git history, is available upon request. Please request access to the private repository located at \href{https://github.com/davidcallanan/mu-fyp}{https://github.com/davidcallanan/mu-fyp}.
 
 Build artifacts and other uninteresting files have been omitted from this appendix. This includes, but is not limited to, all files mentioned inside \lstinline{.gitignore}.
 
-% \input{appendix_source_code.tex}
+\input{appendix_source_code.tex}
 
 \newpage
 
-\section{Appendix: LLM Prompts}
+\chapter{LLM Prompts}
 
 % \input{appendix_llm_prompts.tex}
 
@@ -664,7 +666,7 @@ Build artifacts and other uninteresting files have been omitted from this append
     frame, 
     scale=0.65, 
     pagecommand={\thispagestyle{plain}
-\section{Appendix: Interim Report}}
+\chapter{Interim Report}}
 ]{../2511_interim_report/report.pdf}
 
 
