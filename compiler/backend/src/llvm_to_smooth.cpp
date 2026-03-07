@@ -5,6 +5,9 @@
 #include "produce_call_func.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
+#include "rotten_int_info.hpp"
+#include "rotten_float_info.hpp"
+#include "llvm/IR/DerivedTypes.h"
 
 // this is such a hacky system and needs to be rid of at some point.
 
@@ -20,6 +23,34 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			|| type_str == "f64"
 			|| type_str == "f128"
 		);
+
+		if (value->getType()->isStructTy()) { // really type information should be telling us this, but this hack will do for now.
+			if (auto info = rotten_float_info(*p_v_rotten)) {
+				llvm::Type* flexi_type = nullptr;
+				
+				if (info->bits == 16) flexi_type = llvm::Type::getHalfTy(value->getContext());
+				else if (info->bits == 32) flexi_type = llvm::Type::getFloatTy(value->getContext());
+				else if (info->bits == 64) flexi_type = llvm::Type::getDoubleTy(value->getContext());
+				else if (info->bits == 128) flexi_type = llvm::Type::getFP128Ty(value->getContext());
+				
+				return std::make_shared<SmoothVoidFloat>(SmoothVoidFloat{
+					type,
+					flexi_type,
+					value,
+				});
+			} else if (auto info = rotten_int_info(*p_v_rotten)) {
+				llvm::Type* flexi_type = llvm::IntegerType::get(value->getContext(), info->bits);
+				
+				return std::make_shared<SmoothVoidInt>(SmoothVoidInt{
+					type,
+					flexi_type,
+					value,
+				});
+			}
+			
+			fprintf(stderr, "Failed to extract info from rotten.");
+			exit(1);
+		}
 
 		if (is_float) {
 			return std::make_shared<SmoothFloat>(SmoothFloat{
@@ -60,14 +91,29 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 		}
 
 		std::optional<Smooth> leaf = std::nullopt;
+		std::vector<Smooth> field_smooths;
+		unsigned int field_index = 0;
 
 		if (has_leaf) {
 			if (is_type_singletonish((*p_v_map)->leaf_type.value())) {
 				leaf = evaluate_singletonish(igc, (*p_v_map)->leaf_type.value());
 			} else {
-				llvm::Value* leaf_value = igc.builder.CreateExtractValue(value, 0);
+				llvm::Value* leaf_value = igc.builder.CreateExtractValue(value, field_index);
 				leaf = llvm_to_smooth(igc, (*p_v_map)->leaf_type.value(), leaf_value);
+				field_smooths.push_back(leaf.value());
+				field_index += 1;
 			}
+		}
+
+		for (const auto& [sym_name, sym_type] : (*p_v_map)->sym_inputs) {
+			if (is_type_singletonish(*sym_type)) {
+				continue;
+			}
+			
+			llvm::Value* sym_value = igc.builder.CreateExtractValue(value, field_index);
+			field_smooths.push_back(llvm_to_smooth(igc, *sym_type, sym_value));
+			
+			field_index += 1;
 		}
 		
 		return std::make_shared<SmoothStructval>(SmoothStructval{
@@ -76,7 +122,7 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			has_leaf,
 			leaf,
 			produce_call_func(igc, *p_v_map),
-			{}, // todo: this needs to be fixed.
+			field_smooths,
 		});
 	}
 
