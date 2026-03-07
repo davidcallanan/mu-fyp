@@ -2,6 +2,7 @@
 #include "get_underlying_type.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
+#include "produce_call_func.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
 
@@ -74,7 +75,8 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			value,
 			has_leaf,
 			leaf,
-			nullptr, // this is problematic.
+			produce_call_func(igc, *p_v_map),
+			{}, // todo: this needs to be fixed.
 		});
 	}
 

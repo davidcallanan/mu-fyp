@@ -32,6 +32,14 @@ Type smooth_type(Smooth smooth) {
 		return Type(type_void);
 	}
 
+	if (auto p_v_void_int = std::get_if<std::shared_ptr<SmoothVoidInt>>(&smooth)) {
+		return (*p_v_void_int)->type;
+	}
+
+	if (auto p_v_void_float = std::get_if<std::shared_ptr<SmoothVoidFloat>>(&smooth)) {
+		return (*p_v_void_float)->type;
+	}
+
 	fprintf(stderr, "The particular smooth does not have a type associated with it (programmer bug?)\n");
 	exit(1);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <vector>
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
 #include "t_types_fwd.hpp"
@@ -12,6 +13,7 @@ struct SmoothStructval {
 	bool has_leaf;
 	std::optional<Smooth> leaf;
 	llvm::Function* call_func;
+	std::vector<Smooth> field_smooths;
 };
 
 struct SmoothPointer {
@@ -36,5 +38,17 @@ struct SmoothFloat {
 
 struct SmoothVoid {
 	std::optional<Type> type;
+	llvm::Value* value;
+};
+
+struct SmoothVoidInt {
+	Type type;
+	llvm::Type* flexi_type;
+	llvm::Value* value;
+};
+
+struct SmoothVoidFloat {
+	Type type;
+	llvm::Type* flexi_type;
 	llvm::Value* value;
 };

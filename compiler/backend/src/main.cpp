@@ -30,7 +30,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/TargetParser/Host.h"
 
-void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
+void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data) {
 	// the amount of boilerplate is crazy lol
 	printf("Generating module binary!!\n");
 	
@@ -347,7 +347,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 		
 		const json& description = create_data["description"];
 
-		Type normalized = normalize_type(description, symbol_table);
+		Type normalized = normalize_type(*toc, description);
 		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized);
 		
 		if (!p_v_map) {
@@ -368,12 +368,12 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 			context,
 			module,
 			builder,
-			symbol_table,
 			value_table,
 			puts_func,
 			log_data_func,
 			log_data_deref_func,
 			nullptr,
+			toc,
 		};
 		
 		process_map_body(igc, *v_map.call_output_type);
@@ -452,7 +452,7 @@ void gen_module_binary(const json& create_data, TypeSymbolTable& symbol_table) {
 	delete target_machine;
 }
 
-static void populate_type_symbol_table(const json& structure, TypeSymbolTable& symbol_table) {
+static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const json& structure) {
 	for (const auto& entry : structure) {
 		if (!entry.contains("type") || entry["type"] != "type") {
 			continue;
@@ -469,8 +469,8 @@ static void populate_type_symbol_table(const json& structure, TypeSymbolTable& s
 		}
 
 		std::string trail = entry["trail"].get<std::string>();
-		Type normalized = normalize_type(entry["definition"], symbol_table);
-		symbol_table.set(trail, promote_to_underlying(normalized));
+		Type normalized = normalize_type(*toc, entry["definition"]);
+		toc->type_table.set(trail, promote_to_underlying(normalized));
 	}
 
 	for (const auto& entry : structure) {
@@ -493,7 +493,7 @@ static void populate_type_symbol_table(const json& structure, TypeSymbolTable& s
 		std::string ext_case_type = ext_case["type"].get<std::string>();
 
 		if (ext_case_type == "extension_case_sym") {
-			std::optional<UnderlyingType> existing = symbol_table.get(target_type);
+			std::optional<UnderlyingType> existing = toc->type_table.get(target_type);
 
 			if (!existing.has_value()) {
 				fprintf(stderr, "Tried to equip a non-existent type alias with an extat. %s\n", target_type.c_str());
@@ -538,9 +538,9 @@ static void populate_type_symbol_table(const json& structure, TypeSymbolTable& s
 			}
 
 			const std::string& leaf_name = trail.back();
-			Type sym_type = normalize_type(ext_case["typeval"], symbol_table);
+			Type sym_type = normalize_type(*toc, ext_case["typeval"]);
 			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(sym_type);
-			symbol_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
+			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
 		} else {
 			fprintf(stderr, "No more cases are implemented at this time %s\n", ext_case_type.c_str());
 			exit(1);
@@ -579,21 +579,22 @@ int main(int argc, char* argv[]) {
 
 	auto& parse_output = frontend_data["parse_output"];
 	
-	TypeSymbolTable symbol_table = create_type_symbol_table();
+	auto toc = std::make_shared<TypeOrchCtx>();
+	toc->type_table = create_type_symbol_table();
 
 	if (!parse_output.contains("structure") || !parse_output["structure"].is_array()) {
 		fprintf(stderr, "There is no .structure\n");
 		exit(1);
 	}
 
-	populate_type_symbol_table(parse_output["structure"], symbol_table);
+	populate_type_symbol_table(toc, parse_output["structure"]);
 	
 	json create_block = nullptr;
 	if (parse_output.contains("create") && !parse_output["create"].is_null()) {
 		create_block = parse_output["create"];
 	}
 	
-	gen_module_binary(create_block, symbol_table);
+	gen_module_binary(toc, create_block);
 
 	auto& dir_node_translations = frontend_data["dir_node_translations"];
 	

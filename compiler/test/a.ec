@@ -223,7 +223,7 @@ create() -> { ; this comment works
 		}
 	};
 	
-	; actually_callable {
-	; 	:foo 123;
-	; };
+	actually_callable {
+		:foo 123;
+	};
 }

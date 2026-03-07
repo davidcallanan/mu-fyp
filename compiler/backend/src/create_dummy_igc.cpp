@@ -19,12 +19,12 @@ DummyIgc create_dummy_igc(IrGenCtx& base) {
 		base.context,
 		base.module,
 		*dummy_builder,
-		base.type_table,
 		std::make_shared<ValueSymbolTable>(create_value_symbol_table()),
 		base.puts_func,
 		base.log_data_func,
 		base.log_data_deref_func,
 		nullptr,
+		base.toc,
 	};
 
 	return DummyIgc{

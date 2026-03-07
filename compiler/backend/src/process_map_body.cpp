@@ -8,6 +8,7 @@
 #include "t_instructions.hpp"
 #include "t_smooth.hpp"
 #include "llvm_value.hpp"
+#include "llvm_flexi_type.hpp"
 #include "smooth_type.hpp"
 #include "create_value_symbol_table.hpp"
 #include "is_type_singletonish.hpp"

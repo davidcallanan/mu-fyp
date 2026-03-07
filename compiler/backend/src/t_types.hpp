@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <map>
 #include <optional>
@@ -18,6 +19,7 @@ struct TypeMap {
 	std::shared_ptr<TypeMap> call_output_type;
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;
 	std::vector<Instruction> execution_sequence;
+	std::optional<uint64_t> bundle_id;
 };
 
 struct TypePointer {

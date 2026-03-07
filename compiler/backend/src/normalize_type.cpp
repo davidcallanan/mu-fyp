@@ -11,6 +11,7 @@
 #include "t_types.hpp"
 #include "t_instructions.hpp"
 #include "t_hardval.hpp"
+#include "t_bundles.hpp"
 #include "preinstantiated_types.hpp"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,8 +19,8 @@
 using json = nlohmann::json;
 
 Type normalize_type(
-	const json& typeval,
-	TypeSymbolTable& symbol_table
+	TypeOrchCtx& toc,
+	const json& typeval
 ) {
 	if (typeval.is_null()) {
 		fprintf(stderr, "Got null for .type\n");
@@ -40,7 +41,7 @@ Type normalize_type(
 		}
 		
 		std::string trail = typeval["trail"];
-		std::optional<UnderlyingType> found = symbol_table.get(trail);
+		std::optional<UnderlyingType> found = toc.type_table.get(trail);
 		
 		if (!found.has_value()) {
 			fprintf(stderr, "No type pre-given for this %s\n", trail.c_str());
@@ -56,7 +57,7 @@ Type normalize_type(
 			exit(1);
 		}
 		
-		Type target_type = normalize_type(typeval["target"], symbol_table);
+		Type target_type = normalize_type(toc, typeval["target"]);
 		
 		return std::make_shared<TypePointer>(TypePointer{
 			std::make_shared<Type>(target_type),
@@ -188,7 +189,7 @@ Type normalize_type(
 			|| !typeval.contains("call_input_type")
 			|| typeval["call_input_type"].is_null()
 		) ? nullptr : [&]() {
-			Type t = normalize_type(typeval["call_input_type"], symbol_table);
+			Type t = normalize_type(toc, typeval["call_input_type"]);
 			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
 			
 			if (!p_v_map) {
@@ -203,7 +204,7 @@ Type normalize_type(
 			|| !typeval.contains("call_output_type")
 			|| typeval["call_output_type"].is_null()
 		) ? nullptr : [&]() {
-			Type t = normalize_type(typeval["call_output_type"], symbol_table);
+			Type t = normalize_type(toc, typeval["call_output_type"]);
 			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
 			
 			if (!p_v_map) {
@@ -213,7 +214,16 @@ Type normalize_type(
 			
 			return std::make_unique<TypeMap>(**p_v_map);
 		}();
-			
+
+		if (true
+			&& result.call_input_type != nullptr
+			&& result.call_output_type != nullptr
+		) {
+			result.bundle_id = toc.bundle_registry.install(
+				std::make_shared<BundleMap>(BundleMap{ nullptr }
+			));
+		}
+		
 		if (typeval.contains("sym_inputs")) {
 			if (!typeval["sym_inputs"].is_object()) {
 				fprintf(stderr, "Expected .sym_inputs as object\n");
@@ -246,7 +256,7 @@ Type normalize_type(
 						exit(1);
 					}
 					
-					Type actually_normalized = normalize_type(instruction_data["expr"], symbol_table);
+					Type actually_normalized = normalize_type(toc, instruction_data["expr"]);
 					v_expr->expr = std::make_shared<Type>(actually_normalized);
 					
 					result.execution_sequence.push_back(v_expr);
@@ -268,7 +278,7 @@ Type normalize_type(
 						exit(1);
 					}
 					
-					Type normalized_type = normalize_type(instruction_data["typeval"], symbol_table);
+					Type normalized_type = normalize_type(toc, instruction_data["typeval"]);
 					v_sym->typeval = std::make_shared<Type>(normalized_type);
 					
 					result.sym_inputs[v_sym->name] = v_sym->typeval;
@@ -285,7 +295,7 @@ Type normalize_type(
 						exit(1);
 					}
 
-					Type body = normalize_type(instruction_data["body"], symbol_table);
+					Type body = normalize_type(toc, instruction_data["body"]);
 					auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&body);
 
 					if (!p_v_map) {
@@ -316,11 +326,11 @@ Type normalize_type(
 						}
 
 						if (branch.contains("condition") && !branch["condition"].is_null()) {
-							Type condition = normalize_type(branch["condition"], symbol_table);
+							Type condition = normalize_type(toc, branch["condition"]);
 							actual_branch.condition = std::make_shared<Type>(condition);
 						}
 
-						Type body = normalize_type(branch["body"], symbol_table);
+						Type body = normalize_type(toc, branch["body"]);
 						auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&body);
 
 						if (!p_v_map) {
@@ -383,7 +393,7 @@ Type normalize_type(
 			exit(1);
 		}
 		
-		Type delicious_type = normalize_type(typeval["typeval"], symbol_table);
+		Type delicious_type = normalize_type(toc, typeval["typeval"]);
 		v_var_walrus->typeval = std::make_shared<Type>(delicious_type);
 		
 		return v_var_walrus;
@@ -404,7 +414,7 @@ Type normalize_type(
 			exit(1);
 		}
 		
-		Type delicious_type = normalize_type(typeval["typeval"], symbol_table);
+		Type delicious_type = normalize_type(toc, typeval["typeval"]);
 		v_var_assign->typeval = std::make_shared<Type>(delicious_type);
 		
 		return v_var_assign;
@@ -416,7 +426,7 @@ Type normalize_type(
 		v_log->message = (false
 			|| !typeval.contains("message")
 			|| typeval["message"].is_null()
-		) ? nullptr : std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+		) ? nullptr : std::make_shared<Type>(normalize_type(toc, typeval["message"]));
 		
 		return v_log;
 	}
@@ -429,7 +439,7 @@ Type normalize_type(
 			exit(1);
 		}
 
-		v_log_d->message = std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+		v_log_d->message = std::make_shared<Type>(normalize_type(toc, typeval["message"]));
 		
 		return v_log_d;
 	}
@@ -447,7 +457,7 @@ Type normalize_type(
 			exit(1);
 		}
 
-		v_log_dd->message = std::make_shared<Type>(normalize_type(typeval["message"], symbol_table));
+		v_log_dd->message = std::make_shared<Type>(normalize_type(toc, typeval["message"]));
 
 		const auto& byte_count = typeval["byte_count"];
 		const std::string byte_count_type = byte_count["type"].get<std::string>();
@@ -457,7 +467,7 @@ Type normalize_type(
 			v_log_dd->byte_count = nullptr;
 		} else if (byte_count_type == "byte_count") {
 			v_log_dd->is_nullterm = false;
-			v_log_dd->byte_count = std::make_shared<Type>(normalize_type(byte_count["count"], symbol_table));
+			v_log_dd->byte_count = std::make_shared<Type>(normalize_type(toc, byte_count["count"]));
 		} else {
 			fprintf(stderr, "bizarre type for byte_count %s\n", byte_count_type.c_str());
 			exit(1);
@@ -501,7 +511,7 @@ Type normalize_type(
 			exit(1);
 		}
 
-		Type target = normalize_type(typeval["target"], symbol_table);
+		Type target = normalize_type(toc, typeval["target"]);
 		std::string sym = typeval["sym"].get<std::string>();
 
 		if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&target)) {
@@ -547,8 +557,8 @@ Type normalize_type(
 			exit(1);
 		}
 
-		Type target = normalize_type(typeval["target"], symbol_table);
-		Type call_data = normalize_type(typeval["call_data"], symbol_table);
+		Type target = normalize_type(toc, typeval["target"]);
+		Type call_data = normalize_type(toc, typeval["call_data"]);
 
 		auto v_call_with_dynamic = std::make_shared<TypeCallWithDynamic>();
 		v_call_with_dynamic->target = std::make_shared<Type>(target);
@@ -563,7 +573,7 @@ Type normalize_type(
 		for (const auto& op_data : typeval["ops"]) {
 			OpNumeric op;
 			op.op = op_data["op"].get<std::string>();
-			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			op.operand = std::make_shared<Type>(normalize_type(toc, op_data["operand"]));
 			v_expr_multi->ops.push_back(op);
 		}
 
@@ -581,7 +591,7 @@ Type normalize_type(
 		for (const auto& op_data : typeval["ops"]) {
 			OpNumeric op;
 			op.op = op_data["op"].get<std::string>();
-			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			op.operand = std::make_shared<Type>(normalize_type(toc, op_data["operand"]));
 			v_expr_addit->ops.push_back(op);
 		}
 
@@ -598,7 +608,7 @@ Type normalize_type(
 
 		for (const auto& op_data : typeval["ops"]) {
 			OpLogical op;
-			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			op.operand = std::make_shared<Type>(normalize_type(toc, op_data["operand"]));
 			v_expr_logical_and->ops.push_back(op);
 		}
 
@@ -612,7 +622,7 @@ Type normalize_type(
 
 		for (const auto& op_data : typeval["ops"]) {
 			OpLogical op;
-			op.operand = std::make_shared<Type>(normalize_type(op_data["operand"], symbol_table));
+			op.operand = std::make_shared<Type>(normalize_type(toc, op_data["operand"]));
 			v_expr_logical_or->ops.push_back(op);
 		}
 
@@ -625,8 +635,8 @@ Type normalize_type(
 		auto v_compare = std::make_shared<TypeCompare>();
 
 		v_compare->operator_ = typeval["operator"].get<std::string>();
-		v_compare->operand_a = std::make_shared<Type>(normalize_type(typeval["operand_a"], symbol_table));
-		v_compare->operand_b = std::make_shared<Type>(normalize_type(typeval["operand_b"], symbol_table));
+		v_compare->operand_a = std::make_shared<Type>(normalize_type(toc, typeval["operand_a"]));
+		v_compare->operand_b = std::make_shared<Type>(normalize_type(toc, typeval["operand_b"]));
 		v_compare->underlying_type = std::make_shared<Type>(Type(type_bool));
 
 		return v_compare;
@@ -653,8 +663,8 @@ Type normalize_type(
 			exit(1);
 		}
 		
-		Type constraint_1 = normalize_type(constraints[0], symbol_table);
-		Type constraint_2 = normalize_type(constraints[1], symbol_table);
+		Type constraint_1 = normalize_type(toc, constraints[0]);
+		Type constraint_2 = normalize_type(toc, constraints[1]);
 		
 		if (auto p_v_1 = std::get_if<std::shared_ptr<TypePointer>>(&constraint_1)) {
 			auto p_v_2 = std::get_if<std::shared_ptr<TypeMap>>(&constraint_2);

@@ -18,6 +18,22 @@ Smooth merge_smooth(IrGenCtx& igc, Smooth smooth_a, Smooth smooth_b) {
 		return smooth_a;
 	}
 
+	if (std::get_if<std::shared_ptr<SmoothVoidInt>>(&smooth_a)) {
+		return smooth_b;
+	}
+
+	if (std::get_if<std::shared_ptr<SmoothVoidInt>>(&smooth_b)) {
+		return smooth_a;
+	}
+
+	if (std::get_if<std::shared_ptr<SmoothVoidFloat>>(&smooth_a)) {
+		return smooth_b;
+	}
+
+	if (std::get_if<std::shared_ptr<SmoothVoidFloat>>(&smooth_b)) {
+		return smooth_a;
+	}
+
 	auto p_v_structval_a = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth_a);
 	auto p_v_structval_b = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth_b);
 

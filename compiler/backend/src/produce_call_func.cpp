@@ -8,12 +8,14 @@
 #include "t_ctx.hpp"
 #include "t_types.hpp"
 #include "t_smooth.hpp"
+#include "t_bundles.hpp"
 #include "evaluate_smooth.hpp"
 #include "process_map_body.hpp"
 #include "create_value_symbol_table.hpp"
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
 #include "llvm_value.hpp"
+#include "llvm_flexi_type.hpp"
 
 llvm::Function* produce_call_func(
 	IrGenCtx& igc,
@@ -24,6 +26,24 @@ llvm::Function* produce_call_func(
 		|| map->call_output_type == nullptr
 	) {
 		return nullptr;
+	}
+
+	if (!map->bundle_id.has_value()) {
+		fprintf(stderr, "Callable maps require a designated bundle.\n");
+		exit(1);	
+	}
+	
+	Bundle* bundle = igc.toc->bundle_registry.get(map->bundle_id.value());
+	
+	auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
+	
+	if (!p_bundle_map) {
+		fprintf(stderr, "Bundle not from map.");
+		exit(1);
+	}
+	
+	if ((*p_bundle_map)->call_func != nullptr) {
+		return (*p_bundle_map)->call_func;
 	}
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
@@ -37,8 +57,8 @@ llvm::Function* produce_call_func(
 	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map)); // if this works, what a lifehack
 	destroy_dummy_igc(dummy2);
 
-	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_value(input_smooth)->getType());
-	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_value(output_smooth_probe)->getType());
+	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
+	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(output_smooth_probe));
 
 	llvm::FunctionType* func_type = llvm::FunctionType::get(
 		output_struct_type,
@@ -68,12 +88,12 @@ llvm::Function* produce_call_func(
 		igc.context,
 		igc.module,
 		func_builder,
-		igc.type_table,
 		new_value_table,
 		igc.puts_func,
 		igc.log_data_func,
 		igc.log_data_deref_func,
 		nullptr,
+		igc.toc,
 	};
 
 	llvm::Argument* single_argument = func->getArg(0);
@@ -103,6 +123,8 @@ llvm::Function* produce_call_func(
 	process_map_body(enhanced_igc, *map->call_output_type);
 	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
 	func_builder.CreateRet(llvm_value(output_smooth));
+
+	(*p_bundle_map)->call_func = func;
 
 	return func;
 }

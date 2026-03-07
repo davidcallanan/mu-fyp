@@ -35,6 +35,7 @@
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
 #include "produce_call_func.hpp"
+#include "happy_smooth.hpp"
 
 bool determine_has_leaf(const Type& type) { // soon this function should be deprecated because it is not relevant to non-maps anymore.
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -98,6 +99,7 @@ Smooth evaluate_smooth(
 		std::optional<Smooth> leaf = std::nullopt;
 		std::vector<llvm::Type*> member_types;
 		std::vector<llvm::Value*> member_values;
+		std::vector<Smooth> field_smooths;
 		
 		if (map.leaf_hardval.has_value() && !map.leaf_type.has_value()) {
 			fprintf(stderr, "Since refactor, this is a major invariant violation.\n");
@@ -121,6 +123,7 @@ Smooth evaluate_smooth(
 				llvm::Value* leaf_value = llvm_value(leaf.value());
 				member_types.push_back(leaf_value->getType());
 				member_values.push_back(leaf_value);
+				field_smooths.push_back(leaf.value());
 			}
 		}
 		
@@ -146,6 +149,7 @@ Smooth evaluate_smooth(
 			
 			member_types.push_back(loaded->getType());
 			member_values.push_back(loaded);
+			field_smooths.push_back(evaluate_smooth(map_igc, *sym_type)); // todo: need to make sure smooths aren't evaluated for this elsewhere in the codebase.
 		}
 		
 		llvm::StructType* struct_type = llvm::StructType::get(igc.context, member_types);
@@ -161,6 +165,7 @@ Smooth evaluate_smooth(
 			determine_has_leaf(type),
 			leaf,
 			call_func,
+			field_smooths,
 		});
 	}
 	
@@ -384,7 +389,35 @@ Smooth evaluate_smooth(
 	}
 	
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&type)) {
-		return smooth_void(igc, type);
+		llvm::Value* void_value = smooth_void(igc, type)->value;
+
+		if (auto info = rotten_int_info(*p_v_rotten)) {
+			llvm::Type* flexi_type = llvm::IntegerType::get(igc.context, info->bits);
+			
+			return std::make_shared<SmoothVoidInt>(SmoothVoidInt{
+				type,
+				flexi_type,
+				void_value,
+			});
+		}
+
+		if (auto info = rotten_float_info(*p_v_rotten)) {
+			llvm::Type* flexi_type = nullptr;
+			
+			if (info->bits == 16) flexi_type = llvm::Type::getHalfTy(igc.context);
+			else if (info->bits == 32) flexi_type = llvm::Type::getFloatTy(igc.context);
+			else if (info->bits == 64) flexi_type = llvm::Type::getDoubleTy(igc.context);
+			else if (info->bits == 128) flexi_type = llvm::Type::getFP128Ty(igc.context);
+			
+			return std::make_shared<SmoothVoidFloat>(SmoothVoidFloat{
+				type,
+				flexi_type,
+				void_value,
+			});
+		}
+
+		fprintf(stderr, "What sort of a rotten that is not intish or floatish is this.");
+		exit(1);
 	}
 
 	if (auto p_v_enum = std::get_if<std::shared_ptr<TypeEnum>>(&type)) {
@@ -470,17 +503,18 @@ Smooth evaluate_smooth(
 				exit(1);
 			}
 
-			Smooth wrapped_up = structwrap(igc, data_smooth);
-			llvm::Value* input_payload = llvm_value(wrapped_up);
-
-			llvm::Value* output_value = igc.builder.CreateCall((*actual_target)->call_func, { input_payload });
-
 			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&(*actual_target)->type);
 			
 			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr) {
 				fprintf(stderr, "somehow target had no appropriate map information.\n");
 				exit(1);
 			}
+
+			Smooth wrapped_up = structwrap(igc, data_smooth);
+			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
+			llvm::Value* input_payload = llvm_value(upgraded);
+			
+			llvm::Value* output_value = igc.builder.CreateCall((*actual_target)->call_func, { input_payload });
 
 			Type output_type = Type((*actual_target_type)->call_output_type);
 
@@ -490,6 +524,7 @@ Smooth evaluate_smooth(
 				false,
 				std::nullopt, // this is problematic.
 				nullptr, // this line is problematic.
+				{}, // this all needs to be sorted properly.
 			});
 
 			return Smooth(output_smooth);
