@@ -46,6 +46,17 @@ TypeSymbolTable::TypeSymbolTable() {
 		entry->type_value = UnderlyingType{v_enum};
 		_root->children["bool"] = std::move(entry);
 	}
+
+	{
+		auto v_map = std::make_shared<TypeMap>();
+		
+		v_map->call_input_type = nullptr;
+		v_map->call_output_type = nullptr;
+
+		auto entry = std::make_unique<MapEntry>();
+		entry->type_value = UnderlyingType{v_map};
+		_root->children["Mod"] = std::move(entry);
+	}
 }
 
 void TypeSymbolTable::set(const std::string &trail, const UnderlyingType &value) {

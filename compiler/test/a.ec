@@ -66,8 +66,8 @@ type MyService {};
 
 @Mod:name "My Module";
 
-@Mod:do_something {} -> {
-	log_d("Doing something...");	
+@Mod:do_something input {} -> {
+	log("Doing something...");	
 };
 
 create() -> { ; this comment works

@@ -12,6 +12,11 @@
 #include "t_hardval.hpp"
 #include "t_instructions.hpp"
 #include "t_ctx.hpp"
+#include "structwrap.hpp"
+#include "is_structwrappable.hpp"
+#include "smooth_type.hpp"
+#include "llvm_value.hpp"
+#include "demote_underlying.hpp"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -375,6 +380,40 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			nullptr,
 			toc,
 		};
+
+		{
+			std::optional<UnderlyingType> mod_underlying = toc->type_table.get("Mod");
+
+			if (!mod_underlying.has_value()) {
+				fprintf(stderr, "The compiler did not properly pre-populate the Mod map.\n");
+				exit(1);
+			}
+
+			Type mod_type = demote_underlying(mod_underlying.value());
+			Smooth mod_smooth = evaluate_smooth(igc, mod_type);
+
+			if (is_structwrappable(mod_smooth)) {
+				mod_smooth = structwrap(igc, mod_smooth);
+			}
+
+			llvm::Value* mod_value = llvm_value(mod_smooth);
+			mod_type = smooth_type(mod_smooth);
+			
+			llvm::Value* mod_alloca = igc.builder.CreateAlloca(
+				mod_value->getType(),
+				nullptr,
+				igc.value_table->scope_id() + "~m_mod"
+			);
+			
+			igc.builder.CreateStore(mod_value, mod_alloca);
+
+			value_table->set("m_mod", ValueSymbolTableEntry{
+				mod_alloca,
+				mod_value->getType(),
+				mod_type,
+				false,
+			});
+		}
 		
 		process_map_body(igc, *v_map.call_output_type);
 	}
