@@ -60,7 +60,7 @@
 		},
 		{
 			"name": "entity.name.tag",
-			"match": "\\b(this|mod)\\b"
+			"match": "\\b(this|mod|extern)\\b"
 		},
 		{
 			"name": "entity.name.function",

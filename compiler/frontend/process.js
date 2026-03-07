@@ -45,6 +45,8 @@ const KW_ENUM = rule("KW_ENUM", withCarefulSkippers("enum"));
 const KW_IF = rule("KW_IF", withCarefulSkippers("if"));
 const KW_ELSE = rule("KW_ELSE", withCarefulSkippers("else"));
 const KW_BREAK = rule("KW_BREAK", withCarefulSkippers("break"));
+const KW_EXTERN = rule("KW_EXTERN", withCarefulSkippers("extern"));
+const KW_CCC = rule("KW_CCC", withCarefulSkippers("ccc"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -1178,8 +1180,22 @@ const extension_case_sym = rule("extension_case_sym", mapData(
 		typeval: data[1],
 	}),
 ));
+
+const extension_case_extern_ccc = rule("extension_case_extern_ccc", mapData(
+	join(SYMBOL_GRAND, KW_EXTERN, KW_CCC, STRING, type_callable, SEMI),
+	(data) => ({
+		type: "extension_case_extern_ccc",
+		trail: data[0],
+		typeval: {
+			type: "type_extern_ccc",
+			function_name: data[3],
+			call_input_type: data[4].call_input_type, // dropping output type, because only implementing void external linkage for now.
+		},
+	}),
+));
 	
 const extension_case = rule("extension_case", or(
+	extension_case_extern_ccc,
 	extension_case_sym,
 ));
 

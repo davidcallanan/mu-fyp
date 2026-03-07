@@ -5,8 +5,7 @@
 #include <cstdint>
 #include <variant>
 #include <string>
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
+
 #include "evaluate_smooth.hpp"
 #include "evaluate_hardval.hpp"
 #include "t_hardval.hpp"
@@ -36,6 +35,15 @@
 #include "evaluate_singletonish.hpp"
 #include "produce_call_func.hpp"
 #include "happy_smooth.hpp"
+#include "create_dummy_igc.hpp"
+#include "destroy_dummy_igc.hpp"
+
+#include "llvm_flexi_type.hpp"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+
+#include "t_bundles.hpp"
 
 bool determine_has_leaf(const Type& type) { // soon this function should be deprecated because it is not relevant to non-maps anymore.
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -817,6 +825,119 @@ Smooth evaluate_smooth(
 
 	if (std::get_if<std::shared_ptr<TypeVoid>>(&type)) {
 		return smooth_void(igc, type);
+	}
+
+	if (auto p_v_extern_ccc = std::get_if<std::shared_ptr<TypeExternCcc>>(&type)) {
+		const auto& v_extern_ccc = **p_v_extern_ccc;
+
+		std::vector<llvm::Type*> c_abi_parameter_types;
+		std::vector<std::string> c_abi_parameter_names;
+
+		// note that leaves are not to form part of the C abi.
+		// if the user wants to use the leaf, they must store it in an actual sym.
+		
+		for (const auto& [sym_name, p_sym_type] : v_extern_ccc.call_input_type->sym_inputs) {
+			if (is_type_singletonish(*p_sym_type)) {
+				continue;
+			}
+
+			DummyIgc dummy = create_dummy_igc(igc);
+			Smooth sym_smooth = evaluate_smooth(dummy.igc, *p_sym_type);
+			llvm::Type* type_in_context_of_function_call = llvm_flexi_type(sym_smooth);
+			destroy_dummy_igc(dummy);
+
+			c_abi_parameter_types.push_back(type_in_context_of_function_call);
+			c_abi_parameter_names.push_back(sym_name);
+		}
+
+		// this is used for determine what to do with the wrapper function, not the actual extern function.
+		
+		DummyIgc dummy2 = create_dummy_igc(igc);
+		Smooth input_probe = evaluate_smooth(dummy2.igc, Type(v_extern_ccc.call_input_type));
+		llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_probe));
+		destroy_dummy_igc(dummy2);
+		
+		llvm::StructType* output_struct_type = llvm::StructType::get(igc.context, {});
+
+		llvm::FunctionType* the_extern_type = llvm::FunctionType::get(
+			llvm::Type::getVoidTy(igc.context),
+			c_abi_parameter_types,
+			false
+		);
+
+		llvm::FunctionCallee the_extern_callee = igc.module.getOrInsertFunction(
+			v_extern_ccc.function_name,
+			the_extern_type
+		);
+		
+		auto* function_handle = llvm::dyn_cast<llvm::Function>(the_extern_callee.getCallee());
+
+		if (!function_handle) {
+			fprintf(stderr, "glitch\n");
+			exit(1);
+		}
+		
+		function_handle->setCallingConv(llvm::CallingConv::C);
+
+		llvm::FunctionType* wrapper_function_type = llvm::FunctionType::get(
+			output_struct_type,
+			{ input_struct_type },
+			false
+		);
+
+		static int next_extern_ccc_id = 0;
+		
+		std::string wrapper_name = "__ec_extern_ccc_" + std::to_string(next_extern_ccc_id++);
+
+		llvm::Function* wrapper_function = llvm::Function::Create(
+			wrapper_function_type,
+			llvm::Function::PrivateLinkage,
+			wrapper_name,
+			igc.module
+		);
+
+		wrapper_function->addFnAttr(llvm::Attribute::AlwaysInline);
+
+		llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(igc.context, "entry", wrapper_function);
+		llvm::IRBuilder<> wrapper_builder(igc.context);
+		wrapper_builder.SetInsertPoint(wrapper_entry);
+
+		llvm::Argument* lonely_input_argument = wrapper_function->getArg(0);
+		lonely_input_argument->setName("input_struct");
+
+		std::vector<llvm::Value*> arg_extraction;
+		
+		unsigned field_index = 0;
+
+		for (const auto& sym_name : c_abi_parameter_names) {
+			llvm::Value* extracted = wrapper_builder.CreateExtractValue(lonely_input_argument, field_index);
+			
+			arg_extraction.push_back(extracted);
+			
+			field_index++;
+		}
+
+		wrapper_builder.CreateCall(the_extern_callee, arg_extraction);
+
+		llvm::Value* final_output = llvm::UndefValue::get(output_struct_type);
+		
+		wrapper_builder.CreateRet(final_output);
+
+		auto bundle_map = std::make_shared<BundleMap>();
+		
+		bundle_map->call_func = wrapper_function;
+		
+		uint64_t bundle_id = igc.toc->bundle_registry.install(Bundle(bundle_map));
+
+		auto callable = std::make_shared<TypeMap>();
+		
+		callable->call_input_type = v_extern_ccc.call_input_type;
+		callable->call_output_type = std::make_shared<TypeMap>();
+		callable->bundle_id = bundle_id;
+
+		(*p_v_extern_ccc)->underlying_type = std::make_shared<Type>(Type(callable));
+
+		return evaluate_smooth(igc, Type(callable));
 	}
 
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");

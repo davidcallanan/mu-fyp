@@ -70,6 +70,10 @@ type MyService {};
 	log("Doing something...");	
 };
 
+@Mod:my_printf extern ccc "printf" {
+	:message *u8;
+} -> {};
+
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;
@@ -264,4 +268,8 @@ create() -> { ; this comment works
 	log(mod:name);
 	
 	mod:do_something {};
+	
+	; mod:my_printf {
+	; 	:message "Test\n";
+	; };
 }

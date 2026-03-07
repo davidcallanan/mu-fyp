@@ -586,6 +586,61 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			the_existing->execution_sequence.push_back(v_sym);
 
 			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
+		} else if (ext_case_type == "extension_case_extern_ccc") { // oops this is almost a full duplicate.
+			std::optional<UnderlyingType> existing = toc->type_table.get(target_type);
+
+			if (!existing.has_value()) {
+				fprintf(stderr, "Tried to equip a non-existent type alias with an extat that uses extern. %s\n", target_type.c_str());
+				exit(1);
+			}
+
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&existing.value());
+
+			if (!p_v_map) {
+				fprintf(stderr, "Tried to extend a non-map type with an extern extat. %s\n", target_type.c_str());
+				exit(1);
+			}
+
+			if (!ext_case.contains("trail") || !ext_case["trail"].is_array()) {
+				fprintf(stderr, "No .trail...\n");
+				exit(1);
+			}
+
+			std::vector<std::string> trail;
+
+			for (const auto& seg : ext_case["trail"]) {
+				trail.push_back(seg.get<std::string>());
+			}
+
+			std::shared_ptr<TypeMap> the_existing = *p_v_map;
+
+			for (size_t i = 0; i + 1 < trail.size(); i++) {
+				const std::string segment = ":" + trail[i];
+
+				if (the_existing->sym_inputs.find(segment) == the_existing->sym_inputs.end()) {
+					the_existing->sym_inputs[segment] = std::make_shared<Type>(std::make_shared<TypeMap>());
+				}
+
+				auto p_v_map2 = std::get_if<std::shared_ptr<TypeMap>>(the_existing->sym_inputs[segment].get());
+
+				if (!p_v_map2) {
+					fprintf(stderr, "Nested trail check resulted in non-map %s\n", segment.c_str());
+					exit(1);
+				}
+
+				the_existing = *p_v_map2;
+			}
+
+			std::string leaf_name = ":" + trail.back();
+			Type extern_type = normalize_type(*toc, ext_case["typeval"]);
+			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(extern_type);
+
+			auto v_sym = std::make_shared<InstructionSym>();
+			v_sym->name = leaf_name;
+			v_sym->typeval = the_existing->sym_inputs[leaf_name];
+			the_existing->execution_sequence.push_back(v_sym);
+
+			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
 		} else {
 			fprintf(stderr, "No more cases are implemented at this time %s\n", ext_case_type.c_str());
 			exit(1);

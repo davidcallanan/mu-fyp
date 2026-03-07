@@ -129,3 +129,9 @@ struct TypeExprLogicalOr {
 	std::vector<OpLogical> ops;
 	std::shared_ptr<Type> underlying_type;
 };
+
+struct TypeExternCcc {
+	std::string function_name;
+	std::shared_ptr<TypeMap> call_input_type;
+	std::shared_ptr<Type> underlying_type;
+};

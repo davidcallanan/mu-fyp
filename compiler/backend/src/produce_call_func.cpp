@@ -100,12 +100,12 @@ llvm::Function* produce_call_func(
 	llvm::Value* input_alloca = func_builder.CreateAlloca(input_struct_type, nullptr, "input_struct");
 	func_builder.CreateStore(single_argument, input_alloca);
 
-	{
-		if (!map->call_input_identifier.has_value()) {
-			fprintf(stderr, "must take in input using entire destructure for now.\n");
-			exit(1);
-		}
+	// if (!map->call_input_identifier.has_value()) {
+	// 	fprintf(stderr, "must take in input using entire destructure for now.\n");
+	// 	exit(1);
+	// }
 
+	if (map->call_input_identifier.has_value()) {
 		std::string input_var_name = "m_" + map->call_input_identifier.value();
 
 		ValueSymbolTableEntry input_entry{

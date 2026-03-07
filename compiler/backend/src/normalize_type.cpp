@@ -716,6 +716,35 @@ Type normalize_type(
 		return v_merged;
 	}
 	
+	if (type == "type_extern_ccc") {
+		if (!typeval.contains("function_name")) {
+			fprintf(stderr, ".function_name missing...\n");
+			exit(1);
+		}
+
+		if (!typeval.contains("call_input_type") || typeval["call_input_type"].is_null()) {
+			fprintf(stderr, ".call_input_type missing...\n");
+			exit(1);
+		}
+
+		auto v_extern_ccc = std::make_shared<TypeExternCcc>();
+		
+		v_extern_ccc->function_name = typeval["function_name"].get<std::string>();
+
+		Type normalized = normalize_type(toc, typeval["call_input_type"]);
+		
+		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized);
+
+		if (!p_v_map) {
+			fprintf(stderr, "input to an external map must itself be a map.\n");
+			exit(1);
+		}
+
+		v_extern_ccc->call_input_type = *p_v_map;
+
+		return v_extern_ccc;
+	}
+
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
 	exit(1);
 }

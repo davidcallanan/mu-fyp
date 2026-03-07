@@ -38,6 +38,17 @@ Type get_underlying_type(const Type& type) {
 
 		return get_underlying_type(*v_merged->underlying_type);
 	}
+	
+	if (auto p_v_extern_ccc = std::get_if<std::shared_ptr<TypeExternCcc>>(&type)) {
+		const auto& v_extern_ccc = *p_v_extern_ccc;
+		
+		if (v_extern_ccc->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExternCcc).\n");
+			exit(1);
+		}
+		
+		return get_underlying_type(*v_extern_ccc->underlying_type);
+	}
 
 	if (std::holds_alternative<std::shared_ptr<TypeVoid>>(type)) {
 		return type;
@@ -53,6 +64,10 @@ Type get_underlying_type(const Type& type) {
 
 	if (std::holds_alternative<std::shared_ptr<TypeLogDd>>(type)) {
 		return type_void;
+	}
+	
+	if (std::holds_alternative<std::shared_ptr<TypeExternCcc>>(type)) {
+		return type;
 	}
 
 	if (auto p_v_call_with_sym = std::get_if<std::shared_ptr<TypeCallWithSym>>(&type)) {
