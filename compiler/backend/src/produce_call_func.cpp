@@ -48,6 +48,7 @@ llvm::Function* produce_call_func(
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
 	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(map->call_input_type));
+	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
 	destroy_dummy_igc(dummy1);
 
 	DummyIgc dummy2 = create_dummy_igc(igc);
@@ -55,10 +56,8 @@ llvm::Function* produce_call_func(
 	output_shell.execution_sequence.clear();
 	auto v_map = std::make_shared<TypeMap>(output_shell);
 	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map)); // if this works, what a lifehack
-	destroy_dummy_igc(dummy2);
-
-	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
 	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(output_smooth_probe));
+	destroy_dummy_igc(dummy2);
 
 	llvm::FunctionType* func_type = llvm::FunctionType::get(
 		output_struct_type,

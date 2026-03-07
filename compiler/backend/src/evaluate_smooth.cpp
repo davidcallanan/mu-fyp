@@ -149,7 +149,7 @@ Smooth evaluate_smooth(
 			
 			member_types.push_back(loaded->getType());
 			member_values.push_back(loaded);
-			field_smooths.push_back(evaluate_smooth(map_igc, *sym_type)); // todo: need to make sure smooths aren't evaluated for this elsewhere in the codebase.
+			field_smooths.push_back(llvm_to_smooth(map_igc, *sym_type, loaded));
 		}
 		
 		llvm::StructType* struct_type = llvm::StructType::get(igc.context, member_types);
