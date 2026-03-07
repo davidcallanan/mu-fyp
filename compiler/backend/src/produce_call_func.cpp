@@ -10,7 +10,6 @@
 #include "t_smooth.hpp"
 #include "t_bundles.hpp"
 #include "evaluate_smooth.hpp"
-#include "process_map_body.hpp"
 #include "create_value_symbol_table.hpp"
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
@@ -119,7 +118,6 @@ llvm::Function* produce_call_func(
 		new_value_table->set(input_var_name, input_entry);
 	}
 
-	process_map_body(enhanced_igc, *map->call_output_type);
 	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
 	func_builder.CreateRet(llvm_value(output_smooth));
 
