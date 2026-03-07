@@ -6,9 +6,15 @@ add comptime llvm/c abi [as a hardcoded ct variable, no comptime variables for n
 when using C abi, just extract values from struct in order probably
 reorganize evluate_structval.cpp
 
-today: check singletonish optimization + dynamic sym call + callable map
-tomoro: callable map respective extat, plus actual call_with_map
-Sunday: start work on extern linking.
+today: callable map extats + @Mod + start work on extern linking.
+Sunday: finish extern linking.
+Monday: start on optimization for single module instance.
+Tuesday: finish optimization.
+Wednesday: Bencharmking.
+Thursday: Finish benchmarking.
+Friday: Synthesize everything.
+Satruday: Submit.
+optional: positional varaibles just to make function call loook nicer.
 
 MAIN GOALS:
 add module system

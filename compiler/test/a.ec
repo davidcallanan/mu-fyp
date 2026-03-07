@@ -58,6 +58,12 @@ type MyService {};
 
 @MyService:name "My Fantastic Service";
 
+; @MyService:print_foo input {
+; 	:foo u64;
+; } -> {
+; 	log_d(input:foo);
+; };
+
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;
@@ -225,5 +231,19 @@ create() -> { ; this comment works
 	
 	actually_callable {
 		:foo 123;
+	};
+	
+	syntactically_shorter := input {
+		:foo u64;
+	} -> {
+		log_d(input:foo);
+	};
+	
+	syntactically_shorter {
+		:foo 456;
+	};
+	
+	syntactically_shorter {
+		:foo 567;
 	};
 }
