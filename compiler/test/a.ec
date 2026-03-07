@@ -58,11 +58,11 @@ type MyService {};
 
 @MyService:name "My Fantastic Service";
 
-; @MyService:print_foo input {
-; 	:foo u64;
-; } -> {
-; 	log_d(input:foo);
-; };
+@MyService:print_foo input {
+	:foo u64;
+} -> {
+	log_d(input:foo);
+};
 
 create() -> { ; this comment works
 	test := 10;
@@ -245,5 +245,13 @@ create() -> { ; this comment works
 	
 	syntactically_shorter {
 		:foo 567;
+	};
+	
+	x := MyService;
+	
+	log(x:name);
+	
+	x:print_foo {
+		:foo 678;
 	};
 }

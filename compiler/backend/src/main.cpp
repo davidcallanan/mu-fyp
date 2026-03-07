@@ -521,7 +521,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			std::shared_ptr<TypeMap> the_existing = *p_v_map;
 			
 			for (size_t i = 0; i + 1 < trail.size(); i++) {
-				const std::string& segment = trail[i];
+				const std::string segment = ":" + trail[i];
 				
 				if (the_existing->sym_inputs.find(segment) == the_existing->sym_inputs.end()) {
 					the_existing->sym_inputs[segment] = std::make_shared<Type>(std::make_shared<TypeMap>());
@@ -537,9 +537,15 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 				the_existing = *p_v_map2;
 			}
 
-			const std::string& leaf_name = trail.back();
+			std::string leaf_name = ":" + trail.back();
 			Type sym_type = normalize_type(*toc, ext_case["typeval"]);
 			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(sym_type);
+
+			auto v_sym = std::make_shared<InstructionSym>();
+			v_sym->name = leaf_name;
+			v_sym->typeval = the_existing->sym_inputs[leaf_name];
+			the_existing->execution_sequence.push_back(v_sym);
+
 			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
 		} else {
 			fprintf(stderr, "No more cases are implemented at this time %s\n", ext_case_type.c_str());
