@@ -630,6 +630,7 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
 \begin{itemize}
   \item The prototype compiler does not yet support cross-compilation. This means a Windows executable cannot be built from within a Linux build environment, or vice versa. Thus, everything had to be kept to Linux/WSL for now.
   \item The parser does not produce helpful error messages. Thus, one must either use a pair of eyes to identify syntax errors, or use the bulky \textit{Parser Trace Explorer} to investigate more significant issues.
+  \item With more time, the entire kernel could have been migrated from \textit{GCC} to \textit{Clang}. This would have offered more realistic benchmarks given \textit{Clang}'s superior link-time optimizations over \textit{GCC}. Nonetheless, the effort of such a migration reminds us of the struggles developers face when writing software in C today -- struggles that might be less apparent in a language like \text{Essence C} that treats LLVM IR as a first-class citizen.
 \end{itemize}
 
 \newpage

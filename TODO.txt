@@ -6,6 +6,11 @@ add comptime llvm/c abi [as a hardcoded ct variable, no comptime variables for n
 when using C abi, just extract values from struct in order probably
 reorganize evluate_structval.cpp
 
+missing some language features:
+- sizeof
+- actually making internal module extern
+- return type for extern (need to read the clock!)
+
 todo:
 - turn on llvm optimizations.
 - eject my kernel into this repo (under benchmarks/kernel_c) - switch to llvm/clang linker.
