@@ -5,7 +5,6 @@
 #include "rotten_int_info.hpp"
 #include "rotten_float_info.hpp"
 #include "is_type_singletonish.hpp"
-#include "llvm_to_smooth.hpp"
 #include "llvm_value.hpp"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -74,23 +73,31 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 		
 		auto v_structval = *p_v_structval;
 
-		llvm::Value* value = v_structval->value;
+		if (v_structval->field_smooths.empty()) {
+			// just gonna assume empty maps will match the passed in type.
+			return smooth;
+		}
 
 		unsigned member_idx = 0;
 		
 		std::vector<llvm::Type*> new_member_types;
 		std::vector<llvm::Value*> new_member_values;
+		std::vector<Smooth> converted_field_smooths;
+		std::optional<Smooth> brand_new_leaf = std::nullopt;
 
 		if (true
 			&& v_map->leaf_type.has_value()
 			&& !is_type_singletonish(v_map->leaf_type.value())
 		) {
-			llvm::Value* field = igc.builder.CreateExtractValue(value, member_idx);
-			Smooth happy_field = happy_smooth(igc, llvm_to_smooth(igc, v_map->leaf_type.value(), field), v_map->leaf_type.value());
-			llvm::Value* happy_field_value = llvm_value(happy_field);
+			Smooth field_smooth = v_structval->field_smooths[member_idx];
+			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value());
+			llvm::Value* field_happy_value = llvm_value(field_happy);
+
+			new_member_types.push_back(field_happy_value->getType());
+			new_member_values.push_back(field_happy_value);
+			converted_field_smooths.push_back(field_happy);
 			
-			new_member_types.push_back(happy_field_value->getType());
-			new_member_values.push_back(happy_field_value);
+			brand_new_leaf = field_happy;
 			
 			member_idx++;
 		}
@@ -100,12 +107,13 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 				continue;
 			}
 
-			llvm::Value* field = igc.builder.CreateExtractValue(value, member_idx);
-			Smooth happy_field = happy_smooth(igc, llvm_to_smooth(igc, *sym_type, field), *sym_type);
-			llvm::Value* happy_field_value = llvm_value(happy_field);
+			Smooth field_smooth = v_structval->field_smooths[member_idx];
+			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type);
+			llvm::Value* field_happy_value = llvm_value(field_happy);
 			
-			new_member_types.push_back(happy_field_value->getType());
-			new_member_values.push_back(happy_field_value);
+			new_member_types.push_back(field_happy_value->getType());
+			new_member_values.push_back(field_happy_value);
+			converted_field_smooths.push_back(field_happy);
 			
 			member_idx++;
 		}
@@ -118,12 +126,12 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 		}
 
 		return std::make_shared<SmoothStructval>(SmoothStructval{
-			v_structval->type,
+			underlying, // i used to not like reducing to underlying, but there is no wrapper type in this context, unless we had a TypeHappy
 			fancy_value,
-			v_structval->has_leaf,
-			v_structval->leaf,
+			brand_new_leaf.has_value(),
+			brand_new_leaf,
 			v_structval->call_func,
-			v_structval->field_smooths, // todo: this is wrong and could cause glitches.
+			converted_field_smooths,
 		});
 	}
 
