@@ -132,6 +132,7 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			has_leaf,
 			leaf,
 			produce_call_func(igc, *p_v_map),
+			produce_call_func(igc, *p_v_map, true),
 			field_smooths,
 		});
 	}

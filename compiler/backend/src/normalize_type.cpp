@@ -563,6 +563,7 @@ Type normalize_type(
 		auto v_call_with_dynamic = std::make_shared<TypeCallWithDynamic>();
 		v_call_with_dynamic->target = std::make_shared<Type>(target);
 		v_call_with_dynamic->call_data = std::make_shared<Type>(call_data);
+		v_call_with_dynamic->is_flag_alwaysinline = typeval.value("is_flag_alwaysinline", false);
 
 		return v_call_with_dynamic;
 	}

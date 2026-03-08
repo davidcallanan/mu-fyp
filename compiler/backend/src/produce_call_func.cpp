@@ -18,7 +18,8 @@
 
 llvm::Function* produce_call_func(
 	IrGenCtx& igc,
-	std::shared_ptr<TypeMap> map
+	std::shared_ptr<TypeMap> map,
+	bool is_alwaysinline
 ) {
 	if (false
 		|| map->call_input_type == nullptr
@@ -42,7 +43,15 @@ llvm::Function* produce_call_func(
 	}
 	
 	if ((*p_bundle_map)->call_func != nullptr) {
+		if (is_alwaysinline) {
+			return (*p_bundle_map)->call_func_alwaysinline;
+		}
+		
 		return (*p_bundle_map)->call_func;
+	}
+	
+	if (is_alwaysinline) {
+		return nullptr;
 	}
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
@@ -122,6 +131,7 @@ llvm::Function* produce_call_func(
 	func_builder.CreateRet(llvm_value(output_smooth));
 
 	(*p_bundle_map)->call_func = func;
+	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
 	return func;
 }

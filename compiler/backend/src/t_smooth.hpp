@@ -13,6 +13,7 @@ struct SmoothStructval {
 	bool has_leaf;
 	std::optional<Smooth> leaf;
 	llvm::Function* call_func;
+	llvm::Function* call_func_alwaysinline;
 	std::vector<Smooth> field_smooths;
 };
 

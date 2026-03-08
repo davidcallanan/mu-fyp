@@ -30,6 +30,8 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
 			nullptr,
+			nullptr,
+			{}, // todo
 		});
 	}
 
@@ -52,6 +54,8 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
 			nullptr,
+			nullptr,
+			{}, // todo
 		});
 	}
 
@@ -74,6 +78,8 @@ std::shared_ptr<SmoothStructval> structwrap(IrGenCtx& igc, const Smooth& smooth)
 				igc.builder.CreateExtractValue(struct_value, 0),
 			}),
 			nullptr,
+			nullptr,
+			{}, // todo
 		});
 	}
 

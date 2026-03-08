@@ -5,4 +5,5 @@
 
 struct BundleMap {
 	llvm::Function* call_func;
+	llvm::Function* call_func_alwaysinline;
 };

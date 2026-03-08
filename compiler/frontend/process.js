@@ -51,6 +51,7 @@ const KW_ELSE = rule("KW_ELSE", withCarefulSkippers("else"));
 const KW_BREAK = rule("KW_BREAK", withCarefulSkippers("break"));
 const KW_EXTERN = rule("KW_EXTERN", withCarefulSkippers("extern"));
 const KW_CCC = rule("KW_CCC", withCarefulSkippers("ccc"));
+const KW_ALWAYSINLINE = rule("KW_ALWAYSINLINE", withCarefulSkippers("alwaysinline"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -339,7 +340,11 @@ const expr27 = rule("expr27", mapData(join(
 		mapData(SYMBOL_BARE, (data) => ({ mode: "sym", data })),
 		// no way , I forgot I had written a lookAhead function.
 		// this has saved me.
-		mapData(join(lookAhead(BAREBONES_AHEAD_with_debug), expr25), (data) => ({ mode: "dynamic", data: data[1] })),
+		mapData(join(lookAhead(BAREBONES_AHEAD_with_debug), opt(KW_ALWAYSINLINE), expr25), (data) => ({
+			mode: "dynamic",
+			is_flag_alwaysinline: data[1] !== undefined,
+			data: data[2],
+		})),
 	)),
 ), (data) => {
 	let result = data[0];
@@ -356,6 +361,7 @@ const expr27 = rule("expr27", mapData(join(
 				type: "expr_call_with_dynamic",
 				target: result,
 				call_data: item.data,
+				is_flag_alwaysinline: item.is_flag_alwaysinline,
 			};
 		}
 	}

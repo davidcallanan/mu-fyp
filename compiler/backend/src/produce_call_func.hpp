@@ -6,5 +6,6 @@
 
 llvm::Function* produce_call_func(
 	IrGenCtx& igc,
-	std::shared_ptr<TypeMap> map
+	std::shared_ptr<TypeMap> map,
+	bool is_alwaysinline = false
 );

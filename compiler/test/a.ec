@@ -281,7 +281,7 @@ create() -> { ; this comment works
 		:0 "\"Test\" \\ \\\n";
 	};
 	
-	; mod:my_printf alwaysinline {
-	; 	:0 "Inlined!\n";	
-	; };
+	mod:my_printf alwaysinline {
+		:0 "Inlined!\n";	
+	};
 }

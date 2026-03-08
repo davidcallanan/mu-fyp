@@ -131,6 +131,7 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 			brand_new_leaf.has_value(),
 			brand_new_leaf,
 			v_structval->call_func,
+			v_structval->call_func_alwaysinline,
 			converted_field_smooths,
 		});
 	}

@@ -103,6 +103,7 @@ Smooth leaf_agnostically_translate(IrGenCtx& igc, Smooth smooth, std::shared_ptr
 		translated_leaf.has_value(),
 		translated_leaf,
 		produce_call_func(igc, target_map),
+		produce_call_func(igc, target_map, true),
 		brand_new_smooths,
 	});
 }

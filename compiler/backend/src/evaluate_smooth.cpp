@@ -94,6 +94,8 @@ Smooth evaluate_smooth(
 		const TypeMap& map = **p_v_map;
 		
 		llvm::Function* call_func = produce_call_func(igc, *p_v_map);
+
+		llvm::Function* call_func_alwaysinline = produce_call_func(igc, *p_v_map, true);
 		
 		std::shared_ptr<ValueSymbolTable> map_value_table = std::make_shared<ValueSymbolTable>(
 			create_value_symbol_table(igc.value_table.get())
@@ -174,6 +176,7 @@ Smooth evaluate_smooth(
 			determine_has_leaf(type),
 			leaf,
 			call_func,
+			call_func_alwaysinline,
 			field_smooths,
 		});
 	}
@@ -533,7 +536,15 @@ Smooth evaluate_smooth(
 			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
 			llvm::Value* input_payload = llvm_value(translated);
 			
-			llvm::Value* output_value = igc.builder.CreateCall((*actual_target)->call_func, { input_payload });
+			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && (*actual_target)->call_func_alwaysinline != nullptr)
+				? (*actual_target)->call_func_alwaysinline
+				: (*actual_target)->call_func;
+
+			llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, { input_payload });
+
+			if (v_call_with_dynamic->is_flag_alwaysinline) {
+				output_value->addFnAttr(llvm::Attribute::AlwaysInline);
+			}
 
 			Type output_type = Type((*actual_target_type)->call_output_type);
 
@@ -543,6 +554,7 @@ Smooth evaluate_smooth(
 				false,
 				std::nullopt, // this is problematic.
 				nullptr, // this line is problematic.
+				nullptr,
 				{}, // this all needs to be sorted properly.
 			});
 
@@ -897,66 +909,78 @@ Smooth evaluate_smooth(
 		);
 
 		static int next_extern_ccc_id = 0;
-		
-		std::string wrapper_name = "__ec_extern_ccc_" + std::to_string(next_extern_ccc_id++);
 
-		llvm::Function* wrapper_function = llvm::Function::Create(
-			wrapper_function_type,
-			llvm::Function::PrivateLinkage,
-			wrapper_name,
-			igc.module
-		);
+		auto produce_wrapper_func = [&](bool is_alwaysinline) -> llvm::Function* {
+			std::string wrapper_name = "__ec_extern_ccc_" + std::to_string(next_extern_ccc_id++);
 
-		wrapper_function->addFnAttr(llvm::Attribute::AlwaysInline);
+			llvm::Function* wrapper_function = llvm::Function::Create(
+				wrapper_function_type,
+				llvm::Function::PrivateLinkage,
+				wrapper_name,
+				igc.module
+			);
 
-		llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(igc.context, "entry", wrapper_function);
-		llvm::IRBuilder<> wrapper_builder(igc.context);
-		wrapper_builder.SetInsertPoint(wrapper_entry);
+			wrapper_function->addFnAttr(llvm::Attribute::AlwaysInline);
 
-		llvm::Argument* lonely_input_argument = wrapper_function->getArg(0);
-		lonely_input_argument->setName("input_struct");
+			llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(igc.context, "entry", wrapper_function);
+			llvm::IRBuilder<> wrapper_builder(igc.context);
+			wrapper_builder.SetInsertPoint(wrapper_entry);
 
-		std::vector<llvm::Value*> arg_extraction;
-		
-		unsigned field_index = 0;
+			llvm::Argument* lonely_input_argument = wrapper_function->getArg(0);
+			lonely_input_argument->setName("input_struct");
 
-		IrGenCtx igc_actual_call = {
-			igc.context,
-			igc.module,
-			wrapper_builder,
-			std::make_shared<ValueSymbolTable>(create_value_symbol_table()),
-			igc.puts_func,
-			igc.log_data_func,
-			igc.log_data_deref_func,
-			nullptr,
-			igc.toc,
-		};
+			std::vector<llvm::Value*> arg_extraction;
 
-		for (const auto& [sym_name, p_sym_type] : v_extern_ccc.call_input_type->sym_inputs) {
-			if (is_type_singletonish(*p_sym_type)) {
-				continue;
+			unsigned field_index = 0;
+
+			IrGenCtx igc_actual_call = {
+				igc.context,
+				igc.module,
+				wrapper_builder,
+				std::make_shared<ValueSymbolTable>(create_value_symbol_table()),
+				igc.puts_func,
+				igc.log_data_func,
+				igc.log_data_deref_func,
+				nullptr,
+				igc.toc,
+			};
+
+			for (const auto& [sym_name, p_sym_type] : v_extern_ccc.call_input_type->sym_inputs) {
+				if (is_type_singletonish(*p_sym_type)) {
+					continue;
+				}
+
+				llvm::Value* extracted = wrapper_builder.CreateExtractValue(lonely_input_argument, field_index);
+
+				Smooth field_smooth = llvm_to_smooth(igc_actual_call, *p_sym_type, extracted);
+				Smooth wrapped_smooth = structwrap(igc_actual_call, field_smooth);
+				Smooth leaf_smooth = extract_leaf(igc_actual_call, wrapped_smooth);
+
+				arg_extraction.push_back(llvm_value(leaf_smooth));
+
+				field_index++;
+			}
+			
+			llvm::CallInst* call_to_extern = wrapper_builder.CreateCall(the_extern_callee, arg_extraction);
+
+			if (is_alwaysinline) {
+				call_to_extern->addFnAttr(llvm::Attribute::AlwaysInline);
 			}
 
-			llvm::Value* extracted = wrapper_builder.CreateExtractValue(lonely_input_argument, field_index);
-
-			Smooth field_smooth = llvm_to_smooth(igc_actual_call, *p_sym_type, extracted);
-			Smooth wrapped_smooth = structwrap(igc_actual_call, field_smooth);
-			Smooth leaf_smooth = extract_leaf(igc_actual_call, wrapped_smooth);
-
-			arg_extraction.push_back(llvm_value(leaf_smooth));
+			llvm::Value* final_output = llvm::UndefValue::get(output_struct_type);
 			
-			field_index++;
-		}
+			wrapper_builder.CreateRet(final_output);
 
-		wrapper_builder.CreateCall(the_extern_callee, arg_extraction);
+			return wrapper_function;
+		};
 
-		llvm::Value* final_output = llvm::UndefValue::get(output_struct_type);
-		
-		wrapper_builder.CreateRet(final_output);
+		llvm::Function* wrapper_traditional = produce_wrapper_func(false);
+		llvm::Function* wrapper_alwaysinline = produce_wrapper_func(true);
 
 		auto bundle_map = std::make_shared<BundleMap>();
 		
-		bundle_map->call_func = wrapper_function;
+		bundle_map->call_func = wrapper_traditional;
+		bundle_map->call_func_alwaysinline = wrapper_alwaysinline;
 		
 		uint64_t bundle_id = igc.toc->bundle_registry.install(Bundle(bundle_map));
 

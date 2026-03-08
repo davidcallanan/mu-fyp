@@ -92,6 +92,7 @@ struct TypeCallWithDynamic {
 	std::shared_ptr<Type> target;
 	std::shared_ptr<Type> call_data;
 	std::shared_ptr<Type> underlying_type;
+	bool is_flag_alwaysinline;
 };
 
 struct OpNumeric {
