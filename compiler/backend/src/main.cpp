@@ -34,6 +34,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Passes/PassBuilder.h"
 
 void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data) {
 	// the amount of boilerplate is crazy lol
@@ -431,16 +432,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	printf("Module generation went fantastically.\n");
 	
 	std::error_code error_code;
-	llvm::raw_fd_ostream ir_file("/app/out/hello.ll", error_code, llvm::sys::fs::OF_None);
-	
-	if (error_code) {
-		fprintf(stderr, "Opening file error: %s\n", error_code.message().c_str());
-		exit(1);
-	}
-	
-	module.print(ir_file, nullptr);
-	ir_file.close();
-	
+
 	llvm::InitializeAllTargetInfos();
 	llvm::InitializeAllTargets();
 	llvm::InitializeAllTargetMCs();
@@ -466,6 +458,36 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	);
 	
 	module.setDataLayout(target_machine->createDataLayout());
+	
+	{
+		// this optimization pass specifically uses LTO PreLink because it doesn't destroy relevant information that would be useful in the later LTO stage.
+		
+		llvm::LoopAnalysisManager lam;
+		llvm::FunctionAnalysisManager fam;
+		llvm::CGSCCAnalysisManager cgam;
+		llvm::ModuleAnalysisManager mam;
+	
+		llvm::PassBuilder pb(target_machine);
+		pb.registerModuleAnalyses(mam);
+		pb.registerCGSCCAnalyses(cgam);
+		pb.registerFunctionAnalyses(fam);
+		pb.registerLoopAnalyses(lam);
+		pb.crossRegisterProxies(lam, fam, cgam, mam);
+	
+		llvm::ModulePassManager mpm = pb.buildLTOPreLinkDefaultPipeline(llvm::OptimizationLevel::O1);
+		
+		mpm.run(module, mam);
+	}
+	
+	llvm::raw_fd_ostream ir_file("/app/out/hello.ll", error_code, llvm::sys::fs::OF_None);
+	
+	if (error_code) {
+		fprintf(stderr, "Opening file error: %s\n", error_code.message().c_str());
+		exit(1);
+	}
+	
+	module.print(ir_file, nullptr);
+	ir_file.close();
 	
 	llvm::raw_fd_ostream obj_file("/app/out/hello.o", error_code, llvm::sys::fs::OF_None);
 	

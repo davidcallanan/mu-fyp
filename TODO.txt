@@ -6,6 +6,13 @@ add comptime llvm/c abi [as a hardcoded ct variable, no comptime variables for n
 when using C abi, just extract values from struct in order probably
 reorganize evluate_structval.cpp
 
+todo:
+- turn on llvm optimizations.
+- eject my kernel into this repo (under benchmarks/kernel_c) - switch to llvm/clang linker.
+- add benchmarking to the "C" version - this will be two or three functions going over ports.
+- make two duplicates of this code (under benchmarks/kernel_ec_noopt and bechmarks/kernel_ec_withopt).
+- maybe instead of duplicates i can have some conditional files, and my compilation process will choose which ones.
+
 today: positional varaibles just to make function call loook nicer. + start on optimizations (add alwaysinline flag at callsites `func alwaysinline {...value...}`).
 Monday: start on optimization for single module instance.
 Tuesday: finish optimization.
