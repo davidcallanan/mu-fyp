@@ -37,6 +37,7 @@
 #include "happy_smooth.hpp"
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
+#include "leaf_agnostically_translate.hpp"
 
 #include "llvm_flexi_type.hpp"
 #include "llvm/IR/Attributes.h"
@@ -183,7 +184,15 @@ Smooth evaluate_smooth(
 		if (!pointer.hardval.has_value()) {
 			// fprintf(stderr, "Evaluation cannot consist of a pointer that has no definitive value, for now (in future, would make sense to deal with pointer of variable, etc.)\n");
 			// exit(1);
-			return smooth_void(igc, type);
+			
+			llvm::Value* void_value = smooth_void(igc, type)->value;
+			llvm::Type* flexi_type = llvm::PointerType::get(igc.context, 0);
+			
+			return std::make_shared<SmoothVoidPointer>(SmoothVoidPointer{
+				type,
+				flexi_type,
+				void_value,
+			});
 		}
 		
 		// might be thinking when on earth would a pointer be assigned to a hardval,
@@ -511,7 +520,8 @@ Smooth evaluate_smooth(
 				exit(1);
 			}
 
-			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&(*actual_target)->type);
+			auto actual_target_underlying = get_underlying_type((*actual_target)->type);
+			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&actual_target_underlying);
 			
 			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr) {
 				fprintf(stderr, "somehow target had no appropriate map information.\n");
@@ -520,7 +530,8 @@ Smooth evaluate_smooth(
 
 			Smooth wrapped_up = structwrap(igc, data_smooth);
 			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
-			llvm::Value* input_payload = llvm_value(upgraded);
+			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+			llvm::Value* input_payload = llvm_value(translated);
 			
 			llvm::Value* output_value = igc.builder.CreateCall((*actual_target)->call_func, { input_payload });
 
@@ -909,10 +920,30 @@ Smooth evaluate_smooth(
 		
 		unsigned field_index = 0;
 
-		for (const auto& sym_name : c_abi_parameter_names) {
+		IrGenCtx igc_actual_call = {
+			igc.context,
+			igc.module,
+			wrapper_builder,
+			std::make_shared<ValueSymbolTable>(create_value_symbol_table()),
+			igc.puts_func,
+			igc.log_data_func,
+			igc.log_data_deref_func,
+			nullptr,
+			igc.toc,
+		};
+
+		for (const auto& [sym_name, p_sym_type] : v_extern_ccc.call_input_type->sym_inputs) {
+			if (is_type_singletonish(*p_sym_type)) {
+				continue;
+			}
+
 			llvm::Value* extracted = wrapper_builder.CreateExtractValue(lonely_input_argument, field_index);
-			
-			arg_extraction.push_back(extracted);
+
+			Smooth field_smooth = llvm_to_smooth(igc_actual_call, *p_sym_type, extracted);
+			Smooth wrapped_smooth = structwrap(igc_actual_call, field_smooth);
+			Smooth leaf_smooth = extract_leaf(igc_actual_call, wrapped_smooth);
+
+			arg_extraction.push_back(llvm_value(leaf_smooth));
 			
 			field_index++;
 		}

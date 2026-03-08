@@ -11,6 +11,7 @@ struct SmoothFloat;
 struct SmoothVoid;
 struct SmoothVoidInt;
 struct SmoothVoidFloat;
+struct SmoothVoidPointer;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -22,5 +23,6 @@ using Smooth = std::variant<
 	std::shared_ptr<SmoothFloat>,
 	std::shared_ptr<SmoothVoid>,
 	std::shared_ptr<SmoothVoidInt>,
-	std::shared_ptr<SmoothVoidFloat>
+	std::shared_ptr<SmoothVoidFloat>,
+	std::shared_ptr<SmoothVoidPointer>
 >;

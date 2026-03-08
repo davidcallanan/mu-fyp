@@ -34,6 +34,10 @@ llvm::Value* llvm_value(const Smooth& smooth) {
 		return (*p_v_void_float)->value;
 	}
 
+	if (auto p_v_void_pointer = std::get_if<std::shared_ptr<SmoothVoidPointer>>(&smooth)) {
+		return (*p_v_void_pointer)->value;
+	}
+
 	fprintf(stderr, "This kind of a smooth does not have llvm value associated with it.");
 	exit(1);
 }

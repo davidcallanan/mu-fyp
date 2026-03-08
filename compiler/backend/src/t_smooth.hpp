@@ -52,3 +52,9 @@ struct SmoothVoidFloat {
 	llvm::Type* flexi_type;
 	llvm::Value* value;
 };
+
+struct SmoothVoidPointer {
+	Type type;
+	llvm::Type* flexi_type;
+	llvm::Value* value;
+};

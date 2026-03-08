@@ -269,7 +269,7 @@ create() -> { ; this comment works
 	
 	mod:do_something {};
 	
-	; mod:my_printf {
-	; 	:message "Test\n";
-	; };
+	mod:my_printf {
+		:message "Test\n";
+	};
 }

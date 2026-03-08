@@ -73,6 +73,16 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 	}
 
 	if (std::get_if<std::shared_ptr<TypePointer>>(&underlying)) {
+		if (value->getType()->isStructTy()) { // nice little hack here.	
+			llvm::Type* flexi_type = llvm::PointerType::get(value->getContext(), 0); // 0 is address space (I think this means CPU).
+		
+			return std::make_shared<SmoothVoidPointer>(SmoothVoidPointer{
+				type,
+				flexi_type,
+				value,
+			});
+		}
+
 		return std::make_shared<SmoothPointer>(SmoothPointer{
 			type,
 			value,
