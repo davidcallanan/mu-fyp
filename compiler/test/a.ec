@@ -70,9 +70,11 @@ type MyService {};
 	log("Doing something...");	
 };
 
-@Mod:my_printf extern ccc "printf" {
-	:message *u8;
-} -> {};
+; @Mod:my_printf extern ccc "printf" {
+; 	:message *u8;
+; } -> {};
+
+@Mod:my_printf extern ccc "printf" (*u8) -> {};
 
 create() -> { ; this comment works
 	test := 10;
@@ -269,7 +271,17 @@ create() -> { ; this comment works
 	
 	mod:do_something {};
 	
+	; mod:my_printf {
+	; 	:message "Test\n";
+	; };
+	
+	mod:my_printf("\"Test\" \\ \\\n");
+	
 	mod:my_printf {
-		:message "Test\n";
+		:0 "\"Test\" \\ \\\n";
 	};
+	
+	; mod:my_printf alwaysinline {
+	; 	:0 "Inlined!\n";	
+	; };
 }

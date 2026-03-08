@@ -12,6 +12,10 @@ import { error_internal } from "./uoe/error_internal.js";
 
 // LEXICAL TOKENS
 
+const deal_with_escapes = (raw) => raw.replace(/\\(.)/g, (_, char) => (
+	char === "n" ? "\n" : char
+));
+
 const WHITESPACE = rule("WHITESPACE", /^\s+/);
 const REALSPACE = rule("REALSPACE", /^[ \t]+/);
 const SINGLELINE_COMMENT = rule("SINGLELINE_COMMENT", mapData(/^\s*;(.*?)(\n|$)\s*/, data => data.groups[0]));
@@ -65,9 +69,9 @@ const SEMI = rule("SEMI", withRightSkippers(SINGLELINE_COMMENT));
 const TYPE_IDENT = rule("TYPE_IDENT", withCarefulSkippers(mapData(/^(?:(?:([a-z]+(?:_[a-z0-9]+)*::)*[A-Z][a-zA-Z0-9]*)|(?:i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128|bool)(?![a-zA-Z0-9_]))/, data => data.groups.all))); // negative lookahead is required because there are no token boundaries in this parsing system.
 const TYPES_IDENT = rule("TYPES_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all)));
 const MOD_IDENT = rule("MOD_IDENT", withCarefulSkippers(mapData(/^(?:([a-z]+(?:_[a-z0-9]+)*::)*(?:[a-z]+(?:_[a-z0-9]+)*))/, data => data.groups.all))); // identical to TYPES_IDENT for now.
-const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
-const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all)));
-const SYMBOL_TIGHT = rule("SYMBOL_TIGHT", mapData(/^:([a-zA-Z_][a-zA-Z0-9_]*)/, data => data.groups.all));
+const SYMBOL = rule("SYMBOL", withCarefulSkippers(mapData(/^:([a-zA-Z_0-9][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const SYMBOL_BARE = rule("SYMBOL_BARE", withBareboneSkippers(mapData(/^:([a-zA-Z_0-9][a-zA-Z0-9_]*)/, data => data.groups.all)));
+const SYMBOL_TIGHT = rule("SYMBOL_TIGHT", mapData(/^:([a-zA-Z_0-9][a-zA-Z0-9_]*)/, data => data.groups.all));
 const SYMBOL_GRAND = rule("SYMBOL_GRAND", withCarefulSkippers(mapData(
 	multi(SYMBOL_TIGHT),
 	(data) => data.map(s => s.substring(1)),
@@ -81,8 +85,8 @@ const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^[0-9]+/, data => B
 const INTEGER_BB = rule("INTEGER_BB", withBareboneSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
 const FLOAT = rule("FLOAT", withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
 const FLOAT_BB = rule("FLOAT_BB", withBareboneSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
-const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => data.groups[0])));
-const STRING_BB = rule("STRING_BB", withBareboneSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/,  data => data.groups[0])));
+const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => deal_with_escapes(data.groups[0]))));
+const STRING_BB = rule("STRING_BB", withBareboneSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => deal_with_escapes(data.groups[0]))));
 const PLUS = rule("PLUS", withCarefulSkippers("+"));
 const MINUS = rule("MINUS", withCarefulSkippers("-"));
 const DIV = rule("DIV", withCarefulSkippers("/"));
@@ -832,24 +836,114 @@ const constraint_enum_braced = rule("constraint_enum_braced", or(
 	constraint_enum_braced_singleline,
 ));
 
-const constraint_map_tupled = rule("constraint_map_tupled", mapData(
+const transform_to_braced = (positional_values) => {
+	const instructions = positional_values.map((value, i) => ({
+		type: "map_entry_sym",
+		name: `:${i}`,
+		typeval: value,
+	}));
+
+	const sym_inputs = Object.fromEntries(
+		instructions.map(instr => [instr.name, {}]),
+	);
+
+	return {
+		type: "type_map",
+		sym_inputs,
+		instructions,
+	};
+};
+
+const constraint_map_tupled_multiline = rule("constraint_map_tupled_multiline", mapData(
 	join(
 		LPAREN,
+		MANDATORY_NEWLINE,
+		opt_multi(
+			mapData(
+				join(typeval, SEMI),
+				(data) => data[0],
+			),
+		),
 		RPAREN,
 	),
-	(data) => ({
-		type: "type_map",
-	}),
+	(data) => transform_to_braced(data[2]),
 ));
 
-const constraint_map_tupled_bb = rule("constraint_map_tupled_bb", mapData(
+const constraint_map_tupled_singleline = rule("constraint_map_tupled_singleline", mapData(
+	join(
+		LPAREN,
+		opt(
+			join(
+				typeval,
+				opt_multi(join(COMMA, typeval)),
+			),
+		),
+		RPAREN,
+	),
+	(data) => {
+		const positional_values = [];
+
+		if (data[1] !== undefined) {
+			positional_values.push(data[1][0]);
+
+			for (const [, value] of data[1][1]) {
+				positional_values.push(value);
+			}
+		}
+
+		return transform_to_braced(positional_values);
+	},
+));
+
+const constraint_map_tupled_multiline_bb = rule("constraint_map_tupled_multiline_bb", mapData(
 	join(
 		LPAREN_BB,
-		RPAREN
+		MANDATORY_NEWLINE,
+		opt_multi(
+			mapData(
+				join(typeval, SEMI),
+				(data) => data[0],
+			),
+		),
+		RPAREN,
 	),
-	(data) => ({
-		type: "type_map",
-	}),
+	(data) => transform_to_braced(data[2]),
+));
+
+const constraint_map_tupled_singleline_bb = rule("constraint_map_tupled_singleline_bb", mapData(
+	join(
+		LPAREN_BB,
+		opt(
+			join(
+				typeval,
+				opt_multi(join(COMMA, typeval)),
+			),
+		),
+		RPAREN,
+	),
+	(data) => {
+		const positional_values = [];
+
+		if (data[1] !== undefined) {
+			positional_values.push(data[1][0]);
+
+			for (const [, value] of data[1][1]) {
+				positional_values.push(value);
+			}
+		}
+
+		return transform_to_braced(positional_values);
+	},
+));
+
+const constraint_map_tupled = rule("constraint_map_tupled", or(
+	constraint_map_tupled_multiline,
+	constraint_map_tupled_singleline,
+));
+
+const constraint_map_tupled_bb = rule("constraint_map_tupled_bb", or(
+	constraint_map_tupled_multiline_bb,
+	constraint_map_tupled_singleline_bb,
 ));
 
 const constraint_map = rule("constraint_map", or(
