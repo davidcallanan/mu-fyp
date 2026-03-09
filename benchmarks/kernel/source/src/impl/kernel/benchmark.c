@@ -7,11 +7,11 @@
 #define BENCHMARK_CLOCK_INTERVAL 100
 
 static void benchmark_wait_for_boundary(struct Mod* mod) {
-	uint8_t orig = mod->port_manager->rtc_seconds(mod->port_manager);
+	uint8_t orig = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	uint8_t next = orig;
 
 	while (next == orig) {
-		next = mod->port_manager->rtc_seconds(mod->port_manager);
+		next = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	}
 }
 
@@ -36,15 +36,15 @@ static void benchmark_pit(struct Mod* mod) {
 	benchmark_head("PIT");
 	benchmark_wait_for_boundary(mod);
 	
-	uint8_t start = mod->port_manager->rtc_seconds(mod->port_manager);
+	uint8_t start = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	uint32_t count = 0;
 
 	while (1) {
-		mod->port_manager->pit_read(mod->port_manager);
+		mod->port_manager->vtable->pit_read(mod->port_manager);
 		count++;
 
 		if (count % BENCHMARK_CLOCK_INTERVAL == 0) {
-			uint8_t seconds = mod->port_manager->rtc_seconds(mod->port_manager);
+			uint8_t seconds = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 			
 			if ((uint8_t)(seconds - start) >= BENCHMARK_DURATION_SECONDS) {
 				break;
@@ -59,15 +59,15 @@ static void benchmark_rtc(struct Mod* mod) {
 	benchmark_head("RTC");
 	benchmark_wait_for_boundary(mod);
 	
-	uint8_t start = mod->port_manager->rtc_seconds(mod->port_manager);
+	uint8_t start = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	uint32_t count = 0;
 
 	while (1) {
-		mod->port_manager->rtc_seconds(mod->port_manager);
+		mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 		count++;
 
 		if (count % BENCHMARK_CLOCK_INTERVAL == 0) {
-			uint8_t seconds = mod->port_manager->rtc_seconds(mod->port_manager);
+			uint8_t seconds = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 			
 			if ((uint8_t)(seconds - start) >= BENCHMARK_DURATION_SECONDS) {
 				break;
@@ -82,15 +82,15 @@ static void benchmark_io_wait(struct Mod* mod) {
 	benchmark_head("IO Wait");
 	benchmark_wait_for_boundary(mod);
 	
-	uint8_t start = mod->port_manager->rtc_seconds(mod->port_manager);
+	uint8_t start = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	uint32_t count = 0;
 
 	while (1) {
-		mod->port_manager->io_wait(mod->port_manager);
+		mod->port_manager->vtable->io_wait(mod->port_manager);
 		count++;
 
 		if (count % BENCHMARK_CLOCK_INTERVAL == 0) {
-			uint8_t seconds = mod->port_manager->rtc_seconds(mod->port_manager);
+			uint8_t seconds = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 			
 			if ((uint8_t)(seconds - start) >= BENCHMARK_DURATION_SECONDS) {
 				break;
@@ -105,15 +105,15 @@ static void benchmark_vga_cursor(struct Mod* mod) {
 	benchmark_head("VGA Cursor");
 	benchmark_wait_for_boundary(mod);
 	
-	uint8_t start = mod->port_manager->rtc_seconds(mod->port_manager);
+	uint8_t start = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 	uint32_t count = 0;
 
 	while (1) {
-		mod->port_manager->vga_cursor_update(mod->port_manager, 0);
+		mod->port_manager->vtable->vga_cursor_update(mod->port_manager, 0);
 		count++;
 
 		if (count % BENCHMARK_CLOCK_INTERVAL == 0) {
-			uint8_t seconds = mod->port_manager->rtc_seconds(mod->port_manager);
+			uint8_t seconds = mod->port_manager->vtable->rtc_seconds(mod->port_manager);
 			if ((uint8_t)(seconds - start) >= BENCHMARK_DURATION_SECONDS) {
 				break;
 			}

@@ -2,10 +2,13 @@
 
 #include <stdint.h>
 
-struct PortController {
-	// this simulates a vtable.
+struct PortControllerVtable {
 	uint8_t (*inb)(uint16_t port);
 	void (*outb)(uint16_t port, uint8_t data);
 };
 
-struct PortController port_controller__create();
+struct PortController {
+	struct PortControllerVtable* vtable;
+};
+
+struct PortController* port_controller__create();

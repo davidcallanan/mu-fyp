@@ -3,7 +3,7 @@
 #include "kernel/heap.h"
 
 struct Mod* mod__create() {
-	struct Mod* this = dummy_alloc(sizeof(struct Mod));
+	struct Mod* this = heap_alloc(sizeof(struct Mod));
 	
 	this->port_manager = port_manager__create();
 	

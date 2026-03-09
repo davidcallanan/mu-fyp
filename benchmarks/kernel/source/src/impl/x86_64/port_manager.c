@@ -8,9 +8,9 @@
 #define PORT_PIT_COMMAND 0x43
 
 static void pit_read(struct PortManager* this) {
-	this->port_controller->outb(PORT_PIT_COMMAND, 0x00);
-	this->port_controller->inb(PORT_PIT_CHANNEL0);
-	this->port_controller->inb(PORT_PIT_CHANNEL0);
+	this->port_controller->vtable->outb(PORT_PIT_COMMAND, 0x00);
+	this->port_controller->vtable->inb(PORT_PIT_CHANNEL0);
+	this->port_controller->vtable->inb(PORT_PIT_CHANNEL0);
 }
 
 // Real-Time Clock
@@ -24,8 +24,8 @@ static void pit_read(struct PortManager* this) {
 #define RTC_DATA_MODE (1 << 2)
 
 static uint8_t rtc_read_register(struct PortManager* this, uint8_t reg) {
-	this->port_controller->outb(PORT_RTC_COMMAND, reg);
-	return this->port_controller->inb(PORT_RTC_DATA);
+	this->port_controller->vtable->outb(PORT_RTC_COMMAND, reg);
+	return this->port_controller->vtable->inb(PORT_RTC_DATA);
 }
 
 static void rtc_wait(struct PortManager* this) {
@@ -54,7 +54,7 @@ static uint8_t rtc_seconds(struct PortManager* this) {
 // IO Waiting
 
 static void io_wait(struct PortManager* this) {
-	this->port_controller->inb(0x80);
+	this->port_controller->vtable->inb(0x80);
 }
 
 // VGA Stuff
@@ -65,25 +65,27 @@ static void io_wait(struct PortManager* this) {
 #define VGA_CURSOR_LOW 0x0F
 
 static void vga_cursor_update(struct PortManager* this, uint16_t pos) {
-	this->port_controller->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_HIGH);
-	this->port_controller->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos >> 8));
-	this->port_controller->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_LOW);
-	this->port_controller->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos & 0xFF));
+	this->port_controller->vtable->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_HIGH);
+	this->port_controller->vtable->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos >> 8));
+	this->port_controller->vtable->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_LOW);
+	this->port_controller->vtable->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos & 0xFF));
 }
 
 // Manager
 
 struct PortManager* port_manager__create() {
-	struct PortManager* this = dummy_alloc(sizeof(struct PortManager));
+	struct PortManager* this = heap_alloc(sizeof(struct PortManager));
 	
-	struct PortController* port_controller = dummy_alloc(sizeof(struct PortController));
-	*port_controller = port_controller__create();
+	this->port_controller = port_controller__create();
 	
-	this->port_controller = port_controller;
-	this->pit_read = pit_read;
-	this->rtc_seconds = rtc_seconds;
-	this->io_wait = io_wait;
-	this->vga_cursor_update = vga_cursor_update;
+	struct PortManagerVtable* vtable = heap_alloc(sizeof(struct PortManagerVtable));
 	
+	this->vtable = vtable;
+	
+	vtable->pit_read = pit_read;
+	vtable->rtc_seconds = rtc_seconds;
+	vtable->io_wait = io_wait;
+	vtable->vga_cursor_update = vga_cursor_update;
+
 	return this;
 }

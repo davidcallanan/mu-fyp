@@ -31,3 +31,5 @@ add module system
 add optimizations
 add evaluation
 maybe a kernel test case of writing characters to the screen (one by one) to show inlining performance diff of direct assembly execution? (or find some kernel-related thing that requires an assembly instruction).
+
+add with-phantom-alloc-bypass
