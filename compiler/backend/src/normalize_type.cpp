@@ -776,6 +776,12 @@ Type normalize_type(
 
 			Type field_underlying = get_underlying_type(*field_type);
 
+			if (auto p_v_field_map = std::get_if<std::shared_ptr<TypeMap>>(&field_underlying)) {
+				if ((*p_v_field_map)->leaf_type.has_value()) {
+					field_underlying = get_underlying_type((*p_v_field_map)->leaf_type.value());
+				}
+			}
+
 			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&field_underlying);
 			auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&field_underlying);
 

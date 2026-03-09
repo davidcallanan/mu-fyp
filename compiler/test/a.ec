@@ -76,6 +76,8 @@ type MyService {};
 
 @Mod:my_printf extern ccc "printf" (*u8) -> {};
 
+@Mod:my_getpid extern ccc "getpid" () -> (i32);
+
 create() -> { ; this comment works
 	test := 10;
 	banana := u64 10;
@@ -282,6 +284,11 @@ create() -> { ; this comment works
 	};
 	
 	mod:my_printf alwaysinline {
-		:0 "Inlined!\n";	
+		:0 "Inlined!\n";
 	};
+
+	pid := mod:my_getpid();
+	
+	log("PID is:");
+	log_d(pid:0);
 }
