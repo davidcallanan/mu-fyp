@@ -38,13 +38,12 @@
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
 #include "leaf_agnostically_translate.hpp"
-
 #include "llvm_flexi_type.hpp"
+#include "t_bundles.hpp"
+
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
-
-#include "t_bundles.hpp"
 
 bool determine_has_leaf(const Type& type) { // soon this function should be deprecated because it is not relevant to non-maps anymore.
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
@@ -360,6 +359,10 @@ Smooth evaluate_smooth(
 			value->getType(),
 			smooth_type(smooth),
 			v_var_walrus->is_mut,
+			std::holds_alternative<std::shared_ptr<SmoothMapReference>>(smooth)
+				? std::optional<Smooth>(smooth)
+				: std::nullopt
+			,
 		};
 		
 		igc.value_table->set(map_var_name, entry);
@@ -476,6 +479,31 @@ Smooth evaluate_smooth(
 		const auto& v_call_with_sym = *p_v_call_with_sym;
 		Smooth target_smooth = evaluate_smooth(igc, *v_call_with_sym->target);
 
+		if (auto p_v_map_reference = std::get_if<std::shared_ptr<SmoothMapReference>>(&target_smooth)) {
+			const auto& v_map_reference = *p_v_map_reference;
+			
+			auto underlying_of_actual_interest = get_underlying_type(v_map_reference->type);
+			auto p_type_map_reference = std::get_if<std::shared_ptr<TypeMapReference>>(&underlying_of_actual_interest);
+			
+			if (!p_type_map_reference) {
+				fprintf(stderr, "supposed to be map reference type.\n");
+				exit(1);
+			}
+			
+			Type target_typeee = Type((*p_type_map_reference)->target);
+			auto underlying_of_genuine_interest = get_underlying_type(target_typeee);
+			
+			llvm::Value* loaded = igc.builder.CreateLoad(v_map_reference->structval_type, v_map_reference->value);
+			
+			Smooth loaded_smooth = llvm_to_smooth(igc, underlying_of_genuine_interest, loaded);
+			
+			// if we load entire struct , llvm optimizer should be able to convert this to just grabbing the memory address offset beforehand for the desired member.
+			
+			auto actual_target = std::get<std::shared_ptr<SmoothStructval>>(loaded_smooth);
+
+			return access_member(igc, actual_target, v_call_with_sym->sym);
+		}
+
 		if (!is_structwrappable(target_smooth)) {
 			fprintf(stderr, "cannot be expected to call with a sym to a non structish object.\n");
 			exit(1);
@@ -491,6 +519,76 @@ Smooth evaluate_smooth(
 		
 		Smooth target_smooth = evaluate_smooth(igc, *v_call_with_dynamic->target);
 		Smooth data_smooth = evaluate_smooth(igc, *v_call_with_dynamic->call_data);
+
+		if (auto p_v_map_reference = std::get_if<std::shared_ptr<SmoothMapReference>>(&target_smooth)) {
+			const auto& v_map_reference = *p_v_map_reference;
+
+			auto actual_target_underlying = get_underlying_type(v_map_reference->type);
+			auto p_type_map_reference = std::get_if<std::shared_ptr<TypeMapReference>>(&actual_target_underlying);
+			
+			if (!p_type_map_reference) {
+				fprintf(stderr, "supposed to be map reference type.\n");
+				exit(1);
+			}
+			
+			Type target_typeee = Type((*p_type_map_reference)->target);
+			auto underlying_of_genuine_interest = get_underlying_type(target_typeee);
+			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&underlying_of_genuine_interest);
+			
+			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr || (*actual_target_type)->call_input_type == nullptr) {
+				fprintf(stderr, "somehow was not an actual map stored here - bug.\n");
+				exit(1);
+			}
+
+			if (auto p_smooth_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&data_smooth)) {
+				const auto& smooth_enum = *p_smooth_enum;
+				auto p_type_enum = std::get_if<std::shared_ptr<TypeEnum>>(&smooth_enum->type);
+
+				if (!p_type_enum || !(*p_type_enum)->hardsym.has_value()) {
+					fprintf(stderr, "only hardsym implemented for now.\n");
+					exit(1);
+				}
+
+				const std::string& sym = (*p_type_enum)->hardsym.value();
+
+				llvm::Value* loaded = igc.builder.CreateLoad(v_map_reference->structval_type, v_map_reference->value);
+				Smooth loaded_smooth = llvm_to_smooth(igc, underlying_of_genuine_interest, loaded);
+				
+				auto resulting_smooth = std::get<std::shared_ptr<SmoothStructval>>(loaded_smooth);
+				
+				return access_member(igc, resulting_smooth, sym);
+			} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
+				Smooth wrapped_up = structwrap(igc, data_smooth);
+				Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
+				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+				llvm::Value* input_payload = llvm_value(translated);
+
+				llvm::Function* call_func = produce_call_func(igc, *actual_target_type);
+				llvm::Function* call_func_alwaysinline = produce_call_func(igc, *actual_target_type, true);
+				
+				llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && call_func_alwaysinline != nullptr)
+					? call_func_alwaysinline
+					: call_func;
+
+				llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, { input_payload });
+
+				if (v_call_with_dynamic->is_flag_alwaysinline) {
+					output_value->addFnAttr(llvm::Attribute::AlwaysInline);
+				}
+
+				Type output_type = Type((*actual_target_type)->call_output_type);
+
+				return std::make_shared<SmoothStructval>(SmoothStructval{
+					output_type,
+					output_value,
+					false,
+					std::nullopt, // problematic.
+					nullptr, // problematic.
+					nullptr,
+					{}, // this needs be sorted evnetually
+				});
+			}
+		}
 
 		if (!is_structwrappable(target_smooth)) {
 			fprintf(stderr, "have to call on a structish thing.\n");
@@ -526,7 +624,7 @@ Smooth evaluate_smooth(
 			auto actual_target_underlying = get_underlying_type((*actual_target)->type);
 			auto actual_target_type = std::get_if<std::shared_ptr<TypeMap>>(&actual_target_underlying);
 			
-			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr) {
+			if (!actual_target_type || (*actual_target_type)->call_output_type == nullptr || (*actual_target_type)->call_input_type == nullptr) {
 				fprintf(stderr, "somehow target had no appropriate map information.\n");
 				exit(1);
 			}
@@ -1025,6 +1123,44 @@ Smooth evaluate_smooth(
 		(*p_v_extern_ccc)->underlying_type = std::make_shared<Type>(Type(callable));
 
 		return evaluate_smooth(igc, Type(callable));
+	}
+	
+	if (auto p_v_take_address = std::get_if<std::shared_ptr<TypeTakeAddress>>(&type)) {
+		const auto& v_take_address = *p_v_take_address;
+
+		Smooth target_smooth = evaluate_smooth(igc, *v_take_address->target);
+
+		auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&target_smooth);
+
+		if (!p_v_structval) {
+			fprintf(stderr, "At the moment, we can only take the address of a map, and it is treated as a reference.\n");
+			exit(1);
+		}
+
+		auto target_underlying = get_underlying_type(*v_take_address->target);
+		auto p_v_target_map = std::get_if<std::shared_ptr<TypeMap>>(&target_underlying);
+
+		if (!p_v_target_map) {
+			fprintf(stderr, "Must target a map.\n");
+			exit(1);
+		}
+
+		llvm::Value* actual_value = (*p_v_structval)->value;
+		
+		llvm::Value* alloca_address = igc.builder.CreateAlloca(actual_value->getType(), nullptr);
+		
+		igc.builder.CreateStore(actual_value, alloca_address);
+
+		auto v_map_reference = std::make_shared<TypeMapReference>();
+		v_map_reference->target = *p_v_target_map;
+
+		v_take_address->underlying_type = std::make_shared<Type>(Type(v_map_reference));
+
+		return std::make_shared<SmoothMapReference>(SmoothMapReference{
+			Type(v_map_reference),
+			alloca_address,
+			actual_value->getType(),
+		});
 	}
 
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");

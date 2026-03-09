@@ -9,6 +9,7 @@
 #include "llvm_to_smooth.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
+#include "fresh_smooth.hpp"
 
 Smooth access_variable(
 	IrGenCtx& igc,
@@ -56,6 +57,10 @@ Smooth access_variable(
 		entry.ir_type,
 		entry.alloca_ptr
 	);
+
+	if (entry.smooth.has_value()) {
+		return fresh_smooth(igc, entry.smooth.value(), loaded);
+	}
 
 	return llvm_to_smooth(igc, entry.type, loaded);
 }

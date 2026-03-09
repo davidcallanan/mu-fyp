@@ -291,4 +291,12 @@ create() -> { ; this comment works
 	
 	log("PID is:");
 	log_d(pid:0);
+	
+	x := &MyService;
+	
+	log(x:name);
+	
+	x:print_foo {
+		:foo 678;
+	};
 }

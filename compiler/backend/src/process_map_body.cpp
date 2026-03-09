@@ -40,6 +40,7 @@ void process_map_body(
 						nullptr,
 						discovered_type,
 						false, // syms, when treated as variables, are always immutable.
+						std::nullopt,
 					};
 				}
 
@@ -53,6 +54,10 @@ void process_map_body(
 					value->getType(),
 					discovered_type, // maybe in the future we'll change how this works
 					false, // syms, when treated as variables, are always immutable.
+					std::holds_alternative<std::shared_ptr<SmoothMapReference>>(smooth)
+						? std::optional<Smooth>(smooth)
+						: std::nullopt
+					,
 				};
 			}();
 			

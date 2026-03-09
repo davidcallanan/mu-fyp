@@ -6,12 +6,16 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Type.h"
 #include "t_types_fwd.hpp"
+#include "t_smooth_fwd.hpp"
 
 struct ValueSymbolTableEntry {
 	llvm::Value* alloca_ptr;
 	llvm::Type* ir_type;
 	Type type;
 	bool is_mut;
+	std::optional<Smooth> smooth; // we are transitioning to storing smooths instead of values
+	// code should use the smooth if available but fallback to the legacy value approach.
+	// smooth is mandatory for some things - like map references.
 };
 
 class ValueSymbolTable {

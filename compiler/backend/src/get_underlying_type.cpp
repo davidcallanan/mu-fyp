@@ -19,7 +19,6 @@ Type get_underlying_type(const Type& type) {
 	if (std::holds_alternative<std::shared_ptr<TypeMap>>(type)) {
 		return type;
 	}
-	
 	if (std::holds_alternative<std::shared_ptr<TypePointer>>(type)) {
 		return type;
 	}
@@ -140,7 +139,7 @@ Type get_underlying_type(const Type& type) {
 		const auto& v_var_access = *p_v_var_access;
 		
 		if (v_var_access->underlying_type == nullptr) {
-			fprintf(stderr, "Underlying type not populated (VarAccess): %s.\n", v_var_access->target_name.c_str());
+			fprintf(stderr, "Underlying type not populated (TypeVarAccess): %s.\n", v_var_access->target_name.c_str());
 			exit(1);
 		}
 		
@@ -151,7 +150,7 @@ Type get_underlying_type(const Type& type) {
 		const auto& v_walrus = *p_v_walrus;
 		
 		if (v_walrus->underlying_type == nullptr) {
-			fprintf(stderr, "Underlying type not populated (VarWalrus): %s.\n", v_walrus->name.c_str());
+			fprintf(stderr, "Underlying type not populated (TypeVarWalrus): %s.\n", v_walrus->name.c_str());
 			exit(1);
 		}
 		
@@ -162,11 +161,26 @@ Type get_underlying_type(const Type& type) {
 		const auto& v_var_assign = *p_v_var_assign;
 		
 		if (v_var_assign->underlying_type == nullptr) {
-			fprintf(stderr, "Underlying type not populated (VarAssign): %s.\n", v_var_assign->name.c_str());
+			fprintf(stderr, "Underlying type not populated (TypeVarAssign): %s.\n", v_var_assign->name.c_str());
 			exit(1);
 		}
 		
 		return get_underlying_type(*v_var_assign->underlying_type);
+	}
+	
+	if (std::holds_alternative<std::shared_ptr<TypeMapReference>>(type)) {
+		return type;
+	}
+
+	if (auto p_v_take_address = std::get_if<std::shared_ptr<TypeTakeAddress>>(&type)) {
+		const auto& v_take_address = *p_v_take_address;
+
+		if (v_take_address->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeTakeAddress).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_take_address->underlying_type);
 	}
 	
 	fprintf(stderr, "Currently no mechanism to determine the actual type of the expression.\n");

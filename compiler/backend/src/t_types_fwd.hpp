@@ -31,6 +31,8 @@ struct TypeExprLogicalOr;
 struct TypeCompare;
 struct TypeVoid;
 struct TypeExternCcc;
+struct TypeMapReference;
+struct TypeTakeAddress;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -54,7 +56,9 @@ using Type = std::variant<
 	std::shared_ptr<TypeExprLogicalOr>,
 	std::shared_ptr<TypeCompare>,
 	std::shared_ptr<TypeVoid>,
-	std::shared_ptr<TypeExternCcc>
+	std::shared_ptr<TypeExternCcc>,
+	std::shared_ptr<TypeMapReference>,
+	std::shared_ptr<TypeTakeAddress>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.
@@ -62,5 +66,6 @@ using UnderlyingType = std::variant< // an underlying type is kind of the eventu
 	std::shared_ptr<TypePointer>,
 	std::shared_ptr<TypeMerged>,
 	std::shared_ptr<TypeRotten>,
-	std::shared_ptr<TypeEnum>
+	std::shared_ptr<TypeEnum>,
+	std::shared_ptr<TypeMapReference>
 >;

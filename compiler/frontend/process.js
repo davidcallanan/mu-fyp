@@ -60,6 +60,7 @@ const LPAREN_BB = rule("LPAREN_BB", withBareboneSkippers("("));
 const RPAREN = rule("RPAREN", withCarefulSkippers(")"));
 const ARROW = rule("ARROW", withCarefulSkippers("->"));
 const ASTERISK = rule("ASTERISK", withCarefulSkippers("*"));
+const AMPERSAND = rule("AMPERSAND", withCarefulSkippers("&"));
 const COMMA = rule("COMMA", withCarefulSkippers(","));
 const PATH_OUTER_ROOT = rule("PATH_OUTER_ROOT", withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all)));
 const PATH_MODULE_ROOT = rule("PATH_MODULE_ROOT", withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all)));
@@ -1097,6 +1098,13 @@ const type_first = rule("type_first", or( // cannot include constraint_enum here
 ));
 
 typeval_atom.define(rule("typeval_atom", or(
+	mapData(
+		join(AMPERSAND, typeval_atom), // in future will allow more expressions in here.
+		(data) => ({
+			type: "type_take_address",
+			target: data[1],
+		}),
+	),
 	mapData(
 		join(type_first, hardval_bb),
 		(data) => ({

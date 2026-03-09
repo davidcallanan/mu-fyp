@@ -137,3 +137,12 @@ struct TypeExternCcc {
 	std::shared_ptr<TypeMap> call_output_type;
 	std::shared_ptr<Type> underlying_type;
 };
+
+struct TypeMapReference {
+	std::shared_ptr<TypeMap> target;
+};
+
+struct TypeTakeAddress {
+	std::shared_ptr<Type> target;
+	std::shared_ptr<Type> underlying_type;
+};

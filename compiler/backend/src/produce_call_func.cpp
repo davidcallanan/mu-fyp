@@ -122,6 +122,7 @@ llvm::Function* produce_call_func(
 			input_struct_type,
 			Type(map->call_input_type),
 			false,
+			std::nullopt,
 		};
 
 		new_value_table->set(input_var_name, input_entry);

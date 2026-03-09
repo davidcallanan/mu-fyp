@@ -413,6 +413,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 				mod_value->getType(),
 				mod_type,
 				false,
+				std::nullopt,
 			});
 		}
 		

@@ -175,7 +175,7 @@ Some brief gratitude to Anthropic for their powerful GenAI models, though other 
   
   (max 250)
 
-The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code \textit{once}, that is agnostic to the linking strategy. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries.
+The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code \textit{once}, that is agnostic to the linking strategy. This is achieved by designing unique language features that are inspired by \textit{zero-cost abstraction} principles. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries. The performance of these optimizations is assessed by benchmarking four simple hardware operations in a proof-of-concept operating system kernel, consisting of \textit{C}, \textit{Essence C}, \textit{NASM}, and \textit{LLVM IR}. The ability for large language models to assist with using \textit{Essence C} is also explored.
 
 \end{abstract}
 
@@ -189,7 +189,7 @@ This project is concerned with the research and development of a novel programmi
 
 \section{Motivation}
 
-Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively depends on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and \textit{React.js} environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for the lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software.
+Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively depends on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and \textit{React.js} environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for the lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software. This includes the desire to be able to freely architect software for organizational, abstractional and future-proofing purposes without compromising performance or compatibility. Developers are often fed up with having to rewrite code when environmental changes are put upon them. This thesis focuses on one key area where such increased flexibility is desirable: linking and dispatch strategies for modules and objects alike.
 
 \section{Methodology}
 
@@ -339,13 +339,17 @@ LLVM was found to be a practical compilation target for low-level programming la
 
 \chapter{The Problem (900)}
 
-\section{Indirect Calls}
+\section{Problem Statement}
 
-The core of the problem is removing indirection.
+How can we design and implement a new programming language that allows the programmer to easily switch data and logic from dynamic to static dispatch and subsequently benefit from link-time optimizations such as inlining across module boundaries? How can we evaluate that the programming language is effective for this purpose?
 
 \section{Functional Requirements}
 
+The language must support the majority of features available in the C programming language (except macros): numerical expressions, logical expressions, functions, structs, conditional statements, loops. Then, the language must be capable of linking in with external compilation units, so that, for example, the C standard library functions can be used.  
+
 \section{Non-Functional Requirements}
+
+The language must have freestanding viability so that it can be used in kernel development. The language must have unified language concept(s) that treat static vs dynamic linking of modules in the same way as static vs dynamic dispatch of objects. The language must allow the programmer to specify their intent to switch to a fully static build by changing some simple keywords, without having to refactor the code.
 
 \chapter{The Solution (2110)}
 

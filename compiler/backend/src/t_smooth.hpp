@@ -59,3 +59,9 @@ struct SmoothVoidPointer {
 	llvm::Type* flexi_type;
 	llvm::Value* value;
 };
+
+struct SmoothMapReference {
+	Type type;
+	llvm::Value* value;
+	llvm::Type* structval_type;
+};

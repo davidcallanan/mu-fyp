@@ -811,6 +811,19 @@ Type normalize_type(
 		return v_extern_ccc;
 	}
 
+	if (type == "type_take_address") {
+		if (!typeval.contains("target")) {
+			fprintf(stderr, "Missings .target field!\n");
+			exit(1);
+		}
+
+		auto v_take_address = std::make_shared<TypeTakeAddress>();
+		
+		v_take_address->target = std::make_shared<Type>(normalize_type(toc, typeval["target"]));
+
+		return v_take_address;
+	}
+
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
 	exit(1);
 }
