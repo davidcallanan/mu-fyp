@@ -879,11 +879,35 @@ Smooth evaluate_smooth(
 		Smooth input_probe = evaluate_smooth(dummy2.igc, Type(v_extern_ccc.call_input_type));
 		llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_probe));
 		destroy_dummy_igc(dummy2);
-		
-		llvm::StructType* output_struct_type = llvm::StructType::get(igc.context, {});
+
+		const auto& output_sym_inputs = v_extern_ccc.call_output_type->sym_inputs;
+		const bool is_return_value_actually_present = !output_sym_inputs.empty();
+
+		llvm::Type* c_abi_return_type = [&]() -> llvm::Type* {
+			if (!is_return_value_actually_present) {
+				return llvm::Type::getVoidTy(igc.context);
+			}
+
+			const auto& first_field = output_sym_inputs.begin()->second;
+
+			DummyIgc dummy = create_dummy_igc(igc);
+			Smooth field_smooth = evaluate_smooth(dummy.igc, *first_field);
+			llvm::Type* result = llvm_flexi_type(field_smooth);
+			destroy_dummy_igc(dummy);
+
+			return result;
+		}();
+
+		llvm::StructType* output_struct_type = [&]() -> llvm::StructType* {
+			if (!is_return_value_actually_present) {
+				return llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{});
+			}
+
+			return llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ c_abi_return_type });
+		}();
 
 		llvm::FunctionType* the_extern_type = llvm::FunctionType::get(
-			llvm::Type::getVoidTy(igc.context),
+			c_abi_return_type,
 			c_abi_parameter_types,
 			false
 		);
@@ -967,7 +991,15 @@ Smooth evaluate_smooth(
 				call_to_extern->addFnAttr(llvm::Attribute::AlwaysInline);
 			}
 
-			llvm::Value* final_output = llvm::UndefValue::get(output_struct_type);
+			llvm::Value* final_output = [&]() -> llvm::Value* {
+				if (!is_return_value_actually_present) {
+					return llvm::UndefValue::get(output_struct_type);
+				}
+
+				llvm::Value* wrapped_up_in_a_tortilla = llvm::UndefValue::get(output_struct_type);
+				
+				return wrapper_builder.CreateInsertValue(wrapped_up_in_a_tortilla, call_to_extern, 0);
+			}();
 			
 			wrapper_builder.CreateRet(final_output);
 
@@ -987,7 +1019,7 @@ Smooth evaluate_smooth(
 		auto callable = std::make_shared<TypeMap>();
 		
 		callable->call_input_type = v_extern_ccc.call_input_type;
-		callable->call_output_type = std::make_shared<TypeMap>();
+		callable->call_output_type = v_extern_ccc.call_output_type;
 		callable->bundle_id = bundle_id;
 
 		(*p_v_extern_ccc)->underlying_type = std::make_shared<Type>(Type(callable));

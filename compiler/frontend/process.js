@@ -1289,7 +1289,8 @@ const extension_case_extern_ccc = rule("extension_case_extern_ccc", mapData(
 		typeval: {
 			type: "type_extern_ccc",
 			function_name: data[3],
-			call_input_type: data[4].call_input_type, // dropping output type, because only implementing void external linkage for now.
+			call_input_type: data[4].call_input_type,
+			call_output_type: data[4].call_output_type,
 		},
 	}),
 ));

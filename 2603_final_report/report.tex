@@ -185,7 +185,7 @@ The logic of computer software is primarily expressed using programming language
 
 \section{Overview}
 
-This project is concerned with the research and development of a novel programming language, Essence C, that facilitates the continuum of static and dynamic modules in low-level software development. The prototype henceforth discussed is accomplished by designing unique language features and implementing bespoke optimizations pursuant to these features. Kernel development is used as a case study throughout the research phase and evaluation phase alike.
+This project is concerned with the research and development of a novel programming language, Essence C, that facilitates the continuum of static and dynamic modules in low-level software development. The prototype henceforth discussed is accomplished by designing unique language features and implementing bespoke optimizations pursuant to these features. Kernel development is used as a case study throughout the research phase and evaluation phase.
 
 \section{Motivation}
 
@@ -228,7 +228,7 @@ The tool was primarily used to steer the work in the right direction, and to ide
 
 \end{enumerate}
 
-Some experimentation with GitHub Copilot agent mode was conducted, with notable issues identified. Firstly, the development speed was impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there was a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, usage of this tool was suspended.
+Some experimentation with GitHub Copilot agent mode was conducted, with notable issues identified. Firstly, the development speed was impeded by slow model response times, lack of funds, and internet connectivity issues. Secondly, there was a great difficulty in referencing contributions made by this tool due to (1) tool calls that modify the codebase directly and (2) significant implicit pollution of the context window as the agent navigates the respository. As such, with an exception for debugging, usage of this tool was suspended.
 
 \chapter{Technical Background (1200)}
 
@@ -523,87 +523,128 @@ Early on in development, I was adamment to ensure a fully reproducible build env
 
 \subsection{Singletonish Optimization}
 
-A custom "singletonish" optimization was implemented that concerns itself with both the module optimizatoin goal (detecting something to be static) and the acknowledgement of the benefits of singleton types (by treating lonely values as singleton types). It also is meets the demands of the map enum equivalence, central to the design of the module system, as it allows different aspects of maps which are inherently static (e.g. the functional nature of maps) to be optimized to a form that behaves like traiditionali programming languages. This means the map-enum equivalence is not just theoretical, but acutually works.
+A custom "singletonish" optimization was implemented that concerns itself with both the module optimizatoin goal (detecting something to be static) and the acknowledgement of the benefits of singleton types (by treating lonely values as singleton types). It also is meets the demands of the map enum equivalence, central to the design of the module system, as it allows different aspects of maps which are inherently static (e.g. the functional nature of maps) to be optimized to a form that behaves like traditional programming languages. This means the map-enum equivalence is not just theoretical, but acutually works.
 
+\subsection{Static Instance Analysis}
 
 \chapter{Evaluation (930)}
 
 \section{Manual Snapshot Testing}
 
-Throughout the development cycle, manual testing was conducted by compiling sample source files and inspecting the terminal output after running the final executable. This mirrors the snapshot testing philosophy commonly implemented in web-development projects (although accomplished in a less automated fashion here), where input/output consistency is checked before each commit. Down the road, this strategy could be extended to a full test suite that prevents all sorts of regressions. One could take this a step further by checking consistency in the compiled LLVM IR code itself, but this is typically only done when a language reaches a pivotal level of maturity; the compiler is in too much flux at this point for this technique to have any merit.
+Throughout the development cycle, manual testing was conducted by compiling sample source files and inspecting the terminal output after running the final executable. This mirrors the snapshot testing philosophy commonly implemented in web-development projects (although accomplished in a less automated fashion here), where input/output consistency is checked before each commit to source control. Down the road, this strategy could be extended to a full test suite that prevents all sorts of regressions. One could take this a step further by checking consistency in the compiled LLVM IR code itself, but this is typically only done when a language reaches a pivotal level of maturity; the compiler is in too much flux at this point for this technique to have any merit.
 
 Much of the snapshot testing was performed using the language's data logging facility which prints the hexidecimal, ascii, and decimal values of arbitrarily-sized binary sequences. This allows straightforward investigation of any runtime values, whether that be integers, floats, pointers, strings, enums, and so on.
 
-\section{User Acceptance Testing}
+% \section{User Acceptance Testing}
 
-Four students from Maynooth University were tasked with implementing a program in the language. Each student was asked to provide positive and negative feedback of the solution.
+% Four students from Maynooth University were tasked with implementing a program in the language. Each student was asked to provide positive and negative feedback of the solution.
 
-The users were given the following code with no explanation, but were allowed to ask me questions.
+% The users were given the following code with no explanation, but were allowed to ask me questions.
 
 
-\renewcommand{\arraystretch}{1.4}
-\begin{longtable}{|>{\raggedright\arraybackslash}p{5.5cm}|>{\raggedright\arraybackslash}p{\dimexpr\textwidth-5.5cm-4\tabcolsep-2\arrayrulewidth\relax}|}
-\caption{Feedback survey}\label{tab:uat} \\
-\hline
-\textbf{Question} & \textbf{Answer} \\
-\hline
-\endfirsthead
-\hline
-\textbf{Question} & \textbf{Answer} \\
-\hline
-\endhead
-\hline
-\endfoot
-\multicolumn{2}{|l|}{\textbf{Student A}} \\
-\hline
-What is the sample program doing? & [Answer] \\
-\hline
-What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
-\hline
-Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
-\hline
-Provide one harsh criticism about the language. & [Answer] \\
-\hline
-\multicolumn{2}{|l|}{\textbf{Student B}} \\
-\hline
-What is the sample program doing? & [Answer] \\
-\hline
-What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
-\hline
-Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
-\hline
-Provide one harsh criticism about the language. & [Answer] \\
-\hline
-\multicolumn{2}{|l|}{\textbf{Student C}} \\
-\hline
-What is the sample program doing? & [Answer] \\
-\hline
-What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
-\hline
-Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
-\hline
-Provide one harsh criticism about the language. & [Answer] \\
-\hline
-\multicolumn{2}{|l|}{\textbf{Student D}} \\
-\hline
-What is the sample program doing? & [Answer] \\
-\hline
-What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
-\hline
-Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
-\hline
-Provide one harsh criticism about the language. & [Answer] \\
-\hline
-\end{longtable}
+% \renewcommand{\arraystretch}{1.4}
+% \begin{longtable}{|>{\raggedright\arraybackslash}p{5.5cm}|>{\raggedright\arraybackslash}p{\dimexpr\textwidth-5.5cm-4\tabcolsep-2\arrayrulewidth\relax}|}
+% \caption{Feedback survey}\label{tab:uat} \\
+% \hline
+% \textbf{Question} & \textbf{Answer} \\
+% \hline
+% \endfirsthead
+% \hline
+% \textbf{Question} & \textbf{Answer} \\
+% \hline
+% \endhead
+% \hline
+% \endfoot
+% \multicolumn{2}{|l|}{\textbf{Student A}} \\
+% \hline
+% What is the sample program doing? & [Answer] \\
+% \hline
+% What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+% \hline
+% Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+% \hline
+% Provide one harsh criticism about the language. & [Answer] \\
+% \hline
+% \multicolumn{2}{|l|}{\textbf{Student B}} \\
+% \hline
+% What is the sample program doing? & [Answer] \\
+% \hline
+% What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+% \hline
+% Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+% \hline
+% Provide one harsh criticism about the language. & [Answer] \\
+% \hline
+% \multicolumn{2}{|l|}{\textbf{Student C}} \\
+% \hline
+% What is the sample program doing? & [Answer] \\
+% \hline
+% What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+% \hline
+% Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+% \hline
+% Provide one harsh criticism about the language. & [Answer] \\
+% \hline
+% \multicolumn{2}{|l|}{\textbf{Student D}} \\
+% \hline
+% What is the sample program doing? & [Answer] \\
+% \hline
+% What semantic or syntactic element of the sample program strikes you the most, and why? & [Answer] \\
+% \hline
+% Implement a program that does blah. Provide one point of positive feedback about the language. & [Answer] \\
+% \hline
+% Provide one harsh criticism about the language. & [Answer] \\
+% \hline
+% \end{longtable}
 
 
 \section{GenAI Comprehension Testing}
 
-With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my YouTube tutorial series [todo], and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported kernel is included in main repository for this project.
+With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a portion of a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my YouTube tutorial series [todo], and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported version is included in this project's repository. It includes C, Essence C, NASM Assembly, and LLVM IR Assembly code living in unison, with build options to substitute different implementations of the source code.
 
 \section{Benchmarking}
 
-To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks.
+To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks. Four procedures were benchmarked across three different implementations.
+
+Procedures:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{12cm}|}
+\hline
+\textbf{Benchmark} & \textbf{Description} \\
+\hline
+PIT & Accesses the Programmable Interval Timer counter as frequently as possible via the x86 port I/O interface. This is a counter exposed by the x86 hardware that decreases rapidly over time. \\
+\hline
+RTC & Accesses the Real-Time Clock as frequently as possible via the same interface. The irony is that the RTC is furthermore used in all benchmarks to calculate the actual operations per second. \\
+\hline
+I/O Wait & Triggers the ``0x80'' hardware request as frequently as possible via the same interface, a legacy no-op instruction that gives the hardware a moment to breathe. \\
+\hline
+VGA Cursor & Updates the VGA text-mode cursor position as frequently as possible via the same interface. This cursor position controls where text would be printed on the screen when using the basic VGA text interface exposed by the hardware. \\
+\hline
+\end{tabular}
+\caption{The four kernel procedures that are benchmarked.}
+\label{tab:benchmarks}
+\end{table}
+
+Implementation Variants:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{2.25cm}|p{1.5cm}|p{11cm}|}
+\hline
+\textbf{Language} & \textbf{Mode} & \textbf{Details} \\
+\hline
+C + NASM Assembly & N/A & Baseline implementation. Compiled with GCC with separate compilation units, with limited link-time optimization available. Instances are passed as pointer arguments, and a vtable is implemented to enable implementation swapping. This reflects a real-world C codebase that is architected to be implementation-agnostic. \\
+\hline
+Essence C + LLVM IR Assembly & Dynamic & Essence C implementation. Linked with LLVM. Instances are passed as pointer arguments, and the language uses a vtable internally to enable implementation swapping. This reflects how a programmer might architect their codebase to be implementation-agnostic. \\
+\hline
+Essence C + LLVM IR Assembly & Static & Same as above, but a custom ``alwaysinline'' flag is included, and a custom ``mut'' flag is excluded, signalling to the compiler to attempt to make instances static. The compiler succeeds without requiring the programmer to make any architectural changes to their codebase. (These optimizations could be automated at a later stage without requiring these flags).\\
+\hline
+\end{tabular}
+\caption{The three implementation variants tested for each benchmark.}
+\label{tab:implementations}
+\end{table}
 
 \section{Validation}
 
@@ -653,7 +694,7 @@ Included in this appendix is a snapshot of the project repository as of the date
 
 Build artifacts and other uninteresting files have been omitted from this appendix. This includes, but is not limited to, all files mentioned inside \lstinline{.gitignore}.
 
-\input{appendix_source_code.tex}
+% \input{appendix_source_code.tex}
 
 \newpage
 

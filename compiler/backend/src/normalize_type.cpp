@@ -13,6 +13,8 @@
 #include "t_hardval.hpp"
 #include "t_bundles.hpp"
 #include "preinstantiated_types.hpp"
+#include "rotten_int_info.hpp"
+#include "rotten_float_info.hpp"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -742,6 +744,63 @@ Type normalize_type(
 		}
 
 		v_extern_ccc->call_input_type = *p_v_map;
+
+		if (!typeval.contains("call_output_type") || typeval["call_output_type"].is_null()) {
+			fprintf(stderr, ".call_output_type wasn't present.\n");
+			exit(1);
+		}
+
+		Type output_normalized = normalize_type(toc, typeval["call_output_type"]);
+		
+		auto p_v_output_map = std::get_if<std::shared_ptr<TypeMap>>(&output_normalized);
+
+		if (!p_v_output_map) {
+			fprintf(stderr, "output must be map contatining one :0 field.\n");
+			exit(1);
+		}
+
+		const auto& sym_inputs = (*p_v_output_map)->sym_inputs;
+
+		if (sym_inputs.size() > 1) {
+			fprintf(stderr, "at most one field is permitted to be returned due to C ABI reasons. If the actual function has multiple return values, you must troubleshoot how this is translated into the C ABI. You likely need to pass pointers!\n");
+			exit(1);
+		}
+
+		if (sym_inputs.size() == 1) {
+			const auto& [field_name, field_type] = *sym_inputs.begin();
+
+			if (field_name != ":0") {
+				fprintf(stderr, "the only field must be the :0 sym. found instead ..%s..\n", field_name.c_str());
+				exit(1);
+			}
+
+			Type field_underlying = get_underlying_type(*field_type);
+
+			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&field_underlying);
+			auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&field_underlying);
+
+			if (!p_v_rotten && !p_v_pointer) {
+				fprintf(stderr, "Only permitted return types due to C ABI reasons are numerical data types (int, float) up to 64 bit, or pointers. For complex structures, you must follow the C ABI approach of passing pointers!\n");
+				exit(1);
+			}
+
+			if (p_v_rotten) {
+				auto int_info = rotten_int_info(*p_v_rotten);
+				auto float_info = rotten_float_info(*p_v_rotten);
+				
+				const bool up_to_scratch = (false
+					|| (int_info.has_value() && int_info->bits <= 64)
+					|| (float_info.has_value() && float_info->bits <= 64)
+				);
+				
+				if (!up_to_scratch) {
+					fprintf(stderr, "the type ..%s.. is not permitted because it has a risk of not being C-abi compatible. use int or float less than 64 bit, or pointers.\n", (*p_v_rotten)->type_str.c_str());
+					exit(1);
+				}
+			}
+		}
+
+		v_extern_ccc->call_output_type = *p_v_output_map;
 
 		return v_extern_ccc;
 	}
