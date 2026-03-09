@@ -52,6 +52,7 @@ const KW_BREAK = rule("KW_BREAK", withCarefulSkippers("break"));
 const KW_EXTERN = rule("KW_EXTERN", withCarefulSkippers("extern"));
 const KW_CCC = rule("KW_CCC", withCarefulSkippers("ccc"));
 const KW_ALWAYSINLINE = rule("KW_ALWAYSINLINE", withCarefulSkippers("alwaysinline"));
+const KW_SIZEOF = rule("KW_SIZEOF", withCarefulSkippers("sizeof"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -1103,6 +1104,13 @@ typeval_atom.define(rule("typeval_atom", or(
 		(data) => ({
 			type: "type_take_address",
 			target: data[1],
+		}),
+	),
+	mapData(
+		join(KW_SIZEOF, LPAREN, typeval, RPAREN),
+		(data) => ({
+			type: "expr_sizeof",
+			target: data[2],
 		}),
 	),
 	mapData(

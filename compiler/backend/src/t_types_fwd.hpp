@@ -33,6 +33,7 @@ struct TypeVoid;
 struct TypeExternCcc;
 struct TypeMapReference;
 struct TypeTakeAddress;
+struct TypeSizeof;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -58,7 +59,8 @@ using Type = std::variant<
 	std::shared_ptr<TypeVoid>,
 	std::shared_ptr<TypeExternCcc>,
 	std::shared_ptr<TypeMapReference>,
-	std::shared_ptr<TypeTakeAddress>
+	std::shared_ptr<TypeTakeAddress>,
+	std::shared_ptr<TypeSizeof>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.

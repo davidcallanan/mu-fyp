@@ -146,3 +146,8 @@ struct TypeTakeAddress {
 	std::shared_ptr<Type> target;
 	std::shared_ptr<Type> underlying_type;
 };
+
+struct TypeSizeof {
+	std::shared_ptr<Type> target;
+	std::shared_ptr<Type> underlying_type;
+};

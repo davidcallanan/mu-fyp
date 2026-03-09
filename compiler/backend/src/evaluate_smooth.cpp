@@ -1125,6 +1125,38 @@ Smooth evaluate_smooth(
 		return evaluate_smooth(igc, Type(callable));
 	}
 	
+	if (auto p_v_sizeof = std::get_if<std::shared_ptr<TypeSizeof>>(&type)) {
+		const auto& v_sizeof = *p_v_sizeof;
+
+		Smooth target_smooth = evaluate_smooth(igc, *v_sizeof->target);
+		
+		llvm::Value* target_value = llvm_value(target_smooth);
+		llvm::Type* target_llvm_type = target_value->getType();
+
+		// this is the famoius GEP trick to force llvm to give us the size of anything.
+		// so even if we, as a compiler, don't know it, our compiled code will happily know it, which is sufficient.
+		
+		llvm::Value* NULL_pointer = llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(target_llvm_type));
+		
+		llvm::Value* gep = igc.builder.CreateGEP(
+			target_llvm_type,
+			NULL_pointer,
+			llvm::ConstantInt::get(llvm::Type::getInt32Ty(igc.context), 1) // getting size of "1" element.
+		);
+		
+		llvm::Value* size = igc.builder.CreatePtrToInt(gep, llvm::Type::getInt64Ty(igc.context));
+
+		auto v_rotten = std::make_shared<TypeRotten>();
+		v_rotten->type_str = "u64";
+
+		(*p_v_sizeof)->underlying_type = std::make_shared<Type>(Type(v_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			Type(v_rotten),
+			size,
+		});
+	}
+
 	if (auto p_v_take_address = std::get_if<std::shared_ptr<TypeTakeAddress>>(&type)) {
 		const auto& v_take_address = *p_v_take_address;
 

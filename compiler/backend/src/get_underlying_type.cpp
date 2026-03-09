@@ -183,6 +183,17 @@ Type get_underlying_type(const Type& type) {
 		return get_underlying_type(*v_take_address->underlying_type);
 	}
 	
+	if (auto p_v_sizeof = std::get_if<std::shared_ptr<TypeSizeof>>(&type)) {
+		const auto& v_sizeof = *p_v_sizeof;
+
+		if (v_sizeof->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeSizeof).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_sizeof->underlying_type);
+	}
+	
 	fprintf(stderr, "Currently no mechanism to determine the actual type of the expression.\n");
 	exit(1);
 }

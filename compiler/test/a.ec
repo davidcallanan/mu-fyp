@@ -57,6 +57,7 @@ type String *u8;
 type MyService {};
 
 @MyService:name "My Fantastic Service";
+@MyService:description "This is a really cool service";
 
 @MyService:print_foo input {
 	:foo u64;
@@ -292,11 +293,15 @@ create() -> { ; this comment works
 	log("PID is:");
 	log_d(pid:0);
 	
-	x := &MyService;
+	y := &MyService;
 	
-	log(x:name);
+	log(y:name);
+	log(y:description);
 	
-	x:print_foo {
+	y:print_foo {
 		:foo 678;
 	};
+	
+	log_d(sizeof(x));
+	log_d(sizeof(y));
 }

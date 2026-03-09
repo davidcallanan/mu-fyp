@@ -345,11 +345,11 @@ How can we design and implement a new programming language that allows the progr
 
 \section{Functional Requirements}
 
-The language must support the majority of features available in the C programming language (except macros): numerical expressions, logical expressions, functions, structs, conditional statements, loops. Then, the language must be capable of linking in with external compilation units, so that, for example, the C standard library functions can be used.  
+The language must support the majority of features available in the C programming language (except macros): numerical expressions, logical expressions, functions, structs, conditional statements, loops, pointers, etc. Then, the language must be capable of linking in with external compilation units, so that, for example, the C standard library functions can be used.  
 
 \section{Non-Functional Requirements}
 
-The language must have freestanding viability so that it can be used in kernel development. The language must have unified language concept(s) that treat static vs dynamic linking of modules in the same way as static vs dynamic dispatch of objects. The language must allow the programmer to specify their intent to switch to a fully static build by changing some simple keywords, without having to refactor the code.
+The language must have freestanding viability so that it can be used in kernel development. The language must have unified language concept(s) that treat static vs dynamic linking of modules in the same way as static vs dynamic dispatch of objects. The language must allow the programmer to specify their intent to switch to a fully static build by substituting some simple keywords, without having to refactor the code.
 
 \chapter{The Solution (2110)}
 

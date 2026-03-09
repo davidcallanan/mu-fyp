@@ -824,6 +824,22 @@ Type normalize_type(
 		return v_take_address;
 	}
 
+	if (type == "expr_sizeof") {
+		if (!typeval.contains("target")) {
+			fprintf(stderr, ".target went missing\n");
+			exit(1);
+		}
+
+		auto v_sizeof = std::make_shared<TypeSizeof>();
+		v_sizeof->target = std::make_shared<Type>(normalize_type(toc, typeval["target"]));
+
+		auto v_rotten = std::make_shared<TypeRotten>();
+		v_rotten->type_str = "u64";
+		v_sizeof->underlying_type = std::make_shared<Type>(Type(v_rotten));
+
+		return v_sizeof;
+	}
+
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());
 	exit(1);
 }
