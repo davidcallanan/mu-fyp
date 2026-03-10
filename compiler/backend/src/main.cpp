@@ -17,6 +17,8 @@
 #include "smooth_type.hpp"
 #include "llvm_value.hpp"
 #include "demote_underlying.hpp"
+#include "t_types.hpp"
+#include "t_smooth.hpp"
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -383,7 +385,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		};
 
 		{
-			std::optional<UnderlyingType> mod_underlying = toc->type_table.get("Mod");
+			std::optional<UnderlyingType> mod_underlying = toc->type_table->get("Mod");
 
 			if (!mod_underlying.has_value()) {
 				fprintf(stderr, "The compiler did not properly pre-populate the Mod map.\n");
@@ -402,18 +404,41 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			
 			llvm::Value* mod_alloca = igc.builder.CreateAlloca(
 				mod_value->getType(),
-				nullptr,
-				igc.value_table->scope_id() + "~m_mod"
+				nullptr
 			);
 			
 			igc.builder.CreateStore(mod_value, mod_alloca);
 
+			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&mod_underlying.value());
+
+			if (!p_v_map) {
+				fprintf(stderr, "Mod should have been a map - what happened..\n");
+				exit(1);
+			}
+
+			auto p_v_map_reference = std::make_shared<TypeMapReference>();
+			p_v_map_reference->target = *p_v_map;
+
+			llvm::Type* opaque_pointer = llvm::PointerType::get(context, 0);
+
+			llvm::Value* mod_alloca_actual = igc.builder.CreateAlloca(
+				opaque_pointer,
+				nullptr,
+				igc.value_table->scope_id() + "~m_mod"
+			);
+
+			igc.builder.CreateStore(mod_alloca, mod_alloca_actual);
+
 			value_table->set("m_mod", ValueSymbolTableEntry{
-				mod_alloca,
-				mod_value->getType(),
-				mod_type,
+				mod_alloca_actual,
+				opaque_pointer,
+				Type(p_v_map_reference),
 				false,
-				std::nullopt,
+				std::optional<Smooth>(std::make_shared<SmoothMapReference>(SmoothMapReference{
+					Type(p_v_map_reference),
+					mod_alloca,
+					mod_value->getType(),
+				})),
 			});
 		}
 		
@@ -532,7 +557,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 
 		std::string trail = entry["trail"].get<std::string>();
 		Type normalized = normalize_type(*toc, entry["definition"]);
-		toc->type_table.set(trail, promote_to_underlying(normalized));
+		toc->type_table->set(trail, promote_to_underlying(normalized));
 	}
 
 	for (const auto& entry : structure) {
@@ -555,7 +580,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 		std::string ext_case_type = ext_case["type"].get<std::string>();
 
 		if (ext_case_type == "extension_case_sym") {
-			std::optional<UnderlyingType> existing = toc->type_table.get(target_type);
+			std::optional<UnderlyingType> existing = toc->type_table->get(target_type);
 
 			if (!existing.has_value()) {
 				fprintf(stderr, "Tried to equip a non-existent type alias with an extat. %s\n", target_type.c_str());
@@ -608,9 +633,9 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			v_sym->typeval = the_existing->sym_inputs[leaf_name];
 			the_existing->execution_sequence.push_back(v_sym);
 
-			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
+			toc->type_table->set(target_type, promote_to_underlying(Type(*p_v_map)));
 		} else if (ext_case_type == "extension_case_extern_ccc") { // oops this is almost a full duplicate.
-			std::optional<UnderlyingType> existing = toc->type_table.get(target_type);
+			std::optional<UnderlyingType> existing = toc->type_table->get(target_type);
 
 			if (!existing.has_value()) {
 				fprintf(stderr, "Tried to equip a non-existent type alias with an extat that uses extern. %s\n", target_type.c_str());
@@ -663,7 +688,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			v_sym->typeval = the_existing->sym_inputs[leaf_name];
 			the_existing->execution_sequence.push_back(v_sym);
 
-			toc->type_table.set(target_type, promote_to_underlying(Type(*p_v_map)));
+			toc->type_table->set(target_type, promote_to_underlying(Type(*p_v_map)));
 		} else {
 			fprintf(stderr, "No more cases are implemented at this time %s\n", ext_case_type.c_str());
 			exit(1);
@@ -703,7 +728,8 @@ int main(int argc, char* argv[]) {
 	auto& parse_output = frontend_data["parse_output"];
 	
 	auto toc = std::make_shared<TypeOrchCtx>();
-	toc->type_table = create_type_symbol_table();
+	toc->bundle_registry = std::make_shared<BundleRegistry>(create_bundle_registry());
+	toc->type_table = std::make_shared<TypeSymbolTable>(create_type_symbol_table(*toc->bundle_registry));
 
 	if (!parse_output.contains("structure") || !parse_output["structure"].is_array()) {
 		fprintf(stderr, "There is no .structure\n");

@@ -11,8 +11,8 @@
 #include "create_bundle_registry.hpp"
 
 struct TypeOrchCtx {
-	TypeSymbolTable type_table;
-	BundleRegistry bundle_registry;
+	std::shared_ptr<TypeSymbolTable> type_table;
+	std::shared_ptr<BundleRegistry> bundle_registry;
 };
 
 struct IrGenCtx {

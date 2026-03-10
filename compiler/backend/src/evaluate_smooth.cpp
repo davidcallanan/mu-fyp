@@ -92,6 +92,31 @@ Smooth evaluate_smooth(
 	if (auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&type)) {
 		const TypeMap& map = **p_v_map;
 		
+		if (!map.bundle_id.has_value()) {
+			fprintf(stderr, "New refactor - Bundles are now required for all maps.\n");
+			exit(1);
+		}
+
+		Bundle* bundle = igc.toc->bundle_registry->get(map.bundle_id.value());
+
+		if (!bundle) {
+			fprintf(stderr, "Bundle not found.");
+			exit(1);
+		}
+
+		auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
+
+		if (!p_bundle_map) {
+			fprintf(stderr, "Bundle is not map.");
+			exit(1);
+		}
+
+		auto bundle_map = *p_bundle_map;
+
+		if (bundle_map->opaque_struct_type == nullptr) {
+			bundle_map->opaque_struct_type = llvm::StructType::create(igc.context);
+		}
+		
 		llvm::Function* call_func = produce_call_func(igc, *p_v_map);
 
 		llvm::Function* call_func_alwaysinline = produce_call_func(igc, *p_v_map, true);
@@ -162,7 +187,8 @@ Smooth evaluate_smooth(
 			field_smooths.push_back(llvm_to_smooth(map_igc, *sym_type, loaded));
 		}
 		
-		llvm::StructType* struct_type = llvm::StructType::get(igc.context, member_types);
+		bundle_map->opaque_struct_type->setBody(member_types);
+		llvm::StructType* struct_type = bundle_map->opaque_struct_type;
 		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
 		
 		for (size_t i = 0; i < member_values.size(); i++) {
@@ -570,7 +596,32 @@ Smooth evaluate_smooth(
 					? call_func_alwaysinline
 					: call_func;
 
-				llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, { input_payload });
+				llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+				
+				// todo: in future we might need to conditionally drop these parameters, it depends whether optimizer is smart enough. actually i think optimizer smart enough provided struct size is zero and only use is conditionally applied "sizeof".
+				std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+				
+				if (!o_entry_mod.has_value()) {
+					fprintf(stderr, "mod context not present!!\n");
+					exit(1);
+				}
+				
+				llvm::Value* arg_mod = igc.builder.CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
+
+				std::optional<ValueSymbolTableEntry> o_entry_this = igc.value_table->get("m_this");
+
+				if (!o_entry_this.has_value()) {
+					fprintf(stderr, "this context not present!!\n");
+					exit(1);
+				}
+
+				llvm::Value* arg_this = igc.builder.CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+
+				llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, {
+					arg_mod,
+					arg_this,
+					input_payload,
+				});
 
 				if (v_call_with_dynamic->is_flag_alwaysinline) {
 					output_value->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -638,7 +689,31 @@ Smooth evaluate_smooth(
 				? (*actual_target)->call_func_alwaysinline
 				: (*actual_target)->call_func;
 
-			llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, { input_payload });
+			llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+
+			std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+
+			if (!o_entry_mod.has_value()) {
+				fprintf(stderr, "mod context not present!!\n");
+				exit(1);
+			}
+
+			llvm::Value* arg_mod = igc.builder.CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
+
+			std::optional<ValueSymbolTableEntry> o_entry_this = igc.value_table->get("m_this");
+
+			if (!o_entry_this.has_value()) {
+				fprintf(stderr, "this context not present!!\n");
+				exit(1);
+			}
+
+			llvm::Value* arg_this = igc.builder.CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+
+			llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, {
+				arg_mod,
+				arg_this,
+				input_payload,
+			});
 
 			if (v_call_with_dynamic->is_flag_alwaysinline) {
 				output_value->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -1024,9 +1099,12 @@ Smooth evaluate_smooth(
 		
 		function_handle->setCallingConv(llvm::CallingConv::C);
 
+		// as these are dropped we can keep them opaque.
+		llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+
 		llvm::FunctionType* wrapper_function_type = llvm::FunctionType::get(
 			output_struct_type,
-			{ input_struct_type },
+			{ opaque_pointer, opaque_pointer, input_struct_type },
 			false
 		);
 
@@ -1047,8 +1125,8 @@ Smooth evaluate_smooth(
 			llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(igc.context, "entry", wrapper_function);
 			llvm::IRBuilder<> wrapper_builder(igc.context);
 			wrapper_builder.SetInsertPoint(wrapper_entry);
-
-			llvm::Argument* lonely_input_argument = wrapper_function->getArg(0);
+			
+			llvm::Argument* lonely_input_argument = wrapper_function->getArg(2);
 			lonely_input_argument->setName("input_struct");
 
 			std::vector<llvm::Value*> arg_extraction;
@@ -1112,7 +1190,7 @@ Smooth evaluate_smooth(
 		bundle_map->call_func = wrapper_traditional;
 		bundle_map->call_func_alwaysinline = wrapper_alwaysinline;
 		
-		uint64_t bundle_id = igc.toc->bundle_registry.install(Bundle(bundle_map));
+		uint64_t bundle_id = igc.toc->bundle_registry->install(Bundle(bundle_map));
 
 		auto callable = std::make_shared<TypeMap>();
 		

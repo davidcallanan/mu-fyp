@@ -43,7 +43,7 @@ Type normalize_type(
 		}
 		
 		std::string trail = typeval["trail"];
-		std::optional<UnderlyingType> found = toc.type_table.get(trail);
+		std::optional<UnderlyingType> found = toc.type_table->get(trail);
 		
 		if (!found.has_value()) {
 			fprintf(stderr, "No type pre-given for this %s\n", trail.c_str());
@@ -217,12 +217,13 @@ Type normalize_type(
 			return std::make_unique<TypeMap>(**p_v_map);
 		}();
 
+		// bundles are now always assigned - we need them to keep track of the opaque struct type!
 		if (true
-			&& result.call_input_type != nullptr
-			&& result.call_output_type != nullptr
+			// && result.call_input_type != nullptr
+			// && result.call_output_type != nullptr
 		) {
-			result.bundle_id = toc.bundle_registry.install(
-				std::make_shared<BundleMap>(BundleMap{ nullptr }
+			result.bundle_id = toc.bundle_registry->install(
+				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr }
 			));
 		}
 		

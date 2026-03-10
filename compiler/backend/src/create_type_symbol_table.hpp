@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include "t_types.hpp"
+#include "create_bundle_registry.hpp"
 #include "dependencies/json.hpp"
 
 using json = nlohmann::json;
@@ -18,15 +19,16 @@ private:
 	};
 	
 	std::unique_ptr<MapEntry> _root;
+	BundleRegistry* _bundle_registry;
 
 	std::vector<std::string> _split_trail(const std::string& trail);
 
 public:
-	TypeSymbolTable();
+	TypeSymbolTable(BundleRegistry& bundle_registry);
 	
 	void set(const std::string& trail, const UnderlyingType& value);
 	
 	std::optional<UnderlyingType> get(const std::string& trail);
 };
 
-TypeSymbolTable create_type_symbol_table();
+TypeSymbolTable create_type_symbol_table(BundleRegistry& bundle_registry);

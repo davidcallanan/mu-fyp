@@ -1,6 +1,9 @@
-#include "create_type_symbol_table.hpp"
+
 #include <cstdio>
 #include <cstdlib>
+
+#include "create_type_symbol_table.hpp"
+#include "t_bundles.hpp"
 
 std::vector<std::string> TypeSymbolTable::_split_trail(const std::string &trail) {
 	std::vector<std::string> segments;
@@ -18,7 +21,7 @@ std::vector<std::string> TypeSymbolTable::_split_trail(const std::string &trail)
 	return segments;
 }
 
-TypeSymbolTable::TypeSymbolTable() {
+TypeSymbolTable::TypeSymbolTable(BundleRegistry& bundle_registry) : _bundle_registry(&bundle_registry) {
 	_root = std::make_unique<MapEntry>();
 
 	const std::vector<std::string> float_types = {"f16", "f32", "f64", "f128"};
@@ -32,6 +35,10 @@ TypeSymbolTable::TypeSymbolTable() {
 		
 		map->call_input_type = nullptr;
 		map->call_output_type = nullptr;
+
+		map->bundle_id = bundle_registry.install(
+			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+		);
 
 		auto entry = std::make_unique<MapEntry>();
 		entry->type_value = UnderlyingType{map};
@@ -52,6 +59,10 @@ TypeSymbolTable::TypeSymbolTable() {
 		
 		v_map->call_input_type = nullptr;
 		v_map->call_output_type = nullptr;
+
+		v_map->bundle_id = bundle_registry.install(
+			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+		);
 
 		auto entry = std::make_unique<MapEntry>();
 		entry->type_value = UnderlyingType{v_map};
@@ -137,6 +148,10 @@ std::optional<UnderlyingType> TypeSymbolTable::get(const std::string &trail) {
 			map->call_input_type = nullptr;
 			map->call_output_type = nullptr;
 
+			map->bundle_id = _bundle_registry->install(
+				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+			);
+
 			auto entry = std::make_unique<MapEntry>();
 			entry->type_value = UnderlyingType{map};
 
@@ -150,6 +165,6 @@ std::optional<UnderlyingType> TypeSymbolTable::get(const std::string &trail) {
 	return std::nullopt;
 }
 
-TypeSymbolTable create_type_symbol_table() {
-	return TypeSymbolTable();
+TypeSymbolTable create_type_symbol_table(BundleRegistry& bundle_registry) {
+	return TypeSymbolTable(bundle_registry);
 }

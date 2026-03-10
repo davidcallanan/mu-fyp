@@ -31,6 +31,10 @@
 \usepackage{amssymb}
 
 
+\usepackage{enumitem}
+\setlist{nosep}
+
+
 \usepackage{pdfpages}
 
 \usepackage{titlesec}
@@ -189,7 +193,7 @@ This project is concerned with the research and development of a novel programmi
 
 \section{Motivation}
 
-Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively depends on the structure imposed directly by the language, given the reduced structural input from the programmer themself. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and \textit{React.js} environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for the lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software. This includes the desire to be able to freely architect software for organizational, abstractional and future-proofing purposes without compromising performance or compatibility. Developers are often fed up with having to rewrite code when environmental changes are put upon them. This thesis focuses on one key area where such increased flexibility is desirable: linking and dispatch strategies for modules and objects alike.
+Software development is becoming very popular, with graduates now unable to find jobs due to a massive spike in educational resources allocated to this field. With the use of LLM agents gaining traction, keeping a codebase clean may be harder than ever before. There is now serious competition in programming language design due to two reasons. Firstly, an LLM's ability to navigate a codebase effectively depends on the structure imposed directly by the language, given the reduced structural input from the programmer. Techniques that minimize duplicated effort in a codebase is expected to minimize context rot and reduce the agentic workflow bills. Secondly, agents are at risk of optimizing their development in highly trained-on environments (e.g. JavaScript, web-based, and \textit{React.js} environments), leaving less-prevalent low-level languages behind unless the agent can learn from on-the-fly tool calls. Highly structured languages with a superb type system, high cohesion of language concepts, and excellent documentation may make up for the lack of training. An effective module system alongside other novel language features has the potential to transform the way humans and agents reason about their software. This includes the desire to be able to freely architect software for organizational, abstractional and future-proofing purposes without compromising performance or compatibility. Developers are often fed up with having to rewrite code when environmental changes are bestowed upon them. This thesis focuses on one key area where such increased flexibility is desirable: linking and dispatch strategies for modules and objects alike.
 
 \section{Methodology}
 
@@ -387,35 +391,33 @@ A syntactical ambiguirty arises. If we write map:foo\_bar("hello"), are we calli
 
 \subsection{Type-Value Unification}
 
-Old-fashioned languages like C treat types and values as entirely distinct.
+Old-fashioned languages treat types and values as entirely distinct. In the traditional sense, a type offers two functions:
 
-In the traditional sense, a type offers two functions:
-
-\begin{itemize}
+\begin{enumerate}
 \item It details the runtime representation of the data, i.e. the possible runtime values that may be encoded and how many bits of data are needed.
-\item It provides a constraint to the programmer themself, preventing the programmer from using values that the code is not built for.
-\end{itemize}
+\item It provides a constraint to the programmer themself if they later modify the code, preventing the programmer from using values that the code is not built for.
+\end{enumerate}
 
 It turns out that it may be appropriate for these two intents to diverge. This results in two separate notions of a type:
 
 \begin{itemize}
 \item \textbf{Logical Type:} A set of allowable values. A constraint of what theoretical values are permissible, i.e. subject the programmer's intended business logic.
-\item \textbf{Encoding Type:} A bijection between a set of values and a set of bit patterns. This allows types to be designed and abstracted independent of the encoding used.
+\item \textbf{Encoding Type:} A bijection between a set of values and a set of bit patterns. This allows logical types to be designed and abstracted independent of the encoding used.
 \end{itemize}
 
-In this sense, a value is just a singleton logical type.
+To achieve this goal, the syntax for logical types and values are unified by treating everything as a constraint. A value is just a singleton constraint, i.e. one possible value. Types are then merged using a binary reduction algorithm such that the final type meets all constraints. Then, an appropriate type encoding is determined that works in harmony with the logical type.
 
+With this in mind, there is no syntactic differentation between types and values, and there is no syntax to give a variable a type. For instance, as illustrated in \autoref{fig:typevals}, we can assign a variable to a type, a value, or both. Semantically, however, the compiler will bail if it realizes there is no single runtime representation available.
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{diagrams/codeblock01.png}
+  \caption{How variables can be assigned to a non-singleton type, a singleton type (value), or a pairwise merging of two types.}
+  \label{fig:typevals}
+\end{figure}
 
-encoding value vs theoretical value.
-
-both the concept unified, and then the syntax is unified too.
 
 \subsection{Additional benefit of inlining: interacting with existing languages without indirection.}
-
-\section{Picking of overall solution}
-
-\section{Design}
 
 \subsection{Associativity}
 
@@ -435,8 +437,8 @@ The syntax was designed to follow the crystal/pistol pattern, some terminology d
   \item Pistol: A binary tree of operations (like how existing languages handle multiplication and division).
 \end{itemize}
 
-For precedence reasons, we have eight separate rules: OR crystal -> OR pistol -> AND crystal -> 
-AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
+% For precedence reasons, we have eight separate rules: OR crystal -> OR pistol -> AND crystal -> 
+% AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
 
 More details on this pattern can be gathered by viewing my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
 

@@ -37,4 +37,5 @@ New plan:
 - make methods actually take in reference to map! (if empty, llvm will optimize away)
 - declare extern that C can actually call in for (only needs be void)
 - add with-phalloc-bypass ("phantom alloc")
-- add sizeof comptime function
+
+i was gonna say i should implement closures, but it is effecitvely already implemented, just use a map!

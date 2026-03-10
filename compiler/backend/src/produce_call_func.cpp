@@ -15,6 +15,8 @@
 #include "destroy_dummy_igc.hpp"
 #include "llvm_value.hpp"
 #include "llvm_flexi_type.hpp"
+#include "fresh_smooth.hpp"
+#include "clone_type_map_for_mutation.hpp"
 
 llvm::Function* produce_call_func(
 	IrGenCtx& igc,
@@ -33,7 +35,7 @@ llvm::Function* produce_call_func(
 		exit(1);	
 	}
 	
-	Bundle* bundle = igc.toc->bundle_registry.get(map->bundle_id.value());
+	Bundle* bundle = igc.toc->bundle_registry->get(map->bundle_id.value());
 	
 	auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
 	
@@ -55,21 +57,25 @@ llvm::Function* produce_call_func(
 	}
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
-	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(map->call_input_type));
+	auto input_shell = clone_type_map_for_mutation(igc, map->call_input_type);
+	input_shell->execution_sequence.clear();
+	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(input_shell));
 	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
 	destroy_dummy_igc(dummy1);
 
 	DummyIgc dummy2 = create_dummy_igc(igc);
-	TypeMap output_shell = *map->call_output_type;
-	output_shell.execution_sequence.clear();
-	auto v_map = std::make_shared<TypeMap>(output_shell);
-	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map)); // if this works, what a lifehack
+	auto v_map = clone_type_map_for_mutation(igc, map->call_output_type);
+	v_map->execution_sequence.clear();
+	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map));
 	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(output_smooth_probe));
 	destroy_dummy_igc(dummy2);
 
+	// ah! llvm has moved to opaque pointers for everything, so we use everywhere!
+	llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+
 	llvm::FunctionType* func_type = llvm::FunctionType::get(
 		output_struct_type,
-		{ input_struct_type },
+		{ opaque_pointer, opaque_pointer, input_struct_type },
 		false
 	);
 
@@ -103,11 +109,77 @@ llvm::Function* produce_call_func(
 		igc.toc,
 	};
 
-	llvm::Argument* single_argument = func->getArg(0);
+	llvm::Argument* arg_mod = func->getArg(0);
+	llvm::Argument* arg_this = func->getArg(1);
+	llvm::Argument* single_argument = func->getArg(2);
+	arg_mod->setName("InputMod");
+	arg_this->setName("InputThis");
 	single_argument->setName("InputMap");
 
 	llvm::Value* input_alloca = func_builder.CreateAlloca(input_struct_type, nullptr, "input_struct");
 	func_builder.CreateStore(single_argument, input_alloca);
+
+	// Here we merely re-expose mod.
+	{
+		std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+
+		if (o_entry_mod.has_value()) {
+			llvm::Type* opaque_pointer = llvm::PointerType::get(enhanced_igc.context, 0);
+			
+			llvm::Value* mod_alloca = func_builder.CreateAlloca(opaque_pointer, nullptr, "AllocaMod");
+			func_builder.CreateStore(arg_mod, mod_alloca);
+			
+			ValueSymbolTableEntry entry_mod = o_entry_mod.value();
+			entry_mod.alloca_ptr = mod_alloca;
+
+			if (entry_mod.smooth.has_value()) {
+				entry_mod.smooth = fresh_smooth(enhanced_igc, entry_mod.smooth.value(), arg_mod);
+			}
+
+			new_value_table->set("m_mod", entry_mod);
+		}
+	}
+
+	// Here we have to populate "this" from the actual data.
+	{
+		auto p_v_map_reference = std::make_shared<TypeMapReference>();
+		p_v_map_reference->target = map;
+
+		Bundle* bundle = igc.toc->bundle_registry->get(map->bundle_id.value());
+		
+		if (!bundle) {
+			fprintf(stderr, "Bundle missing.\n");
+			exit(1);
+		}
+		
+		auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
+		
+		if (!p_bundle_map) {
+			fprintf(stderr, "Bundle map missing.");
+			exit(1);
+		}
+		
+		auto bundle_map = *p_bundle_map;
+		
+		llvm::Type* this_llvm_type = bundle_map->opaque_struct_type;
+
+		llvm::Type* opaque_pointer = llvm::PointerType::get(enhanced_igc.context, 0);
+		
+		llvm::Value* this_alloca = func_builder.CreateAlloca(opaque_pointer, nullptr, "AllocaThis");
+		func_builder.CreateStore(arg_this, this_alloca);
+
+		new_value_table->set("m_this", ValueSymbolTableEntry{
+			this_alloca,
+			opaque_pointer,
+			Type(p_v_map_reference),
+			false,
+			std::optional<Smooth>(std::make_shared<SmoothMapReference>(SmoothMapReference{
+				Type(p_v_map_reference),
+				arg_this,
+				this_llvm_type,
+			})),
+		});
+	}
 
 	// if (!map->call_input_identifier.has_value()) {
 	// 	fprintf(stderr, "must take in input using entire destructure for now.\n");
@@ -127,12 +199,12 @@ llvm::Function* produce_call_func(
 
 		new_value_table->set(input_var_name, input_entry);
 	}
+	
+	(*p_bundle_map)->call_func = func;
+	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
 	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
 	func_builder.CreateRet(llvm_value(output_smooth));
-
-	(*p_bundle_map)->call_func = func;
-	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
 	return func;
 }

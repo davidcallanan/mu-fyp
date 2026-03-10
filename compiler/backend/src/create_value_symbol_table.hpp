@@ -13,7 +13,7 @@ struct ValueSymbolTableEntry {
 	llvm::Type* ir_type;
 	Type type;
 	bool is_mut;
-	std::optional<Smooth> smooth; // we are transitioning to storing smooths instead of values
+	std::optional<Smooth> smooth; // we are transitioning to storing smooths instead of value+ir_type
 	// code should use the smooth if available but fallback to the legacy value approach.
 	// smooth is mandatory for some things - like map references.
 };

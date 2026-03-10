@@ -63,12 +63,20 @@ type MyService {};
 	:foo u64;
 } -> {
 	log_d(input:foo);
+	log("I also know my description:");
+	log(this:description);
+	log("I also know the module's description:");
+	log(mod:description);
 };
 
 @Mod:name "My Module";
+@Mod:description "This is a fantastic description..";
 
 @Mod:do_something input {} -> {
-	log("Doing something...");	
+	log("Doing something...");
+	log("I also can access \"this\" and \"mod\"...");
+	log(this:name);
+	log(mod:name);
 };
 
 ; @Mod:my_printf extern ccc "printf" {
