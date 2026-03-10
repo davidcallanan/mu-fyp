@@ -58,13 +58,20 @@ llvm::Function* produce_call_func(
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
 	auto input_shell = clone_type_map_for_mutation(igc, map->call_input_type);
-	input_shell->execution_sequence.clear();
+	// we cannot clear, we need to process the syms to know what types they are.
+	// input_shell->execution_sequence.clear();
 	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(input_shell));
 	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
 	destroy_dummy_igc(dummy1);
 
 	DummyIgc dummy2 = create_dummy_igc(igc);
 	auto v_map = clone_type_map_for_mutation(igc, map->call_output_type);
+	// we have to clear, because the body only makes sense to execute in the context of where it is called.
+	// for now it is impossible to determine type information.
+	// but all our internal call funcs are void for now, so less relevant.
+	// i have no idea how i would fix this.
+	// like somehow pass in types instead of llvm::Value's, it is impossible in the current system.
+	// literally could be a 5k+ loc change.
 	v_map->execution_sequence.clear();
 	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map));
 	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(output_smooth_probe));

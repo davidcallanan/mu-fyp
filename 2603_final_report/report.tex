@@ -30,6 +30,8 @@
 
 \usepackage{amssymb}
 
+\usepackage[labelfont=bf,font=small]{caption}
+
 
 \usepackage{enumitem}
 \setlist{nosep}
@@ -369,13 +371,18 @@ Languages have historically offered various features like classes, modules, pack
 
 \subsection{Map-Enum Equivalence}
 
-Three features in programming languages were found to share an ermegent goal. These are structs (or classes), functions (or methods), and enums (specifically, tagged unions).
+Three features in programming languages were found to share an emergent goal: structs (or classes), functions (or methods), and enums (specifically, tagged unions).
 
-Essence C unifies structs and functions into a single feature called a "map". This takes inspiration from \href{https://en.wikipedia.org/wiki/Pure_mathematics}{Pure Mathematics}, where the pattern of notational definitions is often used for multiple purposes -- functions ($f(x)$), operations ($x + y$), subscripts ($x_n$), accessors ($\star_G$). Little special treatment is given to these different cases, as all could be denoted with function-like syntax ($f(x), +(x,y), x(n), \star(G)$).
+Essence C unifies structs and functions into a single feature called a ``map''. This takes inspiration from \href{https://en.wikipedia.org/wiki/Pure_mathematics}{Pure Mathematics}, where the pattern of notational definitions is often used for multiple purposes -- functions ($f(x)$), operations ($x + y$), subscripts ($x_n$), accessors ($\star_G$). Little special treatment is given to these different cases, as all could be denoted with function-like syntax ($f(x), +(x,y), x(n), \star(G)$).
 
-In Essence C, there are no struct accessors like ``.first\_name''. Rather, a struct is a "map" that takes in a symbol (e.g. ``:first\_name'') as its only parameter and returns the member from its internal storage. These semantics are not so bizarre, as the technique to store data alongside functions (often known as closures) is already commonplace. When a "map" has no virtual methods, its behaving as a struct results in the same low-level data representation. 
+In Essence C, there are no struct accessors like ``.first\_name''. Rather, a struct is a ``map'' that takes in a symbol (e.g. ``:first\_name'') as its only parameter and returns the member from its internal storage. These semantics are not so bizarre, as the technique to store data alongside functions (often known as closures) is already commonplace. When a "map" has no virtual methods, its behaving as a struct results in the same low-level data representation. 
 
-Insert beautiful diagram here.
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.9\textwidth]{diagrams/diagram01.png}
+  \caption{This diagram showcases the equivalent data representation between a traditional struct (left) and a field extraction closure (right).}
+  \label{fig:closurestuff}
+\end{figure}
 
 Furthermore, tuples are syntactic sugar for maps, adding positional syntax. One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters. It's maps all the way down.
 
@@ -405,7 +412,7 @@ It turns out that it may be appropriate for these two intents to diverge. This r
 \item \textbf{Encoding Type:} A bijection between a set of values and a set of bit patterns. This allows logical types to be designed and abstracted independent of the encoding used.
 \end{itemize}
 
-To achieve this goal, the syntax for logical types and values are unified by treating everything as a constraint. A value is just a singleton constraint, i.e. one possible value. Types are then merged using a binary reduction algorithm such that the final type meets all constraints. Then, an appropriate type encoding is determined that works in harmony with the logical type.
+To achieve this distinction, the syntax for logical types and values are unified by treating everything as a constraint. A value is just a singleton constraint, i.e. one possible value. Types are then merged using a binary reduction algorithm such that the final type meets all constraints. Then, an appropriate type encoding is determined that works in harmony with the logical type.
 
 With this in mind, there is no syntactic differentation between types and values, and there is no syntax to give a variable a type. For instance, as illustrated in \autoref{fig:typevals}, we can assign a variable to a type, a value, or both. Semantically, however, the compiler will bail if it realizes there is no single runtime representation available.
 
