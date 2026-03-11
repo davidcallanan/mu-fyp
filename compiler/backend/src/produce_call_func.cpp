@@ -64,10 +64,10 @@ llvm::Function* produce_call_func(
 	}
 
 	DummyIgc dummy1 = create_dummy_igc(igc);
-	auto input_shell = clone_type_map_for_mutation(igc, map->call_input_type);
+	// auto input_shell = clone_type_map_for_mutation(igc, map->call_input_type);
 	// we cannot clear, we need to process the syms to know what types they are.
 	// input_shell->execution_sequence.clear();
-	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(input_shell));
+	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(map->call_input_type));
 	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
 	destroy_dummy_igc(dummy1);
 

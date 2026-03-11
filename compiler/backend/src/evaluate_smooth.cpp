@@ -586,11 +586,12 @@ Smooth evaluate_smooth(
 			} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
 				Smooth wrapped_up = structwrap(igc, data_smooth);
 				Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
-				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
-				llvm::Value* input_payload = llvm_value(translated);
 
 				llvm::Function* call_func = produce_call_func(igc, *actual_target_type);
 				llvm::Function* call_func_alwaysinline = produce_call_func(igc, *actual_target_type, true);
+
+				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+				llvm::Value* input_payload = llvm_value(translated);
 				
 				llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && call_func_alwaysinline != nullptr)
 					? call_func_alwaysinline
@@ -682,11 +683,12 @@ Smooth evaluate_smooth(
 
 			Smooth wrapped_up = structwrap(igc, data_smooth);
 			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
-			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
-			llvm::Value* input_payload = llvm_value(translated);
 			
 			llvm::Function* my_call_func = (*actual_target)->call_func();
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
+			
+			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+			llvm::Value* input_payload = llvm_value(translated);
 			
 			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && my_call_func_alwaysinline != nullptr)
 				? my_call_func_alwaysinline

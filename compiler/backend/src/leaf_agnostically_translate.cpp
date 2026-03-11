@@ -2,6 +2,8 @@
 
 #include "t_smooth.hpp"
 #include "t_types.hpp"
+#include "t_ctx.hpp"
+#include "t_bundles.hpp"
 #include "get_underlying_type.hpp"
 #include "is_type_singletonish.hpp"
 #include "llvm_value.hpp"
@@ -21,7 +23,7 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 
 	unsigned member_idx = 0;
 
-	std::vector<llvm::Type*> new_member_types;
+	// std::vector<llvm::Type*> new_member_types;
 	std::vector<llvm::Value*> new_member_values;
 	std::vector<Smooth> brand_new_smooths;
 	std::optional<Smooth> translated_leaf = std::nullopt;
@@ -50,7 +52,7 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 
 		llvm::Value* translated_value = llvm_value(translated_smooth);
 		
-		new_member_types.push_back(translated_value->getType());
+		// new_member_types.push_back(translated_value->getType());
 		new_member_values.push_back(translated_value);
 		brand_new_smooths.push_back(translated_smooth);
 
@@ -83,14 +85,39 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 
 		llvm::Value* translated_value = llvm_value(translated_smooth);
 		
-		new_member_types.push_back(translated_value->getType());
+		// new_member_types.push_back(translated_value->getType());
 		new_member_values.push_back(translated_value);
 		brand_new_smooths.push_back(translated_smooth);
 
 		member_idx++;
 	}
 
-	llvm::StructType* translated_outcome_type = llvm::StructType::get(*igc->context, new_member_types);
+	if (!target_map->bundle_id.has_value()) {
+		fprintf(stderr, "Bundle gone to stray.\n");
+		exit(1);
+	}
+
+	Bundle* bundle = igc->toc->bundle_registry->get(target_map->bundle_id.value());
+
+	if (!bundle) {
+		fprintf(stderr, "Bundle missing in action.\n");
+		exit(1);
+	}
+
+	auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
+
+	if (!p_bundle_map) {
+		fprintf(stderr, "BundleMap turned up missing.\n");
+		exit(1);
+	}
+
+	llvm::StructType* translated_outcome_type = (*p_bundle_map)->opaque_struct_type;
+
+	if (!translated_outcome_type || translated_outcome_type->isOpaque()) {
+		fprintf(stderr, "Opaque struct's body woke up dead.\n");
+		exit(1);
+	}
+
 	llvm::Value* translated_outcome_value = llvm::UndefValue::get(translated_outcome_type);
 
 	for (size_t i = 0; i < new_member_values.size(); i++) {
