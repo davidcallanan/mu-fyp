@@ -7,7 +7,7 @@ llvm::Value* force_identical_layout(std::shared_ptr<IrGenCtx> igc, llvm::Value* 
 	auto* type = llvm::dyn_cast<llvm::StructType>(value->getType());
 
 	if (!type) {
-		if (value->getType() != target_type) {
+		if (value->getType() != target_type && llvm::dyn_cast<llvm::StructType>(target_type)) {
 			fprintf(stderr, "did not pass in something that was a struct or of matching type.\n");
 			fprintf(stderr, "got type details: ");
 			value->getType()->print(llvm::errs());
