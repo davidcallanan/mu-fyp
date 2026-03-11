@@ -68,10 +68,13 @@ Smooth access_member(
 			auto actual_map = std::make_shared<TypeMap>(TypeMap{
 				unclear_type,
 				std::nullopt,
+				std::nullopt,
+				nullptr,
 				nullptr,
 				nullptr,
 				{},
 				{},
+				std::nullopt,
 			});
 
 			return std::make_shared<SmoothStructval>(SmoothStructval{

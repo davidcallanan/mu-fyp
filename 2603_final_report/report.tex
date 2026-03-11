@@ -370,9 +370,9 @@ In Essence C, there are no struct accessors like ``.first\_name''. Rather, a str
   \label{fig:closurestuff}
 \end{figure}
 
-Furthermore, tuples are syntactic sugar for maps, adding positional syntax. One notable outcome is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters. It's maps all the way down.
+In the same vein, tuples are implemented as syntactic sugar for maps, where positional syntax is translated into numeric symbol input. One notable outcome of this decision is that there is no concept of multiple function parameters; instead, there is a single parameter which reuses the existing tuple syntax to achieve multiple parameters. It's maps all the way down.
 
-Next, Essence C unifies maps and enums via the so-called Map-Enum Equivalence technique.
+Next, Essence C unifies maps and enums via a so-called Map-Enum Equivalence rule.
 
 Recall Rust-like enums (tagged unions) where a symbol (:foo\_bar) is associated with some data (:foo\_bar("hello")).
 
@@ -474,7 +474,7 @@ Rather than a standard library, first class integration with LLVM IR and the C A
 
 \subsection{Build Environment}
 
-Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses \textit{Node.js} and \textit{pnpm}, which are easy to install on different operating systems. Build scripts are then organized into \textit{package.json} files. However, the C++ portion, consisting of a suite of tools (\textit{clang}, \textit{make}, \textit{llvm}, etc.), is more difficult to set up consistently. The build scripts for this portion are organized using a Makefile, and the development environment itself is prepared using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts, but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based software setups, which can act as reproducible development enviornments. Thus I set up a repository-level nix script for those on NixOS who want to fast-track the development environment. This makes both the build layer and host interaction layer highly reproducible.
+Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses \textit{Node.js} and \textit{pnpm}, which are easy to install on different operating systems. Build scripts are then organized into \textit{package.json} files. However, the C++ portion, consisting of a suite of tools (\textit{clang}, \textit{make}, \textit{llvm}, etc.), is more difficult to set up consistently. The build scripts for this portion are organized using a Makefile, and the development environment itself is prepared using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts, but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based software setups, which can act as reproducible development enviornments. Thus I set up a repository-level Nix script for those on NixOS who want to fast-track setting up their development environment. This makes both the build layer and host interaction layer highly reproducible.
 
 \subsection{Parsing}
 
@@ -686,7 +686,7 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
 \begin{itemize}
   \item The prototype compiler does not yet support cross-compilation. This means a Windows executable cannot be built from within a Linux build environment, or vice versa. Thus, everything had to be kept to Linux/WSL for now.
   \item The parser does not produce helpful error messages. Thus, one must either use a pair of eyes to identify syntax errors, or use the bulky \textit{Parser Trace Explorer} to investigate more significant issues.
-  \item With more time, the entire kernel could have been migrated from \textit{GCC} to \textit{Clang}. This would have offered more realistic benchmarks given \textit{Clang}'s superior link-time optimizations over \textit{GCC}. Nonetheless, the effort of such a migration reminds us of the struggles developers face when writing software in C today -- struggles that might be less apparent in a language like \text{Essence C} that treats LLVM IR as a first-class citizen.
+  \item With more time, the entire kernel could have been migrated from \textit{GCC} to \textit{Clang}. This would have offered more realistic benchmarks given \textit{Clang}'s superior link-time optimizations over \textit{GCC}. Nonetheless, the effort of such a migration reminds us of the struggles developers face when writing software in C today -- struggles that might be less prevalent in a language like \text{Essence C} that treats LLVM IR as a first-class citizen.
   
 \end{itemize}
 

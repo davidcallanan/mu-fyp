@@ -37,7 +37,7 @@ TypeSymbolTable::TypeSymbolTable(BundleRegistry& bundle_registry) : _bundle_regi
 		map->call_output_type = nullptr;
 
 		map->bundle_id = bundle_registry.install(
-			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr, nullptr })
 		);
 
 		auto entry = std::make_unique<MapEntry>();
@@ -61,7 +61,7 @@ TypeSymbolTable::TypeSymbolTable(BundleRegistry& bundle_registry) : _bundle_regi
 		v_map->call_output_type = nullptr;
 
 		v_map->bundle_id = bundle_registry.install(
-			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+			std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr, nullptr })
 		);
 
 		auto entry = std::make_unique<MapEntry>();
@@ -149,7 +149,7 @@ std::optional<UnderlyingType> TypeSymbolTable::get(const std::string &trail) {
 			map->call_output_type = nullptr;
 
 			map->bundle_id = _bundle_registry->install(
-				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr, nullptr })
 			);
 
 			auto entry = std::make_unique<MapEntry>();

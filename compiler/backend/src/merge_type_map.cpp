@@ -48,6 +48,7 @@ std::shared_ptr<TypeMap> merge_type_map(std::shared_ptr<TypeMap> map_a, std::sha
 	
 	if (map_a->call_output_type != nullptr) {
 		merged->call_output_type = map_a->call_output_type;
+		merged->call_output_predicted_type = map_a->call_output_predicted_type;
 	}
 	
 	if (!map_a->sym_inputs.empty()) {

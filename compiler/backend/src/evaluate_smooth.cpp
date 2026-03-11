@@ -39,6 +39,8 @@
 #include "destroy_dummy_igc.hpp"
 #include "leaf_agnostically_translate.hpp"
 #include "llvm_flexi_type.hpp"
+#include "llvm_opaqued_flexi_type.hpp"
+#include "clone_type_map_for_mutation.hpp"
 #include "t_bundles.hpp"
 
 #include "llvm/IR/Attributes.h"
@@ -155,7 +157,7 @@ Smooth evaluate_smooth(
 
 				llvm::Value* leaf_value = llvm_value(leaf.value());
 				member_types.push_back(leaf_value->getType());
-				flexi_member_types.push_back(llvm_flexi_type(leaf.value()));
+				flexi_member_types.push_back(llvm_opaqued_flexi_type(leaf.value(), igc));
 				member_values.push_back(leaf_value);
 				field_smooths.push_back(leaf.value());
 			}
@@ -183,7 +185,7 @@ Smooth evaluate_smooth(
 			
 			Smooth sym_smooth = llvm_to_smooth(map_igc, *sym_type, loaded);
 			member_types.push_back(loaded->getType());
-			flexi_member_types.push_back(llvm_flexi_type(sym_smooth));
+			flexi_member_types.push_back(llvm_opaqued_flexi_type(sym_smooth, igc));
 			member_values.push_back(loaded);
 			field_smooths.push_back(sym_smooth);
 		}
@@ -590,13 +592,19 @@ Smooth evaluate_smooth(
 				
 				return access_member(igc, resulting_smooth, sym);
 			} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
+				{ // this hack better fix the opaque type error.
+					DummyIgc dummy = create_dummy_igc(igc);
+					evaluate_smooth(dummy.igc, Type((*actual_target_type)->call_input_type));
+					destroy_dummy_igc(dummy);
+				}
+
 				Smooth wrapped_up = structwrap(igc, data_smooth);
-				Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
+				Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type), true);
 
 				llvm::Function* call_func = produce_call_func(igc, *actual_target_type);
 				llvm::Function* call_func_alwaysinline = produce_call_func(igc, *actual_target_type, true);
 
-				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
 				llvm::Value* input_payload = llvm_value(translated);
 				
 				llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && call_func_alwaysinline != nullptr)
@@ -634,7 +642,7 @@ Smooth evaluate_smooth(
 					output_value->addFnAttr(llvm::Attribute::AlwaysInline);
 				}
 
-				Type output_type = Type((*actual_target_type)->call_output_type);
+				Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
 				return std::make_shared<SmoothStructval>(SmoothStructval{
 					output_type,
@@ -687,13 +695,19 @@ Smooth evaluate_smooth(
 				exit(1);
 			}
 
+			{ // this hack better fix the opaque type error.
+				DummyIgc dummy = create_dummy_igc(igc);
+				evaluate_smooth(dummy.igc, Type((*actual_target_type)->call_input_type));
+				destroy_dummy_igc(dummy);
+			}
+
 			Smooth wrapped_up = structwrap(igc, data_smooth);
-			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
+			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type), true);
 			
 			llvm::Function* my_call_func = (*actual_target)->call_func();
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
 			
-			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
+			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
 			llvm::Value* input_payload = llvm_value(translated);
 			
 			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && my_call_func_alwaysinline != nullptr)
@@ -730,7 +744,7 @@ Smooth evaluate_smooth(
 				output_value->addFnAttr(llvm::Attribute::AlwaysInline);
 			}
 
-			Type output_type = Type((*actual_target_type)->call_output_type);
+			Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
 			auto output_smooth = std::make_shared<SmoothStructval>(SmoothStructval{
 				output_type,
@@ -1061,7 +1075,7 @@ Smooth evaluate_smooth(
 		
 		DummyIgc dummy2 = create_dummy_igc(igc);
 		Smooth input_probe = evaluate_smooth(dummy2.igc, Type(v_extern_ccc.call_input_type));
-		llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_probe));
+		llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_opaqued_flexi_type(input_probe, dummy2.igc));
 		destroy_dummy_igc(dummy2);
 
 		const auto& output_sym_inputs = v_extern_ccc.call_output_type->sym_inputs;
@@ -1207,6 +1221,8 @@ Smooth evaluate_smooth(
 		
 		callable->call_input_type = v_extern_ccc.call_input_type;
 		callable->call_output_type = v_extern_ccc.call_output_type;
+		callable->call_output_predicted_type = clone_type_map_for_mutation(igc->toc, v_extern_ccc.call_output_type);
+		callable->call_output_predicted_type->execution_sequence.clear();
 		callable->bundle_id = bundle_id;
 
 		(*p_v_extern_ccc)->underlying_type = std::make_shared<Type>(Type(callable));

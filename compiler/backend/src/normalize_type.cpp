@@ -15,6 +15,7 @@
 #include "preinstantiated_types.hpp"
 #include "rotten_int_info.hpp"
 #include "rotten_float_info.hpp"
+#include "clone_type_map_for_mutation.hpp"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -217,13 +218,25 @@ Type normalize_type(
 			return std::make_unique<TypeMap>(**p_v_map);
 		}();
 
+		if (result.call_output_type != nullptr) {
+			auto predicted_version = clone_type_map_for_mutation(toc, result.call_output_type);
+			// we have to clear, because the body only makes sense to execute in the context of where it is called.
+			// for now it is impossible to determine type information.
+			// but all our internal call funcs are void for now, so less relevant.
+			// i have no idea how i would fix this.
+			// like somehow pass in types instead of llvm::Value's, it is impossible in the current system.
+			// literally could be a 5k+ loc change.
+			predicted_version->execution_sequence.clear();
+			result.call_output_predicted_type = predicted_version;
+		}
+
 		// bundles are now always assigned - we need them to keep track of the opaque struct type!
 		if (true
 			// && result.call_input_type != nullptr
 			// && result.call_output_type != nullptr
 		) {
 			result.bundle_id = toc->bundle_registry->install(
-				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr }
+				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr, nullptr }
 			));
 		}
 		

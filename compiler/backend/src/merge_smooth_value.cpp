@@ -20,8 +20,11 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 	std::shared_ptr<SmoothStructval> structval_a,
 	std::shared_ptr<SmoothStructval> structval_b
 ) {
-	auto p_v_map_a = std::get_if<std::shared_ptr<TypeMap>>(&structval_a->type);
-	auto p_v_map_b = std::get_if<std::shared_ptr<TypeMap>>(&structval_b->type);
+	Type underlying_a = get_underlying_type(structval_a->type);
+	Type underlying_b = get_underlying_type(structval_b->type);
+	
+	auto p_v_map_a = std::get_if<std::shared_ptr<TypeMap>>(&underlying_a);
+	auto p_v_map_b = std::get_if<std::shared_ptr<TypeMap>>(&underlying_b);
 	
 	if (!p_v_map_a || !p_v_map_b) {
 		fprintf(stderr, "only makes sense to merge two maps for now, really i don't think there should ever be non-map as a smooth_value.\n");

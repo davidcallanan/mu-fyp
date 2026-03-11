@@ -12,7 +12,7 @@
 #include "produce_call_func.hpp"
 #include "is_structwrappable.hpp"
 
-Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth, std::shared_ptr<TypeMap> target_map) {
+Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth, std::shared_ptr<TypeMap> target_map, bool use_flexi_mode) {
 	auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth);
 
 	if (!p_v_structval) {
@@ -42,7 +42,7 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 			Smooth wrapped = structwrap(igc, field_smooth);
 
 			if (p_leaf_as_map) {
-				return leaf_agnostically_translate(igc, wrapped, *p_leaf_as_map);
+				return leaf_agnostically_translate(igc, wrapped, *p_leaf_as_map, use_flexi_mode);
 			}
 
 			return extract_leaf(igc, wrapped);
@@ -77,7 +77,7 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 			Smooth wrapped = structwrap(igc, field_smooth);
 
 			if (p_sym_as_map) {
-				return leaf_agnostically_translate(igc, wrapped, *p_sym_as_map);
+				return leaf_agnostically_translate(igc, wrapped, *p_sym_as_map, use_flexi_mode);
 			}
 
 			return extract_leaf(igc, wrapped);
@@ -111,7 +111,9 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 		exit(1);
 	}
 
-	llvm::StructType* translated_outcome_type = (*p_bundle_map)->opaque_struct_type;
+	llvm::StructType* translated_outcome_type = use_flexi_mode
+		? (*p_bundle_map)->opaque_flexi_struct_type
+		: (*p_bundle_map)->opaque_struct_type;
 
 	if (!translated_outcome_type || translated_outcome_type->isOpaque()) {
 		fprintf(stderr, "Opaque struct's body woke up dead.\n");

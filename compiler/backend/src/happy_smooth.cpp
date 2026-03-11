@@ -1,6 +1,8 @@
 #include "happy_smooth.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
+#include "t_ctx.hpp"
+#include "t_bundles.hpp"
 #include "get_underlying_type.hpp"
 #include "rotten_int_info.hpp"
 #include "rotten_float_info.hpp"
@@ -9,7 +11,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
-Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& type) {
+Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& type, bool use_flexi_mode) {
 	Type underlying = get_underlying_type(type);
 
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying)) {
@@ -81,7 +83,7 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 
 		unsigned member_idx = 0;
 		
-		std::vector<llvm::Type*> new_member_types;
+		// std::vector<llvm::Type*> new_member_types;
 		std::vector<llvm::Value*> new_member_values;
 		std::vector<Smooth> converted_field_smooths;
 		std::optional<Smooth> brand_new_leaf = std::nullopt;
@@ -91,10 +93,10 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			&& !is_type_singletonish(v_map->leaf_type.value())
 		) {
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value());
+			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_happy);
 
-			new_member_types.push_back(field_happy_value->getType());
+			// new_member_types.push_back(field_happy_value->getType());
 			new_member_values.push_back(field_happy_value);
 			converted_field_smooths.push_back(field_happy);
 			
@@ -109,17 +111,44 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			}
 
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type);
+			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type, use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_happy);
 			
-			new_member_types.push_back(field_happy_value->getType());
+			// new_member_types.push_back(field_happy_value->getType());
 			new_member_values.push_back(field_happy_value);
 			converted_field_smooths.push_back(field_happy);
 			
 			member_idx++;
 		}
 
-		llvm::StructType* fancy_type = llvm::StructType::get(*igc->context, new_member_types);
+		if (!v_map->bundle_id.has_value()) {
+			fprintf(stderr, "No bundle.\n");
+			exit(1);
+		}
+
+		Bundle* bundle = igc->toc->bundle_registry->get(v_map->bundle_id.value());
+
+		if (!bundle) {
+			fprintf(stderr, "No bundle\n");
+			exit(1);
+		}
+
+		auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
+
+		if (!p_bundle_map) {
+			fprintf(stderr, "No map-based bundle\n");
+			exit(1);
+		}
+
+		llvm::StructType* fancy_type = use_flexi_mode
+			? (*p_bundle_map)->opaque_flexi_struct_type
+			: (*p_bundle_map)->opaque_struct_type;
+
+		if (!fancy_type || fancy_type->isOpaque()) {
+			fprintf(stderr, "type still opquaeuea.\n");
+			exit(1);
+		}
+
 		llvm::Value* fancy_value = llvm::UndefValue::get(fancy_type);
 
 		for (size_t i = 0; i < new_member_values.size(); i++) {

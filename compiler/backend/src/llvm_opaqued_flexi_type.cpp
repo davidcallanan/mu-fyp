@@ -1,6 +1,7 @@
 #include "llvm_opaqued_flexi_type.hpp"
 #include "llvm_flexi_type.hpp"
 #include "llvm_value.hpp"
+#include "get_underlying_type.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 #include "t_ctx.hpp"
@@ -9,7 +10,8 @@
 
 llvm::Type* llvm_opaqued_flexi_type(const Smooth smooth, std::shared_ptr<IrGenCtx> igc) {
 	if (auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth)) {
-		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&(*p_v_structval)->type);
+		Type underlying = get_underlying_type((*p_v_structval)->type);
+		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&underlying);
 
 		if (!p_v_map) {
 			fprintf(stderr, "not map.\n");

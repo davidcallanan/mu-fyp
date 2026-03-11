@@ -17,6 +17,7 @@ struct TypeMap {
 	std::optional<std::string> call_input_identifier;
 	std::shared_ptr<TypeMap> call_input_type;
 	std::shared_ptr<TypeMap> call_output_type;
+	std::shared_ptr<TypeMap> call_output_predicted_type;
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;
 	std::vector<Instruction> execution_sequence;
 	std::optional<uint64_t> bundle_id;

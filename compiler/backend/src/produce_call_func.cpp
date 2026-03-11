@@ -17,6 +17,7 @@
 #include "llvm_opaqued_flexi_type.hpp"
 #include "fresh_smooth.hpp"
 #include "clone_type_map_for_mutation.hpp"
+#include "happy_smooth.hpp"
 
 llvm::Function* produce_call_func(
 	std::shared_ptr<IrGenCtx> igc,
@@ -72,15 +73,7 @@ llvm::Function* produce_call_func(
 	destroy_dummy_igc(dummy1);
 
 	DummyIgc dummy2 = create_dummy_igc(igc);
-	auto v_map = clone_type_map_for_mutation(igc, map->call_output_type);
-	// we have to clear, because the body only makes sense to execute in the context of where it is called.
-	// for now it is impossible to determine type information.
-	// but all our internal call funcs are void for now, so less relevant.
-	// i have no idea how i would fix this.
-	// like somehow pass in types instead of llvm::Value's, it is impossible in the current system.
-	// literally could be a 5k+ loc change.
-	v_map->execution_sequence.clear();
-	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map));
+	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(map->call_output_predicted_type));
 	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_opaqued_flexi_type(output_smooth_probe, dummy2.igc));
 	destroy_dummy_igc(dummy2);
 
@@ -218,7 +211,8 @@ llvm::Function* produce_call_func(
 	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
 	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
-	func_builder->CreateRet(llvm_value(output_smooth));
+	Smooth output_flexi_smooth = happy_smooth(enhanced_igc, output_smooth, Type(map->call_output_predicted_type), true);
+	func_builder->CreateRet(llvm_value(output_flexi_smooth));
 
 	return func;
 }

@@ -1,7 +1,7 @@
 #include "clone_type_map_for_mutation.hpp"
 #include "t_bundles.hpp"
 
-std::shared_ptr<TypeMap> clone_type_map_for_mutation(std::shared_ptr<IrGenCtx> igc, std::shared_ptr<TypeMap> map) {
+std::shared_ptr<TypeMap> clone_type_map_for_mutation(std::shared_ptr<TypeOrchCtx> toc, std::shared_ptr<TypeMap> map) {
 	auto clone = std::make_shared<TypeMap>(*map);
 	
 	// we can't create a new bundle - we need to share the opaque struct type!
@@ -11,8 +11,8 @@ std::shared_ptr<TypeMap> clone_type_map_for_mutation(std::shared_ptr<IrGenCtx> i
 	// wait, we have to create a new bundle, this is for cloning types for mutation.
 	// it's only if we are dummy evaluating an existing type do we have to hold the old bundle.
 	
-	clone->bundle_id = igc->toc->bundle_registry->install(
-		std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr })
+	clone->bundle_id = toc->bundle_registry->install(
+		std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr, nullptr })
 	);
 	
 	return clone;
