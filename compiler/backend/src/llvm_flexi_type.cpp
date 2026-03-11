@@ -4,7 +4,7 @@
 #include "llvm/IR/DerivedTypes.h"
 
 // this is a definitive record of what the type would be if we were genuinely storing a value.
-// it bypasses the value is poison (i.e. unpopulated) and thus having a void type or similar.
+// it bypasses if the value is poison (i.e. unpopulated) and thus having a void type or similar.
 // it is only used when crossing a function boundary, because the type of the function has to remain consistent irrespective of value possibilities.
 
 llvm::Type* llvm_flexi_type(const Smooth smooth) {

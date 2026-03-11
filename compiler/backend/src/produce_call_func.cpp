@@ -14,7 +14,7 @@
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
 #include "llvm_value.hpp"
-#include "llvm_flexi_type.hpp"
+#include "llvm_opaqued_flexi_type.hpp"
 #include "fresh_smooth.hpp"
 #include "clone_type_map_for_mutation.hpp"
 
@@ -68,7 +68,7 @@ llvm::Function* produce_call_func(
 	// we cannot clear, we need to process the syms to know what types they are.
 	// input_shell->execution_sequence.clear();
 	Smooth input_smooth = evaluate_smooth(dummy1.igc, Type(map->call_input_type));
-	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(input_smooth));
+	llvm::StructType* input_struct_type = llvm::cast<llvm::StructType>(llvm_opaqued_flexi_type(input_smooth, dummy1.igc));
 	destroy_dummy_igc(dummy1);
 
 	DummyIgc dummy2 = create_dummy_igc(igc);
@@ -81,7 +81,7 @@ llvm::Function* produce_call_func(
 	// literally could be a 5k+ loc change.
 	v_map->execution_sequence.clear();
 	Smooth output_smooth_probe = evaluate_smooth(dummy2.igc, Type(v_map));
-	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_flexi_type(output_smooth_probe));
+	llvm::StructType* output_struct_type = llvm::cast<llvm::StructType>(llvm_opaqued_flexi_type(output_smooth_probe, dummy2.igc));
 	destroy_dummy_igc(dummy2);
 
 	// ah! llvm has moved to opaque pointers for everything, so we use everywhere!

@@ -115,6 +115,7 @@ Smooth evaluate_smooth(
 
 		if (bundle_map->opaque_struct_type == nullptr) {
 			bundle_map->opaque_struct_type = llvm::StructType::create(*igc->context);
+			bundle_map->opaque_flexi_struct_type = llvm::StructType::create(*igc->context);
 		}
 		
 		std::shared_ptr<ValueSymbolTable> map_value_table = std::make_shared<ValueSymbolTable>(
@@ -129,6 +130,7 @@ Smooth evaluate_smooth(
 		
 		std::optional<Smooth> leaf = std::nullopt;
 		std::vector<llvm::Type*> member_types;
+		std::vector<llvm::Type*> flexi_member_types;
 		std::vector<llvm::Value*> member_values;
 		std::vector<Smooth> field_smooths;
 		
@@ -153,6 +155,7 @@ Smooth evaluate_smooth(
 
 				llvm::Value* leaf_value = llvm_value(leaf.value());
 				member_types.push_back(leaf_value->getType());
+				flexi_member_types.push_back(llvm_flexi_type(leaf.value()));
 				member_values.push_back(leaf_value);
 				field_smooths.push_back(leaf.value());
 			}
@@ -178,12 +181,15 @@ Smooth evaluate_smooth(
 				entry.alloca_ptr
 			);
 			
+			Smooth sym_smooth = llvm_to_smooth(map_igc, *sym_type, loaded);
 			member_types.push_back(loaded->getType());
+			flexi_member_types.push_back(llvm_flexi_type(sym_smooth));
 			member_values.push_back(loaded);
-			field_smooths.push_back(llvm_to_smooth(map_igc, *sym_type, loaded));
+			field_smooths.push_back(sym_smooth);
 		}
 		
 		bundle_map->opaque_struct_type->setBody(member_types);
+		bundle_map->opaque_flexi_struct_type->setBody(flexi_member_types);
 		llvm::StructType* struct_type = bundle_map->opaque_struct_type;
 		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
 		
