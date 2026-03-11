@@ -9,6 +9,7 @@
 #include "is_type_singletonish.hpp"
 #include "llvm_value.hpp"
 #include "force_identical_layout.hpp"
+#include "better_leaf_agnostically_translate.hpp"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -94,7 +95,8 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			&& !is_type_singletonish(v_map->leaf_type.value())
 		) {
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
+			Smooth field_translated = better_leaf_agnostically_translate(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
+			Smooth field_happy = happy_smooth(igc, field_translated, v_map->leaf_type.value(), use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_happy);
 
 			// new_member_types.push_back(field_happy_value->getType());
@@ -112,7 +114,8 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			}
 
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type, use_flexi_mode);
+			Smooth field_translated = better_leaf_agnostically_translate(igc, field_smooth, *sym_type, use_flexi_mode);
+			Smooth field_happy = happy_smooth(igc, field_translated, *sym_type, use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_happy);
 			
 			// new_member_types.push_back(field_happy_value->getType());
