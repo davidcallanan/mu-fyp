@@ -42,6 +42,7 @@
 #include "llvm_opaqued_flexi_type.hpp"
 #include "t_bundles.hpp"
 #include "clone_type_map_for_mutation.hpp"
+#include "force_identical_layout.hpp"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -605,7 +606,8 @@ Smooth evaluate_smooth(
 				llvm::Function* call_func_alwaysinline = produce_call_func(igc, *actual_target_type, true);
 
 				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
-				llvm::Value* input_payload = llvm_value(translated);
+				llvm::StructType* the_type_it_should_be = llvm::cast<llvm::StructType>(call_func->getFunctionType()->getParamType(2));
+				llvm::Value* input_payload = force_identical_layout(igc, llvm_value(translated), the_type_it_should_be);
 				
 				llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && call_func_alwaysinline != nullptr)
 					? call_func_alwaysinline
@@ -708,7 +710,8 @@ Smooth evaluate_smooth(
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
 			
 			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
-			llvm::Value* input_payload = llvm_value(translated);
+			llvm::StructType* the_type_it_should_be = llvm::cast<llvm::StructType>(my_call_func->getFunctionType()->getParamType(2));
+			llvm::Value* input_payload = force_identical_layout(igc, llvm_value(translated), the_type_it_should_be);
 			
 			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && my_call_func_alwaysinline != nullptr)
 				? my_call_func_alwaysinline
