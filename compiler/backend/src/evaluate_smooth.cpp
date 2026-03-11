@@ -40,8 +40,8 @@
 #include "leaf_agnostically_translate.hpp"
 #include "llvm_flexi_type.hpp"
 #include "llvm_opaqued_flexi_type.hpp"
-#include "clone_type_map_for_mutation.hpp"
 #include "t_bundles.hpp"
+#include "clone_type_map_for_mutation.hpp"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"

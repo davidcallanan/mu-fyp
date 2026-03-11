@@ -16,8 +16,8 @@ struct TypeMap {
 	std::optional<Hardval> leaf_hardval;
 	std::optional<std::string> call_input_identifier;
 	std::shared_ptr<TypeMap> call_input_type;
-	std::shared_ptr<TypeMap> call_output_type;
-	std::shared_ptr<TypeMap> call_output_predicted_type;
+	std::shared_ptr<TypeMap> call_output_type; // this is essentially the type of the "body" of the function.
+	std::shared_ptr<TypeMap> call_output_predicted_type; // this is the signature, currently "predicted" by ignoring the body.
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;
 	std::vector<Instruction> execution_sequence;
 	std::optional<uint64_t> bundle_id;
