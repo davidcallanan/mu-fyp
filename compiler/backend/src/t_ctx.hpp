@@ -16,11 +16,11 @@ struct TypeOrchCtx {
 };
 
 struct IrGenCtx {
-	llvm::LLVMContext& context;
-	llvm::Module& module;
-	llvm::IRBuilder<>& builder;
+	std::shared_ptr<llvm::LLVMContext> context;
+	std::shared_ptr<llvm::Module> module;
+	std::shared_ptr<llvm::IRBuilder<>> builder;
 	std::shared_ptr<ValueSymbolTable> value_table;
-	llvm::FunctionCallee& puts_func;
+	std::shared_ptr<llvm::FunctionCallee> puts_func;
 	llvm::Function* log_data_func;
 	llvm::Function* log_data_deref_func;
 	llvm::BasicBlock* block_break;

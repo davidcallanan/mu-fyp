@@ -5,6 +5,6 @@
 #include "t_smooth_fwd.hpp"
 
 std::shared_ptr<SmoothEnum> llvm_to_smooth_bool(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	llvm::Value* i1_val
 );

@@ -10,7 +10,7 @@
 #include "produce_call_func.hpp"
 #include "is_structwrappable.hpp"
 
-Smooth leaf_agnostically_translate(IrGenCtx& igc, Smooth smooth, std::shared_ptr<TypeMap> target_map) {
+Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth, std::shared_ptr<TypeMap> target_map) {
 	auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth);
 
 	if (!p_v_structval) {
@@ -90,11 +90,11 @@ Smooth leaf_agnostically_translate(IrGenCtx& igc, Smooth smooth, std::shared_ptr
 		member_idx++;
 	}
 
-	llvm::StructType* translated_outcome_type = llvm::StructType::get(igc.context, new_member_types);
+	llvm::StructType* translated_outcome_type = llvm::StructType::get(*igc->context, new_member_types);
 	llvm::Value* translated_outcome_value = llvm::UndefValue::get(translated_outcome_type);
 
 	for (size_t i = 0; i < new_member_values.size(); i++) {
-		translated_outcome_value = igc.builder.CreateInsertValue(translated_outcome_value, new_member_values[i], (unsigned)i);
+		translated_outcome_value = igc->builder->CreateInsertValue(translated_outcome_value, new_member_values[i], (unsigned)i);
 	}
 
 	return std::make_shared<SmoothStructval>(SmoothStructval{
@@ -102,8 +102,12 @@ Smooth leaf_agnostically_translate(IrGenCtx& igc, Smooth smooth, std::shared_ptr
 		translated_outcome_value,
 		translated_leaf.has_value(),
 		translated_leaf,
-		produce_call_func(igc, target_map),
-		produce_call_func(igc, target_map, true),
+		[igc, target_map]() mutable -> llvm::Function* {
+			return produce_call_func(igc, target_map);
+		},
+		[igc, target_map]() mutable -> llvm::Function* {
+			return produce_call_func(igc, target_map, true);
+		},
 		brand_new_smooths,
 	});
 }

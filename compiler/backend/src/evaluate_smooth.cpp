@@ -64,7 +64,7 @@ bool determine_has_leaf(const Type& type) { // soon this function should be depr
 // underlying types are not determined from smooth, always the other way around.
 
 Smooth evaluate_smooth(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Type& type
 ) {
 	if (auto p_v_var_access = std::get_if<std::shared_ptr<TypeVarAccess>>(&type)) {
@@ -97,7 +97,7 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		Bundle* bundle = igc.toc->bundle_registry->get(map.bundle_id.value());
+		Bundle* bundle = igc->toc->bundle_registry->get(map.bundle_id.value());
 
 		if (!bundle) {
 			fprintf(stderr, "Bundle not found.");
@@ -114,19 +114,15 @@ Smooth evaluate_smooth(
 		auto bundle_map = *p_bundle_map;
 
 		if (bundle_map->opaque_struct_type == nullptr) {
-			bundle_map->opaque_struct_type = llvm::StructType::create(igc.context);
+			bundle_map->opaque_struct_type = llvm::StructType::create(*igc->context);
 		}
 		
-		llvm::Function* call_func = produce_call_func(igc, *p_v_map);
-
-		llvm::Function* call_func_alwaysinline = produce_call_func(igc, *p_v_map, true);
-		
 		std::shared_ptr<ValueSymbolTable> map_value_table = std::make_shared<ValueSymbolTable>(
-			create_value_symbol_table(igc.value_table.get())
+			create_value_symbol_table(igc->value_table.get())
 		);
 		
-		IrGenCtx map_igc = igc;
-		map_igc.value_table = map_value_table;
+		auto map_igc = std::make_shared<IrGenCtx>(*igc);
+		map_igc->value_table = map_value_table;
 		// map_igc.block_break = nullptr;
 		
 		process_map_body(map_igc, map);
@@ -168,7 +164,7 @@ Smooth evaluate_smooth(
 			}
 
 			std::string map_sym_var_name = "ms_" + sym_name;
-			std::optional<ValueSymbolTableEntry> o_entry = map_igc.value_table->get(map_sym_var_name);
+			std::optional<ValueSymbolTableEntry> o_entry = map_igc->value_table->get(map_sym_var_name);
 			
 			if (!o_entry.has_value()) {
 				fprintf(stderr, "Symbol as a variable %s was not really present in the value table\n", sym_name.c_str());
@@ -177,7 +173,7 @@ Smooth evaluate_smooth(
 			
 			ValueSymbolTableEntry entry = o_entry.value();
 			
-			llvm::Value* loaded = map_igc.builder.CreateLoad(
+			llvm::Value* loaded = map_igc->builder->CreateLoad(
 				entry.ir_type,
 				entry.alloca_ptr
 			);
@@ -192,7 +188,7 @@ Smooth evaluate_smooth(
 		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
 		
 		for (size_t i = 0; i < member_values.size(); i++) {
-			struct_value = igc.builder.CreateInsertValue(struct_value, member_values[i], i);
+			struct_value = igc->builder->CreateInsertValue(struct_value, member_values[i], i);
 		}
 		
 		return std::make_shared<SmoothStructval>(SmoothStructval{
@@ -200,8 +196,12 @@ Smooth evaluate_smooth(
 			struct_value,
 			determine_has_leaf(type),
 			leaf,
-			call_func,
-			call_func_alwaysinline,
+			[igc, v_map = *p_v_map]() mutable -> llvm::Function* {
+				return produce_call_func(igc, v_map);
+			},
+			[igc, v_map = *p_v_map]() mutable -> llvm::Function* {
+				return produce_call_func(igc, v_map, true);
+			},
 			field_smooths,
 		});
 	}
@@ -214,7 +214,7 @@ Smooth evaluate_smooth(
 			// exit(1);
 			
 			llvm::Value* void_value = smooth_void(igc, type)->value;
-			llvm::Type* flexi_type = llvm::PointerType::get(igc.context, 0);
+			llvm::Type* flexi_type = llvm::PointerType::get(*igc->context, 0);
 			
 			return std::make_shared<SmoothVoidPointer>(SmoothVoidPointer{
 				type,
@@ -237,12 +237,12 @@ Smooth evaluate_smooth(
 		const auto& v_log = *p_v_log;
 		
 		if (v_log->message == nullptr) {
-			llvm::Value* log_str = igc.builder.CreateGlobalStringPtr("");
-			igc.builder.CreateCall(igc.puts_func, { log_str });
+			llvm::Value* log_str = igc->builder->CreateGlobalStringPtr("");
+			igc->builder->CreateCall(*igc->puts_func, { log_str });
 		} else {
 			Smooth message_smooth = evaluate_smooth(igc, *v_log->message);
 			Smooth leaf_smooth = extract_leaf(igc, message_smooth, true);
-			igc.builder.CreateCall(igc.puts_func, { llvm_value(leaf_smooth) });
+			igc->builder->CreateCall(*igc->puts_func, { llvm_value(leaf_smooth) });
 		}
 		
 		return smooth_void(igc, type);
@@ -267,36 +267,36 @@ Smooth evaluate_smooth(
 		uint64_t bit_width = leaf_type->getPrimitiveSizeInBits();
 
 		if (bit_width == 0 && leaf_type->isPointerTy()) {
-			bit_width = igc.module.getDataLayout().getPointerSizeInBits();
+			bit_width = igc->module->getDataLayout().getPointerSizeInBits();
 		}
 
 		if (bit_width == 0) {
-			llvm::Value* error_str = igc.builder.CreateGlobalStringPtr("[undeterminable size]");
-			igc.builder.CreateCall(igc.puts_func, { error_str });
+			llvm::Value* error_str = igc->builder->CreateGlobalStringPtr("[undeterminable size]");
+			igc->builder->CreateCall(*igc->puts_func, { error_str });
 			
 			return smooth_void(igc, type);
 		}
 
 		if (leaf_type->isPointerTy()) {
-			leaf = igc.builder.CreatePtrToInt(leaf, llvm::IntegerType::get(igc.context, bit_width));
+			leaf = igc->builder->CreatePtrToInt(leaf, llvm::IntegerType::get(*igc->context, bit_width));
 		} else if (!leaf_type->isIntegerTy()) { // interpret the value as raw bits
-			leaf = igc.builder.CreateBitCast(leaf, llvm::IntegerType::get(igc.context, bit_width));
+			leaf = igc->builder->CreateBitCast(leaf, llvm::IntegerType::get(*igc->context, bit_width));
 		}
 
 		uint64_t num_chunks = (bit_width + 63) / 64;
 		uint64_t total_bits = num_chunks * 64;
 
-		llvm::Type* i8  = llvm::Type::getInt8Ty(igc.context);
-		llvm::Type* i64 = llvm::Type::getInt64Ty(igc.context);
+		llvm::Type* i8  = llvm::Type::getInt8Ty(*igc->context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(*igc->context);
 
 		llvm::Value* wide = (total_bits > bit_width) // zero-extend
-			? igc.builder.CreateZExt(leaf, llvm::IntegerType::get(igc.context, total_bits))
+			? igc->builder->CreateZExt(leaf, llvm::IntegerType::get(*igc->context, total_bits))
 			: leaf;
 
 		for (uint64_t i = 0; i < num_chunks; i++) {
 			uint64_t shift = (num_chunks - 1 - i) * 64;
-			llvm::Value* shifted = igc.builder.CreateLShr(wide, llvm::ConstantInt::get(wide->getType(), shift));
-			llvm::Value* chunk = igc.builder.CreateTrunc(shifted, i64);
+			llvm::Value* shifted = igc->builder->CreateLShr(wide, llvm::ConstantInt::get(wide->getType(), shift));
+			llvm::Value* chunk = igc->builder->CreateTrunc(shifted, i64);
 
 			llvm::Value* bl;
 			llvm::Value* br;
@@ -315,7 +315,7 @@ Smooth evaluate_smooth(
 				br = llvm::ConstantInt::get(i8, '-');
 			}
 
-			igc.builder.CreateCall(igc.log_data_func, { chunk, bl, br });
+			igc->builder->CreateCall(igc->log_data_func, { chunk, bl, br });
 		}
 
 		return smooth_void(igc, type);
@@ -334,10 +334,10 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(igc.context);
-		llvm::Type* i64 = llvm::Type::getInt64Ty(igc.context);
+		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(*igc->context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(*igc->context);
 
-		llvm::Value* ptr = igc.builder.CreateBitCast(leaf, i8ptr);
+		llvm::Value* ptr = igc->builder->CreateBitCast(leaf, i8ptr);
 
 		llvm::Value* byte_count;
 
@@ -355,10 +355,10 @@ Smooth evaluate_smooth(
 
 			byte_count = (count_leaf->getType() == i64)
 				? count_leaf
-				: igc.builder.CreateZExt(count_leaf, i64);
+				: igc->builder->CreateZExt(count_leaf, i64);
 		}
 
-		igc.builder.CreateCall(igc.log_data_deref_func, { ptr, byte_count });
+		igc->builder->CreateCall(igc->log_data_deref_func, { ptr, byte_count });
 
 		return smooth_void(igc, type);
 	}
@@ -367,7 +367,7 @@ Smooth evaluate_smooth(
 		const auto& v_var_walrus = *p_v_var_walrus;
 		
 		std::string map_var_name = "m_" + v_var_walrus->name;
-		std::string scoped_alloca_name = igc.value_table->scope_id() + "~" + map_var_name;
+		std::string scoped_alloca_name = igc->value_table->scope_id() + "~" + map_var_name;
 		
 		Smooth smooth = evaluate_smooth(igc, *v_var_walrus->typeval);
 
@@ -377,8 +377,8 @@ Smooth evaluate_smooth(
 
 		llvm::Value* value = llvm_value(smooth);
 
-		llvm::Value* alloca = igc.builder.CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
-		igc.builder.CreateStore(value, alloca);
+		llvm::Value* alloca = igc->builder->CreateAlloca(value->getType(), nullptr, scoped_alloca_name);
+		igc->builder->CreateStore(value, alloca);
 
 		ValueSymbolTableEntry entry{
 			alloca,
@@ -391,7 +391,7 @@ Smooth evaluate_smooth(
 			,
 		};
 		
-		igc.value_table->set(map_var_name, entry);
+		igc->value_table->set(map_var_name, entry);
 		
 		return access_variable(igc, type);
 	}
@@ -400,7 +400,7 @@ Smooth evaluate_smooth(
 		const auto& v_var_assign = *p_v_var_assign;
 		
 		std::string map_var_name = "m_" + v_var_assign->name;
-		std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(map_var_name);
+		std::optional<ValueSymbolTableEntry> o_entry = igc->value_table->get(map_var_name);
 		
 		if (!o_entry.has_value()) {
 			fprintf(stderr, "So %s does not exist.\n", v_var_assign->name.c_str());
@@ -429,7 +429,7 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		igc.builder.CreateStore(value, existing.alloca_ptr);
+		igc->builder->CreateStore(value, existing.alloca_ptr);
 		
 		// as we are using stack allocations, we can mutate via stack address, bypassing immutable registers and phi logic.
 		// llvm will optimize this to single-static-assignment (SSA) form for us, when possible.
@@ -441,7 +441,7 @@ Smooth evaluate_smooth(
 		llvm::Value* void_value = smooth_void(igc, type)->value;
 
 		if (auto info = rotten_int_info(*p_v_rotten)) {
-			llvm::Type* flexi_type = llvm::IntegerType::get(igc.context, info->bits);
+			llvm::Type* flexi_type = llvm::IntegerType::get(*igc->context, info->bits);
 			
 			return std::make_shared<SmoothVoidInt>(SmoothVoidInt{
 				type,
@@ -453,10 +453,10 @@ Smooth evaluate_smooth(
 		if (auto info = rotten_float_info(*p_v_rotten)) {
 			llvm::Type* flexi_type = nullptr;
 			
-			if (info->bits == 16) flexi_type = llvm::Type::getHalfTy(igc.context);
-			else if (info->bits == 32) flexi_type = llvm::Type::getFloatTy(igc.context);
-			else if (info->bits == 64) flexi_type = llvm::Type::getDoubleTy(igc.context);
-			else if (info->bits == 128) flexi_type = llvm::Type::getFP128Ty(igc.context);
+			if (info->bits == 16) flexi_type = llvm::Type::getHalfTy(*igc->context);
+			else if (info->bits == 32) flexi_type = llvm::Type::getFloatTy(*igc->context);
+			else if (info->bits == 64) flexi_type = llvm::Type::getDoubleTy(*igc->context);
+			else if (info->bits == 128) flexi_type = llvm::Type::getFP128Ty(*igc->context);
 			
 			return std::make_shared<SmoothVoidFloat>(SmoothVoidFloat{
 				type,
@@ -477,7 +477,7 @@ Smooth evaluate_smooth(
 		}
 
 		uint32_t bit_width = (uint32_t) std::bit_width(v_enum->syms.size() - 1);
-		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
+		llvm::Type* int_type = llvm::IntegerType::get(*igc->context, bit_width);
 		
 		// if (!v_enum->hardsym.has_value()) {
 		// 	fprintf(stderr, "Enum does not have any definitive symbol, could not reduce to one possibility.\n");
@@ -519,7 +519,7 @@ Smooth evaluate_smooth(
 			Type target_typeee = Type((*p_type_map_reference)->target);
 			auto underlying_of_genuine_interest = get_underlying_type(target_typeee);
 			
-			llvm::Value* loaded = igc.builder.CreateLoad(v_map_reference->structval_type, v_map_reference->value);
+			llvm::Value* loaded = igc->builder->CreateLoad(v_map_reference->structval_type, v_map_reference->value);
 			
 			Smooth loaded_smooth = llvm_to_smooth(igc, underlying_of_genuine_interest, loaded);
 			
@@ -577,7 +577,7 @@ Smooth evaluate_smooth(
 
 				const std::string& sym = (*p_type_enum)->hardsym.value();
 
-				llvm::Value* loaded = igc.builder.CreateLoad(v_map_reference->structval_type, v_map_reference->value);
+				llvm::Value* loaded = igc->builder->CreateLoad(v_map_reference->structval_type, v_map_reference->value);
 				Smooth loaded_smooth = llvm_to_smooth(igc, underlying_of_genuine_interest, loaded);
 				
 				auto resulting_smooth = std::get<std::shared_ptr<SmoothStructval>>(loaded_smooth);
@@ -596,28 +596,28 @@ Smooth evaluate_smooth(
 					? call_func_alwaysinline
 					: call_func;
 
-				llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+				llvm::Type* opaque_pointer = llvm::PointerType::get(*igc->context, 0);
 				
 				// todo: in future we might need to conditionally drop these parameters, it depends whether optimizer is smart enough. actually i think optimizer smart enough provided struct size is zero and only use is conditionally applied "sizeof".
-				std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+				std::optional<ValueSymbolTableEntry> o_entry_mod = igc->value_table->get("m_mod");
 				
 				if (!o_entry_mod.has_value()) {
 					fprintf(stderr, "mod context not present!!\n");
 					exit(1);
 				}
 				
-				llvm::Value* arg_mod = igc.builder.CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
+				llvm::Value* arg_mod = igc->builder->CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
 
-				std::optional<ValueSymbolTableEntry> o_entry_this = igc.value_table->get("m_this");
+				std::optional<ValueSymbolTableEntry> o_entry_this = igc->value_table->get("m_this");
 
 				if (!o_entry_this.has_value()) {
 					fprintf(stderr, "this context not present!!\n");
 					exit(1);
 				}
 
-				llvm::Value* arg_this = igc.builder.CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+				llvm::Value* arg_this = igc->builder->CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
 
-				llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, {
+				llvm::CallInst* output_value = igc->builder->CreateCall(optimized_func, {
 					arg_mod,
 					arg_this,
 					input_payload,
@@ -634,8 +634,8 @@ Smooth evaluate_smooth(
 					output_value,
 					false,
 					std::nullopt, // problematic.
-					nullptr, // problematic.
-					nullptr,
+					{}, // problematic.
+					{},
 					{}, // this needs be sorted evnetually
 				});
 			}
@@ -667,7 +667,7 @@ Smooth evaluate_smooth(
 		} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
 			auto actual_target = std::get_if<std::shared_ptr<SmoothStructval>>(&target_smooth);
 
-			if (!actual_target || (*actual_target)->call_func == nullptr) {
+			if (!actual_target || !(*actual_target)->call_func) {
 				fprintf(stderr, "cannot do a map call on a target that doesn't support it. - map is not map-callable.");
 				exit(1);
 			}
@@ -685,31 +685,34 @@ Smooth evaluate_smooth(
 			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type);
 			llvm::Value* input_payload = llvm_value(translated);
 			
-			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && (*actual_target)->call_func_alwaysinline != nullptr)
-				? (*actual_target)->call_func_alwaysinline
-				: (*actual_target)->call_func;
+			llvm::Function* my_call_func = (*actual_target)->call_func();
+			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
+			
+			llvm::Function* optimized_func = (v_call_with_dynamic->is_flag_alwaysinline && my_call_func_alwaysinline != nullptr)
+				? my_call_func_alwaysinline
+				: my_call_func;
 
-			llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+			llvm::Type* opaque_pointer = llvm::PointerType::get(*igc->context, 0);
 
-			std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+			std::optional<ValueSymbolTableEntry> o_entry_mod = igc->value_table->get("m_mod");
 
 			if (!o_entry_mod.has_value()) {
 				fprintf(stderr, "mod context not present!!\n");
 				exit(1);
 			}
 
-			llvm::Value* arg_mod = igc.builder.CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
+			llvm::Value* arg_mod = igc->builder->CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
 
-			std::optional<ValueSymbolTableEntry> o_entry_this = igc.value_table->get("m_this");
+			std::optional<ValueSymbolTableEntry> o_entry_this = igc->value_table->get("m_this");
 
 			if (!o_entry_this.has_value()) {
 				fprintf(stderr, "this context not present!!\n");
 				exit(1);
 			}
 
-			llvm::Value* arg_this = igc.builder.CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+			llvm::Value* arg_this = igc->builder->CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
 
-			llvm::CallInst* output_value = igc.builder.CreateCall(optimized_func, {
+			llvm::CallInst* output_value = igc->builder->CreateCall(optimized_func, {
 				arg_mod,
 				arg_this,
 				input_payload,
@@ -726,8 +729,8 @@ Smooth evaluate_smooth(
 				output_value,
 				false,
 				std::nullopt, // this is problematic.
-				nullptr, // this line is problematic.
-				nullptr,
+				{}, // this line is problematic.
+				{},
 				{}, // this all needs to be sorted properly.
 			});
 
@@ -794,16 +797,16 @@ Smooth evaluate_smooth(
 				uint32_t value_bits = value->getType()->getIntegerBitWidth();
 				
 				if (result_bits < value_bits) {
-					result = igc.builder.CreateZExt(result, value->getType());
+					result = igc->builder->CreateZExt(result, value->getType());
 				} else if (value_bits < result_bits) {
-					value = igc.builder.CreateZExt(value, result->getType());
+					value = igc->builder->CreateZExt(value, result->getType());
 				}
 			}
 
 			if (op_numeric.op == "*") {
-				result = is_float.value() ? igc.builder.CreateFMul(result, value) : igc.builder.CreateMul(result, value);
+				result = is_float.value() ? igc->builder->CreateFMul(result, value) : igc->builder->CreateMul(result, value);
 			} else if (op_numeric.op == "/") {
-				result = is_float.value() ? igc.builder.CreateFDiv(result, value) : igc.builder.CreateSDiv(result, value);
+				result = is_float.value() ? igc->builder->CreateFDiv(result, value) : igc->builder->CreateSDiv(result, value);
 				// todo: is signed division appropriate in all cases? probably need to adjust this.
 			} else {
 				fprintf(stderr, "Some bizarre operator was encountered %s (multiplicative)\n", op_numeric.op.c_str());
@@ -896,16 +899,16 @@ Smooth evaluate_smooth(
 				uint32_t value_bits = value->getType()->getIntegerBitWidth();
 				
 				if (result_bits < value_bits) {
-					result = igc.builder.CreateZExt(result, value->getType());
+					result = igc->builder->CreateZExt(result, value->getType());
 				} else if (value_bits < result_bits) {
-					value = igc.builder.CreateZExt(value, result->getType());
+					value = igc->builder->CreateZExt(value, result->getType());
 				}
 			}
 
 			if (op_numeric.op == "+") {
-				result = is_float.value() ? igc.builder.CreateFAdd(result, value) : igc.builder.CreateAdd(result, value);
+				result = is_float.value() ? igc->builder->CreateFAdd(result, value) : igc->builder->CreateAdd(result, value);
 			} else if (op_numeric.op == "-") {
-				result = is_float.value() ? igc.builder.CreateFSub(result, value) : igc.builder.CreateSub(result, value);
+				result = is_float.value() ? igc->builder->CreateFSub(result, value) : igc->builder->CreateSub(result, value);
 			} else {
 				fprintf(stderr, "Some bizarre operator was encountered %s (additive)\n", op_numeric.op.c_str());
 				exit(1);
@@ -963,7 +966,7 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		llvm::Type* i1 = llvm::Type::getInt1Ty(igc.context);
+		llvm::Type* i1 = llvm::Type::getInt1Ty(*igc->context);
 		llvm::Value* result = llvm::ConstantInt::get(i1, 1);
 
 		for (const auto& op : v_expr_logical_and.ops) {
@@ -981,7 +984,7 @@ Smooth evaluate_smooth(
 				exit(1);
 			}
 
-			result = igc.builder.CreateAnd(result, actual_value);
+			result = igc->builder->CreateAnd(result, actual_value);
 		}
 
 		return llvm_to_smooth_bool(igc, result);
@@ -995,7 +998,7 @@ Smooth evaluate_smooth(
 			exit(1);
 		}
 
-		llvm::Type* i1 = llvm::Type::getInt1Ty(igc.context);
+		llvm::Type* i1 = llvm::Type::getInt1Ty(*igc->context);
 		llvm::Value* result = llvm::ConstantInt::get(i1, 0);
 
 		for (const auto& op : v_expr_logical_or.ops) {
@@ -1013,7 +1016,7 @@ Smooth evaluate_smooth(
 				exit(1);
 			}
 
-			result = igc.builder.CreateOr(result, actual_value);
+			result = igc->builder->CreateOr(result, actual_value);
 		}
 
 		return llvm_to_smooth_bool(igc, result);
@@ -1058,7 +1061,7 @@ Smooth evaluate_smooth(
 
 		llvm::Type* c_abi_return_type = [&]() -> llvm::Type* {
 			if (!is_return_value_actually_present) {
-				return llvm::Type::getVoidTy(igc.context);
+				return llvm::Type::getVoidTy(*igc->context);
 			}
 
 			const auto& first_field = output_sym_inputs.begin()->second;
@@ -1073,10 +1076,10 @@ Smooth evaluate_smooth(
 
 		llvm::StructType* output_struct_type = [&]() -> llvm::StructType* {
 			if (!is_return_value_actually_present) {
-				return llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{});
+				return llvm::StructType::get(*igc->context, llvm::ArrayRef<llvm::Type*>{});
 			}
 
-			return llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ c_abi_return_type });
+			return llvm::StructType::get(*igc->context, llvm::ArrayRef<llvm::Type*>{ c_abi_return_type });
 		}();
 
 		llvm::FunctionType* the_extern_type = llvm::FunctionType::get(
@@ -1085,7 +1088,7 @@ Smooth evaluate_smooth(
 			false
 		);
 
-		llvm::FunctionCallee the_extern_callee = igc.module.getOrInsertFunction(
+		llvm::FunctionCallee the_extern_callee = igc->module->getOrInsertFunction(
 			v_extern_ccc.function_name,
 			the_extern_type
 		);
@@ -1100,7 +1103,7 @@ Smooth evaluate_smooth(
 		function_handle->setCallingConv(llvm::CallingConv::C);
 
 		// as these are dropped we can keep them opaque.
-		llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+		llvm::Type* opaque_pointer = llvm::PointerType::get(*igc->context, 0);
 
 		llvm::FunctionType* wrapper_function_type = llvm::FunctionType::get(
 			output_struct_type,
@@ -1117,14 +1120,14 @@ Smooth evaluate_smooth(
 				wrapper_function_type,
 				llvm::Function::PrivateLinkage,
 				wrapper_name,
-				igc.module
+				*igc->module
 			);
 
 			wrapper_function->addFnAttr(llvm::Attribute::AlwaysInline);
 
-			llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(igc.context, "entry", wrapper_function);
-			llvm::IRBuilder<> wrapper_builder(igc.context);
-			wrapper_builder.SetInsertPoint(wrapper_entry);
+			llvm::BasicBlock* wrapper_entry = llvm::BasicBlock::Create(*igc->context, "entry", wrapper_function);
+			auto wrapper_builder = std::make_shared<llvm::IRBuilder<>>(*igc->context);
+			wrapper_builder->SetInsertPoint(wrapper_entry);
 			
 			llvm::Argument* lonely_input_argument = wrapper_function->getArg(2);
 			lonely_input_argument->setName("input_struct");
@@ -1133,24 +1136,24 @@ Smooth evaluate_smooth(
 
 			unsigned field_index = 0;
 
-			IrGenCtx igc_actual_call = {
-				igc.context,
-				igc.module,
+			auto igc_actual_call = std::make_shared<IrGenCtx>(IrGenCtx{
+				igc->context,
+				igc->module,
 				wrapper_builder,
 				std::make_shared<ValueSymbolTable>(create_value_symbol_table()),
-				igc.puts_func,
-				igc.log_data_func,
-				igc.log_data_deref_func,
+				igc->puts_func,
+				igc->log_data_func,
+				igc->log_data_deref_func,
 				nullptr,
-				igc.toc,
-			};
+				igc->toc,
+			});
 
 			for (const auto& [sym_name, p_sym_type] : v_extern_ccc.call_input_type->sym_inputs) {
 				if (is_type_singletonish(*p_sym_type)) {
 					continue;
 				}
 
-				llvm::Value* extracted = wrapper_builder.CreateExtractValue(lonely_input_argument, field_index);
+				llvm::Value* extracted = wrapper_builder->CreateExtractValue(lonely_input_argument, field_index);
 
 				Smooth field_smooth = llvm_to_smooth(igc_actual_call, *p_sym_type, extracted);
 				Smooth wrapped_smooth = structwrap(igc_actual_call, field_smooth);
@@ -1161,7 +1164,7 @@ Smooth evaluate_smooth(
 				field_index++;
 			}
 			
-			llvm::CallInst* call_to_extern = wrapper_builder.CreateCall(the_extern_callee, arg_extraction);
+			llvm::CallInst* call_to_extern = wrapper_builder->CreateCall(the_extern_callee, arg_extraction);
 
 			if (is_alwaysinline) {
 				call_to_extern->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -1174,10 +1177,10 @@ Smooth evaluate_smooth(
 
 				llvm::Value* wrapped_up_in_a_tortilla = llvm::UndefValue::get(output_struct_type);
 				
-				return wrapper_builder.CreateInsertValue(wrapped_up_in_a_tortilla, call_to_extern, 0);
+				return wrapper_builder->CreateInsertValue(wrapped_up_in_a_tortilla, call_to_extern, 0);
 			}();
 			
-			wrapper_builder.CreateRet(final_output);
+			wrapper_builder->CreateRet(final_output);
 
 			return wrapper_function;
 		};
@@ -1190,7 +1193,7 @@ Smooth evaluate_smooth(
 		bundle_map->call_func = wrapper_traditional;
 		bundle_map->call_func_alwaysinline = wrapper_alwaysinline;
 		
-		uint64_t bundle_id = igc.toc->bundle_registry->install(Bundle(bundle_map));
+		uint64_t bundle_id = igc->toc->bundle_registry->install(Bundle(bundle_map));
 
 		auto callable = std::make_shared<TypeMap>();
 		
@@ -1216,13 +1219,13 @@ Smooth evaluate_smooth(
 		
 		llvm::Value* NULL_pointer = llvm::ConstantPointerNull::get(llvm::PointerType::getUnqual(target_llvm_type));
 		
-		llvm::Value* gep = igc.builder.CreateGEP(
+		llvm::Value* gep = igc->builder->CreateGEP(
 			target_llvm_type,
 			NULL_pointer,
-			llvm::ConstantInt::get(llvm::Type::getInt32Ty(igc.context), 1) // getting size of "1" element.
+			llvm::ConstantInt::get(llvm::Type::getInt32Ty(*igc->context), 1) // getting size of "1" element.
 		);
 		
-		llvm::Value* size = igc.builder.CreatePtrToInt(gep, llvm::Type::getInt64Ty(igc.context));
+		llvm::Value* size = igc->builder->CreatePtrToInt(gep, llvm::Type::getInt64Ty(*igc->context));
 
 		auto v_rotten = std::make_shared<TypeRotten>();
 		v_rotten->type_str = "u64";
@@ -1257,9 +1260,9 @@ Smooth evaluate_smooth(
 
 		llvm::Value* actual_value = (*p_v_structval)->value;
 		
-		llvm::Value* alloca_address = igc.builder.CreateAlloca(actual_value->getType(), nullptr);
+		llvm::Value* alloca_address = igc->builder->CreateAlloca(actual_value->getType(), nullptr);
 		
-		igc.builder.CreateStore(actual_value, alloca_address);
+		igc->builder->CreateStore(actual_value, alloca_address);
 
 		auto v_map_reference = std::make_shared<TypeMapReference>();
 		v_map_reference->target = *p_v_target_map;

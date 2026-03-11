@@ -6,6 +6,6 @@
 #include "t_smooth.hpp"
 
 Smooth access_variable(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Type& node
 );

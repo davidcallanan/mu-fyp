@@ -11,7 +11,7 @@
 
 // this is such a hacky system and needs to be rid of at some point.
 
-Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
+Smooth llvm_to_smooth(std::shared_ptr<IrGenCtx> igc, const Type& type, llvm::Value* value) {
 	Type underlying = get_underlying_type(type);
 
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying)) {
@@ -108,7 +108,7 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			if (is_type_singletonish((*p_v_map)->leaf_type.value())) {
 				leaf = evaluate_singletonish(igc, (*p_v_map)->leaf_type.value());
 			} else {
-				llvm::Value* leaf_value = igc.builder.CreateExtractValue(value, field_index);
+				llvm::Value* leaf_value = igc->builder->CreateExtractValue(value, field_index);
 				leaf = llvm_to_smooth(igc, (*p_v_map)->leaf_type.value(), leaf_value);
 				field_smooths.push_back(leaf.value());
 				field_index += 1;
@@ -120,7 +120,7 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 				continue;
 			}
 			
-			llvm::Value* sym_value = igc.builder.CreateExtractValue(value, field_index);
+			llvm::Value* sym_value = igc->builder->CreateExtractValue(value, field_index);
 			field_smooths.push_back(llvm_to_smooth(igc, *sym_type, sym_value));
 			
 			field_index += 1;
@@ -131,8 +131,12 @@ Smooth llvm_to_smooth(IrGenCtx& igc, const Type& type, llvm::Value* value) {
 			value,
 			has_leaf,
 			leaf,
-			produce_call_func(igc, *p_v_map),
-			produce_call_func(igc, *p_v_map, true),
+			[igc, v_map = *p_v_map]() mutable -> llvm::Function* {
+				return produce_call_func(igc, v_map);
+			},
+			[igc, v_map = *p_v_map]() mutable -> llvm::Function* {
+				return produce_call_func(igc, v_map, true);
+			},
 			field_smooths,
 		});
 	}

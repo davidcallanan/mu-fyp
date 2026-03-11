@@ -6,7 +6,7 @@
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 
-Smooth extract_leaf(IrGenCtx& igc, Smooth smooth, bool be_permissive) {
+Smooth extract_leaf(std::shared_ptr<IrGenCtx> igc, Smooth smooth, bool be_permissive) {
 	if (auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth)) {
 		const auto& v_structval = *p_v_structval;
 
@@ -41,7 +41,7 @@ Smooth extract_leaf(IrGenCtx& igc, Smooth smooth, bool be_permissive) {
 			exit(1);
 		}
 
-		llvm::Value* value = igc.builder.CreateExtractValue(v_structval->value, 0);
+		llvm::Value* value = igc->builder->CreateExtractValue(v_structval->value, 0);
 
 		if (!o_leaf_type.has_value()) {
 			auto v_rotten = std::make_shared<TypeRotten>();

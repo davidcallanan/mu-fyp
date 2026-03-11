@@ -9,7 +9,7 @@
 #include "llvm/IR/DerivedTypes.h"
 
 std::shared_ptr<SmoothInt> merge_smooth_int(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<SmoothInt> int_a,
 	std::shared_ptr<SmoothInt> int_b
 ) {
@@ -45,8 +45,8 @@ std::shared_ptr<SmoothInt> merge_smooth_int(
 	}
 
 	llvm::Value* value = int_a->value != nullptr ? int_a->value : int_b->value;
-	llvm::Type* type = llvm::IntegerType::get(igc.context, bits_a >= bits_b ? bits_a : bits_b);
-	value = igc.builder.CreateZExt(value, type);
+	llvm::Type* type = llvm::IntegerType::get(*igc->context, bits_a >= bits_b ? bits_a : bits_b);
+	value = igc->builder->CreateZExt(value, type);
 
 	return std::make_shared<SmoothInt>(SmoothInt{
 		bits_a >= bits_b ? int_a->type : int_b->type,

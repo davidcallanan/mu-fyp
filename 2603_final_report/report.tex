@@ -178,10 +178,8 @@ Some brief gratitude to Anthropic for their powerful GenAI models, though other 
 \newpage
 
 \begin{abstract}
-  
-  (max 250)
 
-The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code \textit{once}, that is agnostic to the linking strategy. This is achieved by designing unique language features that are inspired by \textit{zero-cost abstraction} principles. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries. The performance of these optimizations is assessed by benchmarking four simple hardware operations in a proof-of-concept operating system kernel, consisting of \textit{C}, \textit{Essence C}, \textit{NASM}, and \textit{LLVM IR}. The ability for large language models to assist with using \textit{Essence C} is also explored.
+The logic of computer software is primarily expressed using programming languages, but the balance between versatile and efficient programming languages remains a major challenge. Changes to the execution environment of a program can impact performance, or worse, cause incompatibilities that require major refactoring. Developers often maintain multiple branches of a codebase to keep performance to acceptable levels. One particular difference between execution environments is whether individual modules are statically linked at compile-time or dynamically resolved at runtime. In this research project, we propose a prototype programming language called ``Essence C'' that better supports the continuum of static and dynamic modules, by allowing the programmer to write code \textit{once}, that is agnostic to the linking strategy. This is achieved by designing unique language features that are inspired by \textit{zero-cost abstraction} principles. By taking advantage of LLVM's intermediate representation, it is possible to advance the state-of-the-art of link-time optimizations across module boundaries. The performance of these optimizations is assessed by benchmarking four simple hardware operations in a proof-of-concept operating system kernel, consisting of \textit{C}, \textit{Essence C}, \textit{NASM}, and \textit{LLVM IR}. The ability for large language models to assist with using \textit{Essence C} is also evaluated.
 
 \end{abstract}
 
@@ -199,11 +197,9 @@ Software development is becoming very popular, with graduates now unable to find
 
 \section{Methodology}
 
-Thesis structure, and a resesarch strategy.
-
 To address the objectives of this research, a design-science methodology is employed with a focus on continued interation and evaluation of ``Essence C''. This approach was selected because the project is concerned with the implementation of a novel programming language that advances the flexibility and performance of modules in software development, and thus requires a design and implementation process that is informed by ongoing evaluation.
 
-The structure of this thesis is organized to reflect this methodology. Chapter 2 reviews existing literature.
+The structure of this thesis is organized to reflect this methodology. First, Chapter 2 reviews existing literature, both theoretical and technical, focusing on how kernels optimize static calls and how the LLVM toolchain is effective for programming language development. Next, Chapter 3 summarizes the key aspects of the problem, including the functional and non-functional requirements. Then, Chapter 4 considers separately the design elements and implementation details of the solution. Penultimately, Chapter 5 evaluates the success of the project in the areas of snapshot testing, performance benchmarking, and GenAI comprehension. Finally, Chapter 6 concludes with an overall assessment, limitations, and future work.
 
 \section{Success Criteria}
 
@@ -242,30 +238,23 @@ Some experimentation with GitHub Copilot agent mode was conducted, with notable 
 
 \subsection{Static vs dynamic dispatch}
 
-Methods of class instances (or equivalent constructs) dispatch calls either statically or dynamically. When the exact implementation of a method is known at compile-time, static dispatch is typically used, involving a direct assembly call to the method. Since the method is known at compile-time, the compiler can use an immediate addressing, which is most efficient. In contrast, when the exact implementation of a method is not decided until runtime (or if the compiler cannot prove otherwise), dynamic dispatch is used, which involves an indirect call through a vtable or similar structure.
+There are two primary ways for methods of objects (or equivalent constructs) to dispatch calls: static dispatch or dynamic dispatch. When the exact implementation of a method is known at compile-time, static dispatch is typically favoured, involving a direct assembly call to the method. Since the method is known at compile-time, the compiler can use immediate addressing mode, which is most efficient. In contrast, when the exact implementation of a method is not decided until runtime (or if the compiler cannot prove otherwise), dynamic dispatch is required, which involves an indirect call through a vtable or similar structure.
 
 \subsection{Static vs dynamic linking}
 
-There is much overlap in the literature between dispatch and linking, but linking focuses on larger units of code, often referred to as modules or libraries, as opposed to class instances. This concept exists in C where there is no inbuilt notion of static vs dynamic dispatch.
+There is much overlap in the literature between dispatch techniques and linking techniques. Linking focuses on larger units of code, often referred to as modules or libraries, as opposed to objects. This is crucial in C where there is no inbuilt notion of static vs dynamic dispatch. Rather, C programmers often use seperate compilation units to allow the user to substitute implementations. Unfortunately, architectural limitations often result in the use of the unfavourable PIMPL idiom which can tank performance, but I digress.
 
-When the exact source code (implementation) of a module is known at compile-time, static linking is typically used, involving the direct inclusion of the module's code into the final executable. Then, the compiler can use immediate addressing to invoke functions or access data from this module. In contrast, when the exact source code of a module is not decided until runtime, dynamic linking is used which typically requires a Procedure Linkage Table (PLT) and Global Offset Table (GOT).
+To ditto the above, there are two primary ways for compilation units to be linked: static linking and dynamic linking. When the exact source code (implementation) of a module is known at compile-time, static linking is typically favoured, involving the direct inclusion of the module's code into the final executable. Then, the compiler can use immediate addressing to invoke functions or access data from this module. In contrast, when the exact source code of a module is not decided until runtime, dynamic linking is used which typically requires a Procedure Linkage Table (PLT) and Global Offset Table (GOT).
 
-However, various techniques are already employed to optimize dynamic linking:
+Various techniques are already employed to optimize dynamic linking:
 
 \begin{enumerate}
-  \item Some architectures use the "relaxation" technique to replace indirection at runtime by modifying the assembly instructions.
-  \item  PLT Rewriting provided by compilers.
-  \item Bespoke replacement (e.g. linux kernel static\_call).
+  \item Some architectures use the ``relaxation'' technique to replace indirection at runtime by modifying the assembly instructions.
+  \item Good compilers can perform PLT rewriting at compile-time if the nature of the calls is known.
+  \item Bespoke replacement (e.g. Linux kernel static calls).
 \end{enumerate} 
 
-However, two primary concerns of interest are still evident:
-
-\begin{enumerate}
-  \item There is always some level of pointer indirection that cannot be avoided (nvm);
-  \item Various techniques such as inlining become impossible due to this indirection.
-\end{enumerate}
-
-Terrible PIMPLE idiom. Headers of headers.
+However, a primary concern remains: Various optimization techniques such as inlining become impossible due to this indirection.
 
 \subsection{Module loading in the Linux kernel}
 
@@ -327,14 +316,6 @@ Great news, inlining refers to the trampoline call, not inlining the function bo
 
 Since the infamous Spectre exploit in 20XX, 
 
-\subsection{Link-time optimizations}
-
-Traditionally, many optimizations were performed at the language level, before the program was compiled to object files. For instance, inlining could not be performed at link-time because there was insufficient information in the object files to reason about the semantics of the program. While dedicated link-time optimizations were introduced, their scope was limited for this reason.
-
-However, LLVM IR sits in between the level of abstraction of source code and object files, and maintains higher-level semantics. By keeping the program in this intermediate representation longer (and treating this as modern object files), recent developments have made link-time optimizations more powerful, allowing, for instance, for inlining across module boundaries.
-
-
-
 \subsection{Inlining and IR-level linking}
 
 \section{Technical Material}
@@ -342,6 +323,11 @@ However, LLVM IR sits in between the level of abstraction of source code and obj
 \subsection{LLVM Intermediate Representation}
 
 LLVM was found to be a practical compilation target for low-level programming languages due to (1) its target-independent code generation \cite{llvmcodegen} and (2) its integration capabilities with existing programming languages thanks to ABI interoperability (including some recent improvements \cite{llvminterop}). Furthermore, the extensive optimization passes shared amongst languages targetting LLVM \cite{llvmoptim} should make \textit{Essence C} directly comparable with existing languages, allowing benchmarks to be solely influenced by the additional optimization techniques employed. For instance, C can be compiled with LLVM via the popular Clang compiler \cite{llvmclang}. It was also noticed that LLVM has experimental support for inline assembly \cite{llvmasm}, preventing the layer of indirection of a separate compilation unit (useful in kernel development \cite{inlinekern}). Additionally, LLVM benefits greatly from intermodular optimizations at link-time \cite{llvmlto}, because its intermediate representation (IR) preserves the necessary higher-level constructs. Critically, the LLVM API exposes a powerful interface to programatically manipulate existing LLVM IR files \cite{llvmtransformations} \cite{llvmpasses}. It follows that inlined compatibility wrappers can be generated to minimize optimization barriers between compilation units originating from languages other than \textit{Essence C}.
+
+\subsection{Link-time optimizations}
+
+Traditionally, many optimizations were performed at the language level, before the program was compiled to object files. For instance, inlining could not be performed at link-time because there was insufficient information in the object files to reason about the semantics of the program. While dedicated link-time optimizations were introduced, their scope was limited for this reason. However, LLVM IR sits in between the level of abstraction of source code and object files, and maintains higher-level semantics. By keeping the program in this intermediate representation longer (and treating this as the ``modern object file''), recent developments have made link-time optimizations more powerful, allowing, for instance, for inlining across module boundaries.
+
 
 \chapter{The Problem (900)}
 
@@ -447,7 +433,7 @@ The syntax was designed to follow the crystal/pistol pattern, some terminology d
 % For precedence reasons, we have eight separate rules: OR crystal -> OR pistol -> AND crystal -> 
 % AND pistol -> additive crystal -> additive pistol -> multiplicative crystal -> multiplicative pistol, with each embedding the next in the hierarchy. Those further to the right of the chain enjoy higher precedence.
 
-More details on this pattern can be gathered by viewing my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
+More details on this pattern can be gathered in my article on \textbf{\href{https://medium.com/@davidcallanan/rethinking-operation-order-the-illusion-of-ambiguity-and-the-introduction-of-bound-pairs-ceef5242a941}{boundly associative operations}}, my article on \textbf{\href{https://medium.com/@davidcallanan/making-complicated-if-statements-cleaner-61bd1e2afeb8}{making complicated if statements cleaner}}, and my YouTube video on \textbf{\href{https://www.youtube.com/watch?v=C5VEKAc0quk}{rethinking operation order}}.
 
 \subsection{Module Resolution}
 
@@ -478,31 +464,28 @@ Rather than a standard library, first class integration with LLVM IR and the C A
 
 \section{Implementation}
 
+\subsection{Build Environment}
+
+Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses \textit{Node.js} and \textit{pnpm}, which are easy to install on different operating systems. Build scripts are then organized into \textit{package.json} files. However, the C++ portion, consisting of a suite of tools (\textit{clang}, \textit{make}, \textit{llvm}, etc.), is more difficult to set up consistently. The build scripts for this portion are organized using a Makefile, and the development environment itself is prepared using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts, but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based software setups, which can act as reproducible development enviornments. Thus I set up a repository-level nix script for those on NixOS who want to fast-track the development environment. This makes both the build layer and host interaction layer highly reproducible.
+
 \subsection{Parsing}
 
 Prior to this project I had already developed a simple parsing library in JavaScript, which allows for:
 
 \begin{enumerate}
 	\item Parsing terminal rules using regular expressions.
-	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{enumerate}
-	\item ``or'' making rule optional
-	\item ``join'' sequencing rules
-	\item ``multi'' repeating rules zero or more times
-	\item ``opt'' making rule optional
-	\end{enumerate}
+	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{itemize}
+	\item ``or'': making rule optional
+	\item ``join'': sequencing rules
+	\item ``multi'': repeating rules zero or more times
+	\item ``opt'': making rule optional
+	\end{itemize}
 	\item Map parsed data to custom structures using the ``mapData'' function.
 \end{enumerate}
 
+Essence C was then parsed by handcrafting hundreds of parse rules using this library.
 
-
-
-\subsection{Mutability}
-
-LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus, variables are entirely implemented using stack allocations. This saved an estimated week of development time.
-
-\subsection{Tooling and Infrastructure}
-
-\subsubsection{Parser Trace Explorer}
+\subsection{Parser Trace Explorer}
 
 Parsing issues were frequently encountered during the development cycle, and manual debugging became infeasible as complexity increased. Hence, a \textit{Parser Trace Explorer} was developed, consisting of a JSON trace logger in the compiler frontend, and a separate web-app tool for exploring these logs. A simple SolidStart + Tanstack Router tech stack was selected for this tool due to existing familiarity with this stack, and because of the straightforward requirements of the tool.
 
@@ -514,9 +497,15 @@ Since parsers try a vast number of rules and are inherently recursive, the logs 
   \caption{Parser Trace Explorer}
 \end{figure}
 
+
 \subsection{Defensive Programming}
 
 As Essence C is designed with strict semantics, the backend has no need to recover from illegal states. As such, defensive programming is used, where the program is crashed with a useful error message whenever an invariant is violated. Such errors could originate from semantic violations in the user's code, or due to subtle bugs in the compiler itself; either way, the issues can be traced effectively. Naturally, not all subtleties can be pre-envisioned, so this was done on a best-effort basis to avoid compromising development speed.
+
+
+\subsection{Mutability Support}
+
+LLVM IR is in SSA form, where registers are immutable. One cannot reuse a register, and must instead create a new register for every mutation. Then, one takes advantage of the phi instruction to pick which register is the correct one at runtime. However, the alloca (stack allocation) model operates under the familiar mindset of mutability, as it works with raw memory addresses. Conveniently, it was observed that the standard mem2reg optimization pass does a fantastic job at converting stack allocations into SSA registers where legal, bypassing the tough development of a custom SSA mutability mechanism. Thus, variables are entirely implemented using stack allocations. This saved an estimated week of development time.
 
 \subsection{Debugging Primitives}
 
@@ -527,10 +516,6 @@ While the primary mechanism of performing external communication is to link with
 Determining the maximum bits needed to hold an integer is an important optimization. While LLVM may be able to detect certain constraints about numbers, much of the compiler information is lost at this point that a modern programming language might be interested in tracking. For example, software verification languages may keep track of exact min and max values for an integer type, which is tracked extensively as the type system navigates the codebase. For non-integer types, an optimal type system implementation might allow the user to use formal logic to keep track of the theoretically-smallest set of runtime possibilities (a provably accurate picture of the possible values that can be assigned at runtime, with no wasted space).
 
 Only simple bit-tracking is performed in the prototype compiler. When a hardcoded integer constant is used, the number of bits is trivially calculated using the logarithm. Addition was more tricky to implement -- one must recursively track the bits needed to hold an arbitrary sum of other integers. The first attempt of taking the maximum of the operand bits and adding one (to account for a potential carry) was insufficient for more than two operands. While an additional carry bit could be added for each additional operand, this estimate would be too conservative. The correct solution was to sum the maximum value each operand could take on (interpreted as data to avoid to intricacies of signed integers), and then take the logarithm of this sum. This can achieved easily in languages that support arbitrarily sized integers out-of-the-box. However, it was easier to implement an approximate solution in C++ by using the double data type, with the final result rounded up. While this sounds bizarre and inaccurate at first glance, recall that floats are internally implemented using an exponent and mantissa. Thus, it is very similar to running the numbers through a logarithmic transformation, which would yield the final result directly. Furthermore, an epsilon value was included to deal with precision errors, favouring a more conservative bit estimate. It was not proven whether this overall approach is mathematically sound up to a particular bit count, but it can always be substituted if the need arises.
-
-\subsection{Build Environment}
-
-Early on in development, I was adamment to ensure a fully reproducible build environment. All building is done using the terminal, so that the build process is independent from the editor used. The JavaScript portion of the project uses \textit{Node.js} and \textit{pnpm}, which are easy to install on different operating systems. Build scripts are then organized into \textit{package.json} files. However, the C++ portion, consisting of a suite of tools (\textit{clang}, \textit{make}, \text{llvm}, etc.), is more difficult to set up consistently. The build scripts for this portion are organized using a Makefile, and the development environment itself is setup using a Dockerfile. Some developer scripts were implemented in Bash to orchestrate the overall process between the JavaScript and C++ portions, the Docker layer, and the developer's own environment. The choice to use Bash means the developer must either use a Linux environment or a WSL environment if using Windows. A docker-in-docker strategy could theoretically have been used instead, requiring minimal platform-specific scripts (I thought I did use docker in docker, I better check), but this complexity was avoided. MacOS users may suffer as a result. Additionally, I recently switched to NixOS on my own system, and its philosophy was applicable here. NixOS allows you to write description-based setup descriptions, which can act as reproducible development enviornments. Thus I set up a repository-level nix script for those on NixOS who want to fast-track the development environment. Thus both the build layer and host interaction layer are highly reproducible.
 
 \subsection{Underlying Type Tracking}
 
@@ -613,7 +598,7 @@ Much of the snapshot testing was performed using the language's data logging fac
 
 \section{GenAI Comprehension Testing}
 
-With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a portion of a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my YouTube tutorial series [todo], and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported version is included in this project's repository. It includes C, Essence C, NASM Assembly, and LLVM IR Assembly code living in unison, with build options to substitute different implementations of the source code.
+With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a portion of a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my \href{https://www.youtube.com/watch?v=FkrpUaGThTQ&t=2s}{YouTube tutorial series}, and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported version is included in this project's repository. It includes C, Essence C, NASM Assembly, and LLVM IR Assembly code living in unison, with build options to substitute different implementations of the source code.
 
 \section{Benchmarking}
 
@@ -663,6 +648,8 @@ Essence C + LLVM IR Assembly & Static & Same as above, but a custom ``alwaysinli
 
 \chapter{Conclusion (930)}
 
+\section{Overall Assessment}
+
 Given the time constraints for this project, the evaluation only scratched the surface. One would want to spend the following time:
 
 \begin{itemize}
@@ -685,7 +672,11 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
   \item The prototype compiler does not yet support cross-compilation. This means a Windows executable cannot be built from within a Linux build environment, or vice versa. Thus, everything had to be kept to Linux/WSL for now.
   \item The parser does not produce helpful error messages. Thus, one must either use a pair of eyes to identify syntax errors, or use the bulky \textit{Parser Trace Explorer} to investigate more significant issues.
   \item With more time, the entire kernel could have been migrated from \textit{GCC} to \textit{Clang}. This would have offered more realistic benchmarks given \textit{Clang}'s superior link-time optimizations over \textit{GCC}. Nonetheless, the effort of such a migration reminds us of the struggles developers face when writing software in C today -- struggles that might be less apparent in a language like \text{Essence C} that treats LLVM IR as a first-class citizen.
+  
 \end{itemize}
+
+  \section{Future Work}
+  
 
 \newpage
 

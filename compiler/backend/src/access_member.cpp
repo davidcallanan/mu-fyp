@@ -14,7 +14,7 @@
 #include "is_structval_leaf_physical.hpp"
 
 Smooth access_member(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<SmoothStructval> target_smooth,
 	const std::string& sym
 ) {
@@ -51,7 +51,7 @@ Smooth access_member(
 			field_index++;
 		}
 		
-		llvm::Value* extracted = igc.builder.CreateExtractValue(target_smooth->value, field_index);
+		llvm::Value* extracted = igc->builder->CreateExtractValue(target_smooth->value, field_index);
 
 		// pointers are typically disallowed on their own, and must be wrapped into a leaf map.
 		// exception is made for syms of maps to prevent infinite recursion.
@@ -61,9 +61,9 @@ Smooth access_member(
 		if (auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&sym_type)) {
 			fprintf(stderr, "is it even getting here. %s\n", sym.c_str());
 			
-			llvm::StructType* wrapped_pointer = llvm::StructType::get(igc.context, llvm::ArrayRef<llvm::Type*>{ extracted->getType() });
+			llvm::StructType* wrapped_pointer = llvm::StructType::get(*igc->context, llvm::ArrayRef<llvm::Type*>{ extracted->getType() });
 			llvm::Value* final_pointer = llvm::UndefValue::get(wrapped_pointer);
-			final_pointer = igc.builder.CreateInsertValue(final_pointer, extracted, 0);
+			final_pointer = igc->builder->CreateInsertValue(final_pointer, extracted, 0);
 
 			auto actual_map = std::make_shared<TypeMap>(TypeMap{
 				unclear_type,
@@ -82,8 +82,8 @@ Smooth access_member(
 					unclear_type,
 					extracted,
 				}),
-				nullptr, // this is problematic.
-				nullptr,
+				{}, // this is problematic.
+				{},
 				{}, // todo
 			});
 		}

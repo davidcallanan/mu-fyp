@@ -14,7 +14,7 @@
 #include "llvm/IR/Constants.h"
 
 Smooth evaluate_hardval(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Hardval& hardval,
 	Type type
 ) {
@@ -60,7 +60,7 @@ Smooth evaluate_hardval(
 		}
 		
 		llvm::APInt ap_int(bits_needed, value_str.c_str(), 10);
-		llvm::Value* const_value = llvm::ConstantInt::get(igc.context, ap_int);
+		llvm::Value* const_value = llvm::ConstantInt::get(*igc->context, ap_int);
 		
 		return llvm_to_smooth(igc, type, const_value);
 	}
@@ -79,30 +79,30 @@ Smooth evaluate_hardval(
 			int bit_width = std::stoi(type_str.substr(1));
 			
 			if (bit_width == 16) {
-				float_type = llvm::Type::getHalfTy(igc.context);
+				float_type = llvm::Type::getHalfTy(*igc->context);
 			} else if (bit_width == 32) {
-				float_type = llvm::Type::getFloatTy(igc.context);
+				float_type = llvm::Type::getFloatTy(*igc->context);
 			} else if (bit_width == 64) {
-				float_type = llvm::Type::getDoubleTy(igc.context);
+				float_type = llvm::Type::getDoubleTy(*igc->context);
 			} else if (bit_width == 128) {
-				float_type = llvm::Type::getFP128Ty(igc.context);
+				float_type = llvm::Type::getFP128Ty(*igc->context);
 			} else {
 				fprintf(stderr, "The float size is not supported, got %d\n", bit_width);
 				exit(1);
 			}
 		} else {
-			float_type = llvm::Type::getDoubleTy(igc.context);
+			float_type = llvm::Type::getDoubleTy(*igc->context);
 		}
 		
 		llvm::APFloat ap_float(float_type->getFltSemantics(), p_v_float->value);
-		llvm::Value* const_value = llvm::ConstantFP::get(igc.context, ap_float);
+		llvm::Value* const_value = llvm::ConstantFP::get(*igc->context, ap_float);
 		
 		return llvm_to_smooth(igc, type, const_value);
 	}
 	
 	if (std::holds_alternative<std::shared_ptr<HardvalString>>(hardval)) {
 		const auto& p_v_string = std::get<std::shared_ptr<HardvalString>>(hardval);
-		llvm::Value* str_const = igc.builder.CreateGlobalStringPtr(p_v_string->value);
+		llvm::Value* str_const = igc->builder->CreateGlobalStringPtr(p_v_string->value);
 		return llvm_to_smooth(igc, type, str_const);
 	}
 	

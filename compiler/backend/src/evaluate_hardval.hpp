@@ -6,7 +6,7 @@
 #include "t_ctx.hpp"
 
 Smooth evaluate_hardval(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Hardval& hardval,
 	Type type
 );

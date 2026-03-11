@@ -21,7 +21,7 @@
 using json = nlohmann::json;
 
 Type normalize_type(
-	TypeOrchCtx& toc,
+	std::shared_ptr<TypeOrchCtx> toc,
 	const json& typeval
 ) {
 	if (typeval.is_null()) {
@@ -43,7 +43,7 @@ Type normalize_type(
 		}
 		
 		std::string trail = typeval["trail"];
-		std::optional<UnderlyingType> found = toc.type_table->get(trail);
+		std::optional<UnderlyingType> found = toc->type_table->get(trail);
 		
 		if (!found.has_value()) {
 			fprintf(stderr, "No type pre-given for this %s\n", trail.c_str());
@@ -222,7 +222,7 @@ Type normalize_type(
 			// && result.call_input_type != nullptr
 			// && result.call_output_type != nullptr
 		) {
-			result.bundle_id = toc.bundle_registry->install(
+			result.bundle_id = toc->bundle_registry->install(
 				std::make_shared<BundleMap>(BundleMap{ nullptr, nullptr, nullptr }
 			));
 		}

@@ -10,7 +10,7 @@
 // by having the smooth information, it now becomes possible in certain cases to properly construct the new smooth.
 // we fallback to the legacy llvm_to_smooth approach for other cases, but we may eventually deprecate llvm_to_smooth in favour of the modern solution.
 
-Smooth fresh_smooth(IrGenCtx& igc, const Smooth& old_smooth, llvm::Value* fresh_value) {
+Smooth fresh_smooth(std::shared_ptr<IrGenCtx> igc, const Smooth& old_smooth, llvm::Value* fresh_value) {
 	if (auto p_v_map_reference = std::get_if<std::shared_ptr<SmoothMapReference>>(&old_smooth)) {
 		return std::make_shared<SmoothMapReference>(SmoothMapReference{
 			(*p_v_map_reference)->type,

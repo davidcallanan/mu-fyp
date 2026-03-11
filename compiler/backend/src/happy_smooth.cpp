@@ -9,7 +9,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
-Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
+Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& type) {
 	Type underlying = get_underlying_type(type);
 
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&underlying)) {
@@ -22,11 +22,12 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 				uint32_t actual_bits = (*p_v_int)->value->getType()->getIntegerBitWidth();
 
 				if (actual_bits < info->bits) {
-					llvm::Value* extended = igc.builder.CreateZExt(
+					llvm::Value* extended = igc->builder->CreateZExt(
 						(*p_v_int)->value,
-						llvm::IntegerType::get(igc.context, info->bits)
+						llvm::IntegerType::get(*igc->context, info->bits)
 					);
 					
+	
 					return std::make_shared<SmoothInt>(SmoothInt{ (*p_v_int)->type, extended });
 				}
 			}
@@ -42,13 +43,13 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 			if (auto info = rotten_float_info(*p_v_rotten)) {
 				llvm::Type* target_type = nullptr;
 
-				if (info->bits == 16) target_type = llvm::Type::getHalfTy(igc.context);
-				else if (info->bits == 32) target_type = llvm::Type::getFloatTy(igc.context);
-				else if (info->bits == 64) target_type = llvm::Type::getDoubleTy(igc.context);
-				else if (info->bits == 128) target_type = llvm::Type::getFP128Ty(igc.context);
+				if (info->bits == 16) target_type = llvm::Type::getHalfTy(*igc->context);
+				else if (info->bits == 32) target_type = llvm::Type::getFloatTy(*igc->context);
+				else if (info->bits == 64) target_type = llvm::Type::getDoubleTy(*igc->context);
+				else if (info->bits == 128) target_type = llvm::Type::getFP128Ty(*igc->context);
 
 				if (target_type && (*p_v_float)->value->getType() != target_type) {
-					llvm::Value* extended = igc.builder.CreateFPExt(
+					llvm::Value* extended = igc->builder->CreateFPExt(
 						(*p_v_float)->value,
 						target_type
 					);
@@ -118,11 +119,11 @@ Smooth happy_smooth(IrGenCtx& igc, Smooth smooth, const Type& type) {
 			member_idx++;
 		}
 
-		llvm::StructType* fancy_type = llvm::StructType::get(igc.context, new_member_types);
+		llvm::StructType* fancy_type = llvm::StructType::get(*igc->context, new_member_types);
 		llvm::Value* fancy_value = llvm::UndefValue::get(fancy_type);
 
 		for (size_t i = 0; i < new_member_values.size(); i++) {
-			fancy_value = igc.builder.CreateInsertValue(fancy_value, new_member_values[i], (unsigned)i);
+			fancy_value = igc->builder->CreateInsertValue(fancy_value, new_member_values[i], (unsigned)i);
 		}
 
 		return std::make_shared<SmoothStructval>(SmoothStructval{

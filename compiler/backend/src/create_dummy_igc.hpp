@@ -7,9 +7,9 @@
 #include "create_value_symbol_table.hpp"
 
 struct DummyIgc {
-	IrGenCtx igc;
-	std::unique_ptr<llvm::IRBuilder<>> dummy_builder;
+	std::shared_ptr<IrGenCtx> igc;
+	std::shared_ptr<llvm::IRBuilder<>> dummy_builder;
 	llvm::Function* dummy_func;
 };
 
-DummyIgc create_dummy_igc(IrGenCtx& base);
+DummyIgc create_dummy_igc(std::shared_ptr<IrGenCtx> base);

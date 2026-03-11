@@ -10,7 +10,7 @@
 #include "t_types.hpp"
 
 std::shared_ptr<SmoothEnum> merge_smooth_enum(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<SmoothEnum> enum_a,
 	std::shared_ptr<SmoothEnum> enum_b
 ) {
@@ -38,7 +38,7 @@ std::shared_ptr<SmoothEnum> merge_smooth_enum(
 		
 		uint32_t enum_idx = (uint32_t) std::distance(v_enum_merged->syms.begin(), it);
 		uint32_t bit_width = (uint32_t) std::bit_width(v_enum_merged->syms.size() - 1);
-		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
+		llvm::Type* int_type = llvm::IntegerType::get(*igc->context, bit_width);
 		merged_value = llvm::ConstantInt::get(int_type, enum_idx);
 	} else if (enum_a->value != nullptr && enum_b->value != nullptr) {
 		fprintf(stderr, "Impossible to merge two enums that have different values that are unknown at compile-time. Only types can be merged like this.\n");

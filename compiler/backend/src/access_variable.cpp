@@ -12,7 +12,7 @@
 #include "fresh_smooth.hpp"
 
 Smooth access_variable(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Type& node
 ) {
 	std::string target_name;
@@ -33,15 +33,11 @@ Smooth access_variable(
 	}
 	
 	std::string var_name = "m_" + target_name;
-	std::optional<ValueSymbolTableEntry> o_entry = igc.value_table->get(var_name);
-	
-	if (!o_entry.has_value() && target_name == "this") {
-		o_entry = igc.value_table->get("m_mod");
-	}
+	std::optional<ValueSymbolTableEntry> o_entry = igc->value_table->get(var_name);
 
 	if (!o_entry.has_value()) {
 		std::string sym_var_name = "ms_:" + target_name;
-		o_entry = igc.value_table->get(sym_var_name);
+		o_entry = igc->value_table->get(sym_var_name);
 		
 		if (!o_entry.has_value()) {
 			fprintf(stderr, "This variable %s was not actually present in our value table\n", target_name.c_str());
@@ -57,7 +53,7 @@ Smooth access_variable(
 		return evaluate_singletonish(igc, entry.type);
 	}
 
-	llvm::Value* loaded = igc.builder.CreateLoad(
+	llvm::Value* loaded = igc->builder->CreateLoad(
 		entry.ir_type,
 		entry.alloca_ptr
 	);

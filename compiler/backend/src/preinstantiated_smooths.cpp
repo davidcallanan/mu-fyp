@@ -4,8 +4,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "t_smooth.hpp"
 
-std::shared_ptr<SmoothVoid> smooth_void(IrGenCtx& igc, std::optional<Type> type) {
-	llvm::StructType* struct_type = llvm::StructType::get(igc.context, {});
+std::shared_ptr<SmoothVoid> smooth_void(std::shared_ptr<IrGenCtx> igc, std::optional<Type> type) {
+	llvm::StructType* struct_type = llvm::StructType::get(*igc->context, {});
 	llvm::Value* value = llvm::UndefValue::get(struct_type);
 	
 	return std::make_shared<SmoothVoid>(SmoothVoid{

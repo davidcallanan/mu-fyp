@@ -4,4 +4,4 @@
 #include "t_smooth_fwd.hpp"
 #include "t_ctx.hpp"
 
-Smooth evaluate_singletonish(IrGenCtx& igc, Type type);
+Smooth evaluate_singletonish(std::shared_ptr<IrGenCtx> igc, Type type);

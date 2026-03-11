@@ -4,6 +4,6 @@
 #include "t_types.hpp"
 
 void process_map_body(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const TypeMap& body
 );

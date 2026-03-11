@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <vector>
 #include "llvm/IR/Function.h"
@@ -12,8 +13,8 @@ struct SmoothStructval {
 	llvm::Value* value;
 	bool has_leaf;
 	std::optional<Smooth> leaf;
-	llvm::Function* call_func;
-	llvm::Function* call_func_alwaysinline;
+	std::function<llvm::Function*()> call_func;
+	std::function<llvm::Function*()> call_func_alwaysinline;
 	std::vector<Smooth> field_smooths;
 };
 

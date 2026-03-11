@@ -22,6 +22,7 @@ const ignored_extensions = new Set([
 	".png",
 	".tex",
 	".ico",
+	".xcf",
 ]);
 
 const escape_latex = (text) => {

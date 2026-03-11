@@ -11,7 +11,7 @@
 #include "t_hardval.hpp"
 #include "preinstantiated_smooths.hpp"
 
-Smooth evaluate_singletonish(IrGenCtx& igc, Type type) {
+Smooth evaluate_singletonish(std::shared_ptr<IrGenCtx> igc, Type type) {
 	type = get_underlying_type(type);
 
 	if (auto p_v_void = std::get_if<std::shared_ptr<TypeVoid>>(&type)) {
@@ -30,7 +30,7 @@ Smooth evaluate_singletonish(IrGenCtx& igc, Type type) {
 		auto it = std::find(v_enum->syms.begin(), v_enum->syms.end(), hardsym);
 		uint32_t enum_idx = (uint32_t) std::distance(v_enum->syms.begin(), it);
 		uint32_t bit_width = (uint32_t) std::bit_width(v_enum->syms.size() - 1);
-		llvm::Type* int_type = llvm::IntegerType::get(igc.context, bit_width);
+		llvm::Type* int_type = llvm::IntegerType::get(*igc->context, bit_width);
 		llvm::Constant* value_as_constant = llvm::ConstantInt::get(int_type, enum_idx);
 
 		return std::make_shared<SmoothEnum>(SmoothEnum{
@@ -48,7 +48,7 @@ Smooth evaluate_singletonish(IrGenCtx& igc, Type type) {
 		}
 
 		if (auto p_v_str = std::get_if<std::shared_ptr<HardvalString>>(&v_pointer->hardval.value())) {
-			llvm::Constant* str_const = igc.builder.CreateGlobalStringPtr((*p_v_str)->value);
+			llvm::Constant* str_const = igc->builder->CreateGlobalStringPtr((*p_v_str)->value);
 			return std::make_shared<SmoothPointer>(SmoothPointer{ type, str_const });
 		}
 

@@ -6,7 +6,7 @@
 #include "build_compare_float.hpp"
 #include "build_compare_struct.hpp"
 
-llvm::Value* build_compare(IrGenCtx& igc, llvm::Value* a, llvm::Value* b, const std::string& operator_) {
+llvm::Value* build_compare(std::shared_ptr<IrGenCtx> igc, llvm::Value* a, llvm::Value* b, const std::string& operator_) {
 	llvm::Type* type = a->getType();
 
 	if (type->isIntegerTy()) {

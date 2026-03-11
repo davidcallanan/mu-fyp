@@ -9,4 +9,5 @@ struct BundleMap {
 	llvm::Function* call_func_alwaysinline;
 	llvm::StructType* opaque_struct_type; // this is opaque until the final struct is determined.
 	// one must only use it for passing around until the final struct is known.
+	bool reentrancy_prevention = false;
 };

@@ -35,6 +35,10 @@ std::optional<ValueSymbolTableEntry> ValueSymbolTable::get(const std::string& na
 	auto it = _values.find(name);
 	
 	if (it == _values.end()) {
+		if (name == "m_this") {
+			return get("m_mod");
+		}
+
 		if (_parent == nullptr) {
 			return std::nullopt;
 		}

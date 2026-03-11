@@ -6,4 +6,4 @@
 
 #include "llvm/IR/Value.h"
 
-Smooth fresh_smooth(IrGenCtx& igc, const Smooth& old_smooth, llvm::Value* fresh_value);
+Smooth fresh_smooth(std::shared_ptr<IrGenCtx> igc, const Smooth& old_smooth, llvm::Value* fresh_value);

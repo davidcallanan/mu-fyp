@@ -42,34 +42,34 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	// the amount of boilerplate is crazy lol
 	printf("Generating module binary!!\n");
 	
-	llvm::LLVMContext context;
-	llvm::Module module("foobar", context);
-	llvm::IRBuilder<> builder(context);
+	auto context = std::make_shared<llvm::LLVMContext>();
+	auto module = std::make_shared<llvm::Module>("foobar", *context);
+	auto builder = std::make_shared<llvm::IRBuilder<>>(*context);
 	
 	auto target_triple = llvm::sys::getDefaultTargetTriple();
-	module.setTargetTriple(target_triple);
+	module->setTargetTriple(target_triple);
 	
-	std::vector<llvm::Type*> puts_args = { llvm::Type::getInt8PtrTy(context) };
+	std::vector<llvm::Type*> puts_args = { llvm::Type::getInt8PtrTy(*context) };
 	
 	llvm::FunctionType* puts_type = llvm::FunctionType::get(
-		llvm::Type::getInt32Ty(context),
+		llvm::Type::getInt32Ty(*context),
 		puts_args,
 		false
 	);
 	
-	llvm::FunctionCallee puts_func = module.getOrInsertFunction("puts", puts_type);
+	auto puts_func = std::make_shared<llvm::FunctionCallee>(module->getOrInsertFunction("puts", puts_type));
 	
 	// Takes in (i64 chunk, i8 bl, i8 br).
 	llvm::Function* log_data_func = [&]() -> llvm::Function* {
 		// there's only one worse thing than handwriting an LLVM IR function, and that's handwiriting C++ code that generates one lol.
 		// but by relying on handrwritten functions just for debugging functions (like log_d), we don't depend on the language's interoperability layer to be in working condition, allowing interoparability to be developed at a later stage.
 		
-		llvm::Type* i8  = llvm::Type::getInt8Ty(context);
-		llvm::Type* i32 = llvm::Type::getInt32Ty(context);
-		llvm::Type* i64 = llvm::Type::getInt64Ty(context);
+		llvm::Type* i8  = llvm::Type::getInt8Ty(*context);
+		llvm::Type* i32 = llvm::Type::getInt32Ty(*context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(*context);
 
 		llvm::FunctionType* fn_type = llvm::FunctionType::get(
-			llvm::Type::getVoidTy(context),
+			llvm::Type::getVoidTy(*context),
 			{ i64, i8, i8 },
 			false
 		);
@@ -78,7 +78,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			fn_type,
 			llvm::Function::PrivateLinkage,
 			"__ec_log_data",
-			module
+			*module
 		);
 		
 		fn->addFnAttr(llvm::Attribute::NoInline);
@@ -87,9 +87,9 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		llvm::Argument* arg_bl    = fn->getArg(1);
 		llvm::Argument* arg_br    = fn->getArg(2);
 
-		llvm::IRBuilder<> b(context);
+		llvm::IRBuilder<> b(*context);
 
-		auto* blk = llvm::BasicBlock::Create(context, "entry", fn);
+		auto* blk = llvm::BasicBlock::Create(*context, "entry", fn);
 		b.SetInsertPoint(blk);
 
 		// if i've counted right, 51 should be enough characters for a single row.
@@ -151,10 +151,10 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		
 		int dec_tail = 48; // we are floating to the right and working our way to the left
 
-		auto* block_dec_loop = llvm::BasicBlock::Create(context, "dec_loop", fn);
-		auto* block_dec_done = llvm::BasicBlock::Create(context, "dec_done", fn);
-		auto* block_fill_loop = llvm::BasicBlock::Create(context, "fill_loop", fn);
-		auto* block_fill_done = llvm::BasicBlock::Create(context, "fill_done", fn);
+		auto* block_dec_loop = llvm::BasicBlock::Create(*context, "dec_loop", fn);
+		auto* block_dec_done = llvm::BasicBlock::Create(*context, "dec_done", fn);
+		auto* block_fill_loop = llvm::BasicBlock::Create(*context, "fill_loop", fn);
+		auto* block_fill_done = llvm::BasicBlock::Create(*context, "fill_done", fn);
 
 		b.CreateStore(b.getInt8(0), b.CreateGEP(i8, buf, b.getInt32(dec_tail + 1))); // null terminator
 		
@@ -186,7 +186,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		b.CreateCondBr(b.CreateICmpSGE(b.CreateLoad(i32, alloca_idx), b.getInt32(pos)), block_fill_loop, block_fill_done);
 
 		b.SetInsertPoint(block_fill_done);
-		b.CreateCall(puts_func, { buf });
+		b.CreateCall(*puts_func, { buf });
 		b.CreateRetVoid();
 
 		return fn;
@@ -195,13 +195,13 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	// Takes in (i8* ptr, i64 byte_count).
 	// byte_count of -1 means null-terminated.
 	llvm::Function* log_data_deref_func = [&]() -> llvm::Function* {
-		llvm::Type* i1 = llvm::Type::getInt1Ty(context);
-		llvm::Type* i8 = llvm::Type::getInt8Ty(context);
-		llvm::Type* i64 = llvm::Type::getInt64Ty(context);
-		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(context);
+		llvm::Type* i1 = llvm::Type::getInt1Ty(*context);
+		llvm::Type* i8 = llvm::Type::getInt8Ty(*context);
+		llvm::Type* i64 = llvm::Type::getInt64Ty(*context);
+		llvm::Type* i8ptr = llvm::Type::getInt8PtrTy(*context);
 
 		llvm::FunctionType* fn_type = llvm::FunctionType::get(
-			llvm::Type::getVoidTy(context),
+			llvm::Type::getVoidTy(*context),
 			{ i8ptr, i64 },
 			false
 		);
@@ -210,7 +210,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			fn_type,
 			llvm::Function::PrivateLinkage,
 			"__ec_log_data_deref",
-			module
+			*module
 		);
 
 		fn->addFnAttr(llvm::Attribute::NoInline);
@@ -218,24 +218,24 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		llvm::Argument* arg_ptr = fn->getArg(0);
 		llvm::Argument* arg_byte_count = fn->getArg(1);
 
-		llvm::IRBuilder<> b(context);
+		llvm::IRBuilder<> b(*context);
 		
 		// uses an outer loop for blocks and inner loop to deal with potential partial blocks.
 		// because of "[---]", we have to implement lookahead so keep track of both chunk and chunk_prev. 
 
-		auto* block_entry = llvm::BasicBlock::Create(context, "entry", fn);
-		auto* block_outer_loop = llvm::BasicBlock::Create(context, "outer_loop", fn);
-		auto* block_inner_setup = llvm::BasicBlock::Create(context, "inner_setup", fn);
-		auto* block_inner_loop = llvm::BasicBlock::Create(context, "inner_loop", fn);
-		auto* block_inner_body = llvm::BasicBlock::Create(context, "inner_body", fn);
-		auto* block_inner_body3 = llvm::BasicBlock::Create(context, "inner_body3", fn);
-		auto* block_inner_body2 = llvm::BasicBlock::Create(context, "inner_body2", fn);
-		auto* block_render = llvm::BasicBlock::Create(context, "render", fn);
-		auto* block_advance2 = llvm::BasicBlock::Create(context, "advance2", fn);
-		auto* block_advance3 = llvm::BasicBlock::Create(context, "advance3", fn);
-		auto* block_flush = llvm::BasicBlock::Create(context, "flush", fn);
-		auto* block_flush_final = llvm::BasicBlock::Create(context, "flush_final", fn);
-		auto* block_done = llvm::BasicBlock::Create(context, "done", fn);
+		auto* block_entry = llvm::BasicBlock::Create(*context, "entry", fn);
+		auto* block_outer_loop = llvm::BasicBlock::Create(*context, "outer_loop", fn);
+		auto* block_inner_setup = llvm::BasicBlock::Create(*context, "inner_setup", fn);
+		auto* block_inner_loop = llvm::BasicBlock::Create(*context, "inner_loop", fn);
+		auto* block_inner_body = llvm::BasicBlock::Create(*context, "inner_body", fn);
+		auto* block_inner_body3 = llvm::BasicBlock::Create(*context, "inner_body3", fn);
+		auto* block_inner_body2 = llvm::BasicBlock::Create(*context, "inner_body2", fn);
+		auto* block_render = llvm::BasicBlock::Create(*context, "render", fn);
+		auto* block_advance2 = llvm::BasicBlock::Create(*context, "advance2", fn);
+		auto* block_advance3 = llvm::BasicBlock::Create(*context, "advance3", fn);
+		auto* block_flush = llvm::BasicBlock::Create(*context, "flush", fn);
+		auto* block_flush_final = llvm::BasicBlock::Create(*context, "flush_final", fn);
+		auto* block_done = llvm::BasicBlock::Create(*context, "done", fn);
 
 		b.SetInsertPoint(block_entry);
 		llvm::Value* alloca_outer_idx = b.CreateAlloca(i64, nullptr, "outer_idx");
@@ -322,7 +322,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	}();
 
 	llvm::FunctionType* main_type = llvm::FunctionType::get(
-		llvm::Type::getInt32Ty(context),
+		llvm::Type::getInt32Ty(*context),
 		false
 	);
 	
@@ -330,11 +330,11 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		main_type,
 		llvm::Function::ExternalLinkage,
 		"main",
-		module
+		*module
 	);
 	
-	llvm::BasicBlock* entry = llvm::BasicBlock::Create(context, "entry", main_func);
-	builder.SetInsertPoint(entry);
+	llvm::BasicBlock* entry = llvm::BasicBlock::Create(*context, "entry", main_func);
+	builder->SetInsertPoint(entry);
 	
 	const char* message;
 	
@@ -344,8 +344,8 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		message = "Module entrypoint found";
 	}
 	
-	llvm::Value* message_str = builder.CreateGlobalStringPtr(message);
-	builder.CreateCall(puts_func, { message_str });
+	llvm::Value* message_str = builder->CreateGlobalStringPtr(message);
+	builder->CreateCall(*puts_func, { message_str });
 	
 	if (!create_data.is_null()) {
 		if (!create_data.contains("description")) {
@@ -355,7 +355,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		
 		const json& description = create_data["description"];
 
-		Type normalized = normalize_type(*toc, description);
+		Type normalized = normalize_type(toc, description);
 		auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&normalized);
 		
 		if (!p_v_map) {
@@ -372,7 +372,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		
 		std::shared_ptr<ValueSymbolTable> value_table = std::make_shared<ValueSymbolTable>(create_value_symbol_table());
 		
-		IrGenCtx igc = {
+		auto igc = std::make_shared<IrGenCtx>(IrGenCtx{
 			context,
 			module,
 			builder,
@@ -382,7 +382,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			log_data_deref_func,
 			nullptr,
 			toc,
-		};
+		});
 
 		{
 			std::optional<UnderlyingType> mod_underlying = toc->type_table->get("Mod");
@@ -402,12 +402,12 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			llvm::Value* mod_value = llvm_value(mod_smooth);
 			mod_type = smooth_type(mod_smooth);
 			
-			llvm::Value* mod_alloca = igc.builder.CreateAlloca(
+			llvm::Value* mod_alloca = igc->builder->CreateAlloca(
 				mod_value->getType(),
 				nullptr
 			);
 			
-			igc.builder.CreateStore(mod_value, mod_alloca);
+			igc->builder->CreateStore(mod_value, mod_alloca);
 
 			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&mod_underlying.value());
 
@@ -419,15 +419,15 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 			auto p_v_map_reference = std::make_shared<TypeMapReference>();
 			p_v_map_reference->target = *p_v_map;
 
-			llvm::Type* opaque_pointer = llvm::PointerType::get(context, 0);
+			llvm::Type* opaque_pointer = llvm::PointerType::get(*context, 0);
 
-			llvm::Value* mod_alloca_actual = igc.builder.CreateAlloca(
+			llvm::Value* mod_alloca_actual = igc->builder->CreateAlloca(
 				opaque_pointer,
 				nullptr,
-				igc.value_table->scope_id() + "~m_mod"
+				igc->value_table->scope_id() + "~m_mod"
 			);
 
-			igc.builder.CreateStore(mod_alloca, mod_alloca_actual);
+			igc->builder->CreateStore(mod_alloca, mod_alloca_actual);
 
 			value_table->set("m_mod", ValueSymbolTableEntry{
 				mod_alloca_actual,
@@ -445,12 +445,12 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		process_map_body(igc, *v_map.call_output_type);
 	}
 	
-	builder.CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+	builder->CreateRet(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*context), 0));
 	
 	std::string verify_error;
 	llvm::raw_string_ostream verify_stream(verify_error);
 	
-	if (llvm::verifyModule(module, &verify_stream)) {
+	if (llvm::verifyModule(*module, &verify_stream)) {
 		fprintf(stderr, "Verification of generated module did not go smoothly, because:%s\n", verify_error.c_str());
 		exit(1);
 	}
@@ -483,7 +483,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		llvm::Reloc::PIC_
 	);
 	
-	module.setDataLayout(target_machine->createDataLayout());
+	module->setDataLayout(target_machine->createDataLayout());
 	
 	{
 		// this optimization pass specifically uses LTO PreLink because it doesn't destroy relevant information that would be useful in the later LTO stage.
@@ -502,7 +502,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 	
 		llvm::ModulePassManager mpm = pb.buildLTOPreLinkDefaultPipeline(llvm::OptimizationLevel::O1);
 		
-		mpm.run(module, mam);
+		mpm.run(*module, mam);
 	}
 	
 	llvm::raw_fd_ostream ir_file("/app/out/hello.ll", error_code, llvm::sys::fs::OF_None);
@@ -512,7 +512,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		exit(1);
 	}
 	
-	module.print(ir_file, nullptr);
+	module->print(ir_file, nullptr);
 	ir_file.close();
 	
 	llvm::raw_fd_ostream obj_file("/app/out/hello.o", error_code, llvm::sys::fs::OF_None);
@@ -531,7 +531,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		exit(1);
 	}
 	
-	pass_manager.run(module);
+	pass_manager.run(*module);
 	obj_file.close();
 	
 	printf("All done!");
@@ -556,7 +556,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 		}
 
 		std::string trail = entry["trail"].get<std::string>();
-		Type normalized = normalize_type(*toc, entry["definition"]);
+		Type normalized = normalize_type(toc, entry["definition"]);
 		toc->type_table->set(trail, promote_to_underlying(normalized));
 	}
 
@@ -625,7 +625,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			}
 
 			std::string leaf_name = ":" + trail.back();
-			Type sym_type = normalize_type(*toc, ext_case["typeval"]);
+			Type sym_type = normalize_type(toc, ext_case["typeval"]);
 			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(sym_type);
 
 			auto v_sym = std::make_shared<InstructionSym>();
@@ -680,7 +680,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			}
 
 			std::string leaf_name = ":" + trail.back();
-			Type extern_type = normalize_type(*toc, ext_case["typeval"]);
+			Type extern_type = normalize_type(toc, ext_case["typeval"]);
 			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(extern_type);
 
 			auto v_sym = std::make_shared<InstructionSym>();

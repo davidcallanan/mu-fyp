@@ -8,7 +8,7 @@
 #include "t_smooth.hpp"
 
 Smooth access_member(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<SmoothStructval> target_smooth,
 	const std::string& sym
 );

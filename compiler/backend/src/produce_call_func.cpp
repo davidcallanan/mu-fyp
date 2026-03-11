@@ -19,7 +19,7 @@
 #include "clone_type_map_for_mutation.hpp"
 
 llvm::Function* produce_call_func(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<TypeMap> map,
 	bool is_alwaysinline
 ) {
@@ -35,7 +35,7 @@ llvm::Function* produce_call_func(
 		exit(1);	
 	}
 	
-	Bundle* bundle = igc.toc->bundle_registry->get(map->bundle_id.value());
+	Bundle* bundle = igc->toc->bundle_registry->get(map->bundle_id.value());
 	
 	auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(bundle);
 	
@@ -52,6 +52,13 @@ llvm::Function* produce_call_func(
 		return (*p_bundle_map)->call_func;
 	}
 	
+	if ((*p_bundle_map)->reentrancy_prevention) {
+		fprintf(stderr, "Re-entrancy invariant violated! This is a serious bug due to circular initialization logic. Can you run produce_call_func later? Do you really need to results now?\n");
+		exit(1);
+	}
+
+	(*p_bundle_map)->reentrancy_prevention = true;
+
 	if (is_alwaysinline) {
 		return nullptr;
 	}
@@ -78,7 +85,7 @@ llvm::Function* produce_call_func(
 	destroy_dummy_igc(dummy2);
 
 	// ah! llvm has moved to opaque pointers for everything, so we use everywhere!
-	llvm::Type* opaque_pointer = llvm::PointerType::get(igc.context, 0);
+	llvm::Type* opaque_pointer = llvm::PointerType::get(*igc->context, 0);
 
 	llvm::FunctionType* func_type = llvm::FunctionType::get(
 		output_struct_type,
@@ -93,28 +100,28 @@ llvm::Function* produce_call_func(
 		func_type,
 		llvm::Function::PrivateLinkage,
 		func_name,
-		igc.module
+		*igc->module
 	);
 
-	llvm::BasicBlock* func_entry = llvm::BasicBlock::Create(igc.context, "entry", func);
-	llvm::IRBuilder<> func_builder(igc.context);
-	func_builder.SetInsertPoint(func_entry);
+	llvm::BasicBlock* func_entry = llvm::BasicBlock::Create(*igc->context, "entry", func);
+	auto func_builder = std::make_shared<llvm::IRBuilder<>>(*igc->context);
+	func_builder->SetInsertPoint(func_entry);
 
 	std::shared_ptr<ValueSymbolTable> new_value_table = std::make_shared<ValueSymbolTable>( // currently no closure ability implemented.
 		create_value_symbol_table()
 	);
 
-	IrGenCtx enhanced_igc = {
-		igc.context,
-		igc.module,
+	auto enhanced_igc = std::make_shared<IrGenCtx>(IrGenCtx{
+		igc->context,
+		igc->module,
 		func_builder,
 		new_value_table,
-		igc.puts_func,
-		igc.log_data_func,
-		igc.log_data_deref_func,
+		igc->puts_func,
+		igc->log_data_func,
+		igc->log_data_deref_func,
 		nullptr,
-		igc.toc,
-	};
+		igc->toc,
+	});
 
 	llvm::Argument* arg_mod = func->getArg(0);
 	llvm::Argument* arg_this = func->getArg(1);
@@ -123,18 +130,18 @@ llvm::Function* produce_call_func(
 	arg_this->setName("InputThis");
 	single_argument->setName("InputMap");
 
-	llvm::Value* input_alloca = func_builder.CreateAlloca(input_struct_type, nullptr, "input_struct");
-	func_builder.CreateStore(single_argument, input_alloca);
+	llvm::Value* input_alloca = func_builder->CreateAlloca(input_struct_type, nullptr, "input_struct");
+	func_builder->CreateStore(single_argument, input_alloca);
 
 	// Here we merely re-expose mod.
 	{
-		std::optional<ValueSymbolTableEntry> o_entry_mod = igc.value_table->get("m_mod");
+		std::optional<ValueSymbolTableEntry> o_entry_mod = igc->value_table->get("m_mod");
 
 		if (o_entry_mod.has_value()) {
-			llvm::Type* opaque_pointer = llvm::PointerType::get(enhanced_igc.context, 0);
+			llvm::Type* opaque_pointer = llvm::PointerType::get(*enhanced_igc->context, 0);
 			
-			llvm::Value* mod_alloca = func_builder.CreateAlloca(opaque_pointer, nullptr, "AllocaMod");
-			func_builder.CreateStore(arg_mod, mod_alloca);
+			llvm::Value* mod_alloca = func_builder->CreateAlloca(opaque_pointer, nullptr, "AllocaMod");
+			func_builder->CreateStore(arg_mod, mod_alloca);
 			
 			ValueSymbolTableEntry entry_mod = o_entry_mod.value();
 			entry_mod.alloca_ptr = mod_alloca;
@@ -152,7 +159,7 @@ llvm::Function* produce_call_func(
 		auto p_v_map_reference = std::make_shared<TypeMapReference>();
 		p_v_map_reference->target = map;
 
-		Bundle* bundle = igc.toc->bundle_registry->get(map->bundle_id.value());
+		Bundle* bundle = igc->toc->bundle_registry->get(map->bundle_id.value());
 		
 		if (!bundle) {
 			fprintf(stderr, "Bundle missing.\n");
@@ -170,10 +177,10 @@ llvm::Function* produce_call_func(
 		
 		llvm::Type* this_llvm_type = bundle_map->opaque_struct_type;
 
-		llvm::Type* opaque_pointer = llvm::PointerType::get(enhanced_igc.context, 0);
+		llvm::Type* opaque_pointer = llvm::PointerType::get(*enhanced_igc->context, 0);
 		
-		llvm::Value* this_alloca = func_builder.CreateAlloca(opaque_pointer, nullptr, "AllocaThis");
-		func_builder.CreateStore(arg_this, this_alloca);
+		llvm::Value* this_alloca = func_builder->CreateAlloca(opaque_pointer, nullptr, "AllocaThis");
+		func_builder->CreateStore(arg_this, this_alloca);
 
 		new_value_table->set("m_this", ValueSymbolTableEntry{
 			this_alloca,
@@ -211,7 +218,7 @@ llvm::Function* produce_call_func(
 	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
 	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
-	func_builder.CreateRet(llvm_value(output_smooth));
+	func_builder->CreateRet(llvm_value(output_smooth));
 
 	return func;
 }

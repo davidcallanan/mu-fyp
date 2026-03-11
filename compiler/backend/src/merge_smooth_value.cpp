@@ -16,7 +16,7 @@
 #include "happy_smooth.hpp"
 
 std::shared_ptr<SmoothStructval> merge_smooth_structval(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	std::shared_ptr<SmoothStructval> structval_a,
 	std::shared_ptr<SmoothStructval> structval_b
 ) {
@@ -54,18 +54,18 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 			field_types[0] = llvm_value(smooth_leaf.value())->getType();
 		}
 
-		llvm::StructType* struct_type_new = llvm::StructType::get(igc.context, field_types);
+		llvm::StructType* struct_type_new = llvm::StructType::get(*igc->context, field_types);
 		llvm::Value* replaced_value = llvm::UndefValue::get(struct_type_new);
 
 		if (is_leaf_physical) {
-			replaced_value = igc.builder.CreateInsertValue(replaced_value, llvm_value(smooth_leaf.value()), 0);
+			replaced_value = igc->builder->CreateInsertValue(replaced_value, llvm_value(smooth_leaf.value()), 0);
 		}
 
 		// currently only taking sym inputs from the b value, not properly merging this stuff yet.
 
 		for (uint32_t i = is_leaf_physical ? 1 : 0; i < struct_type_orig->getNumElements(); i++) {
-			llvm::Value* element = igc.builder.CreateExtractValue(structval_b->value, i);
-			replaced_value = igc.builder.CreateInsertValue(replaced_value, element, i);
+			llvm::Value* element = igc->builder->CreateExtractValue(structval_b->value, i);
+			replaced_value = igc->builder->CreateInsertValue(replaced_value, element, i);
 		}
 
 		value_merged = replaced_value;
@@ -76,8 +76,8 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		value_merged,
 		structval_b->has_leaf,
 		smooth_leaf,
-		nullptr, // this is problematic.
-		nullptr, // todo
+		{}, // this is problematic.
+		{}, // todo
 		{}, // todo
 	});
 }

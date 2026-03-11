@@ -8,6 +8,6 @@
 #include "t_smooth.hpp"
 
 Smooth evaluate_smooth(
-	IrGenCtx& igc,
+	std::shared_ptr<IrGenCtx> igc,
 	const Type& type
 );
