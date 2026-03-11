@@ -11,6 +11,7 @@
 #include "extract_leaf.hpp"
 #include "produce_call_func.hpp"
 #include "is_structwrappable.hpp"
+#include "force_identical_layout.hpp"
 
 Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth, std::shared_ptr<TypeMap> target_map, bool use_flexi_mode) {
 	auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth);
@@ -123,7 +124,9 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 	llvm::Value* translated_outcome_value = llvm::UndefValue::get(translated_outcome_type);
 
 	for (size_t i = 0; i < new_member_values.size(); i++) {
-		translated_outcome_value = igc->builder->CreateInsertValue(translated_outcome_value, new_member_values[i], (unsigned)i);
+		llvm::Type* expected = translated_outcome_type->getElementType(i);
+		llvm::Value* desired = force_identical_layout(igc, new_member_values[i], expected);
+		translated_outcome_value = igc->builder->CreateInsertValue(translated_outcome_value, desired, (unsigned) i);
 	}
 
 	return std::make_shared<SmoothStructval>(SmoothStructval{

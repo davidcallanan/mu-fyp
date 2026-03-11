@@ -8,6 +8,7 @@
 #include "rotten_float_info.hpp"
 #include "is_type_singletonish.hpp"
 #include "llvm_value.hpp"
+#include "force_identical_layout.hpp"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -152,7 +153,9 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 		llvm::Value* fancy_value = llvm::UndefValue::get(fancy_type);
 
 		for (size_t i = 0; i < new_member_values.size(); i++) {
-			fancy_value = igc->builder->CreateInsertValue(fancy_value, new_member_values[i], (unsigned)i);
+			llvm::Type* what_we_really_want = fancy_type->getElementType(i);
+			llvm::Value* desired_value = force_identical_layout(igc, new_member_values[i], what_we_really_want);
+			fancy_value = igc->builder->CreateInsertValue(fancy_value, desired_value, (unsigned) i);
 		}
 
 		return std::make_shared<SmoothStructval>(SmoothStructval{
