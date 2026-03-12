@@ -627,14 +627,7 @@ Smooth evaluate_smooth(
 				
 				llvm::Value* arg_mod = igc->builder->CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
 
-				std::optional<ValueSymbolTableEntry> o_entry_this = igc->value_table->get("m_this");
-
-				if (!o_entry_this.has_value()) {
-					fprintf(stderr, "this context not present!!\n");
-					exit(1);
-				}
-
-				llvm::Value* arg_this = igc->builder->CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+				llvm::Value* arg_this = igc->builder->CreatePointerCast(v_map_reference->value, opaque_pointer);
 
 				llvm::CallInst* output_value = igc->builder->CreateCall(optimized_func, {
 					arg_mod,
@@ -722,14 +715,9 @@ Smooth evaluate_smooth(
 
 			llvm::Value* arg_mod = igc->builder->CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
 
-			std::optional<ValueSymbolTableEntry> o_entry_this = igc->value_table->get("m_this");
-
-			if (!o_entry_this.has_value()) {
-				fprintf(stderr, "this context not present!!\n");
-				exit(1);
-			}
-
-			llvm::Value* arg_this = igc->builder->CreateLoad(opaque_pointer, o_entry_this->alloca_ptr);
+			llvm::Value* reference_version = igc->builder->CreateAlloca((*actual_target)->value->getType(), nullptr, "this_target");
+			igc->builder->CreateStore((*actual_target)->value, reference_version);
+			llvm::Value* arg_this = igc->builder->PointerCast(reference_version, opaque_pointer);
 
 			llvm::CallInst* output_value = igc->builder->CreateCall(optimized_func, {
 				arg_mod,
