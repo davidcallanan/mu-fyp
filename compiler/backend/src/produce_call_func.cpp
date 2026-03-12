@@ -151,7 +151,7 @@ llvm::Function* produce_call_func(
 	// Here we have to populate "this" from the actual data.
 	{
 		auto p_v_map_reference = std::make_shared<TypeMapReference>();
-		p_v_map_reference->target = map;
+		p_v_map_reference->target = (map->call_this_type != nullptr) ? map->call_this_type->target : map;
 
 		Bundle* bundle = igc->toc->bundle_registry->get(map->bundle_id.value());
 		
@@ -176,14 +176,14 @@ llvm::Function* produce_call_func(
 			
 			Bundle* masterbundle = igc->toc->bundle_registry->get(map->call_this_type->target->bundle_id.value());
 			
-			auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(masterbundle);
+			auto p_masterbundle_map = std::get_if<std::shared_ptr<BundleMap>>(masterbundle);
 			
-			if (!p_bundle_map) {
+			if (!p_masterbundle_map) {
 				fprintf(stderr, "Master map bundle gone.");
 				exit(1);
 			}
 			
-			return (*p_bundle_map)->opaque_struct_type;
+			return (*p_masterbundle_map)->opaque_struct_type;
 		}();
 
 		llvm::Type* opaque_pointer = llvm::PointerType::get(*enhanced_igc->context, 0);
