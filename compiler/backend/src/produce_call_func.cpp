@@ -211,8 +211,8 @@ llvm::Function* produce_call_func(
 	(*p_bundle_map)->call_func = func;
 	(*p_bundle_map)->call_func_alwaysinline = nullptr;
 
-	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_predicted_type));
-	Smooth output_flexi_smooth = happy_smooth(enhanced_igc, output_smooth, Type(map->call_output_predicted_type), true);
+	Smooth output_smooth = evaluate_smooth(enhanced_igc, Type(map->call_output_type));
+	Smooth output_flexi_smooth = happy_smooth(enhanced_igc, output_smooth, Type(map->call_output_type), true);
 	llvm::Value* output_ret_value = force_identical_layout(enhanced_igc, llvm_value(output_flexi_smooth), output_struct_type);
 	func_builder->CreateRet(output_ret_value);
 

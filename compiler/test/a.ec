@@ -64,9 +64,9 @@ type MyService {};
 } -> {
 	log_d(input:foo);
 	log("I also know my description:");
-	; log(this:description);
+	log(this:description);
 	log("I also know the module's description:");
-	; log(mod:description);
+	log(mod:description);
 };
 
 @Mod:name "My Module";
@@ -75,8 +75,8 @@ type MyService {};
 @Mod:do_something input {} -> {
 	log("Doing something...");
 	log("I also can access \"this\" and \"mod\"...");
-	; log(this:name);
-	; log(mod:name);
+	log(this:name);
+	log(mod:name);
 };
 
 ; @Mod:my_printf extern ccc "printf" {
@@ -278,7 +278,7 @@ create() -> { ; this comment works
 		:foo 678;
 	};
 	
-	; log(mod:name);
+	log(mod:name);
 	
 	mod:do_something {};
 	
