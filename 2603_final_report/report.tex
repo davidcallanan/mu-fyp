@@ -480,11 +480,12 @@ Prior to this project I had already developed a simple parsing library in JavaSc
 
 \begin{enumerate}
 	\item Parsing terminal rules using regular expressions.
-	\item Forming non-terminal rules by combining other rules in the following ways, sufficient to develop any complex grammar: \begin{itemize}
+	\item Forming non-terminal rules by combining other rules in the following ways (sufficient to develop any complex grammar): \begin{itemize}
 	\item ``or'': making a rule optional
 	\item ``join'': sequencing rules
 	\item ``multi'': repeating rules zero or more times
 	\item ``opt'': making a rule optional
+	\item ``lookAhead'': peeking ahead to prevent ambiguity (seldom used)
 	\end{itemize}
 	\item Map parsed data to custom structures using the ``mapData'' function.
 \end{enumerate}

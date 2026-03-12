@@ -1329,12 +1329,22 @@ const top_extension = rule("top_extension", mapData(
 	}),
 ));
 
-const top_create = rule("top_create", mapData(
-	join(KW_CREATE, type_callable),
-	(data) => ({
-		type: "top_create",
-		description: data[1],
-	}),
+const top_create = rule("top_create", or(
+	mapData(
+		join(KW_CREATE, KW_EXTERN, KW_CCC, STRING, type_callable),
+		(data) => ({
+			type: "top_create",
+			extern_ccc: data[3],
+			description: data[4],
+		}),
+	),
+	mapData(
+		join(KW_CREATE, type_callable),
+		(data) => ({
+			type: "top_create",
+			description: data[1],
+		}),
+	),
 ));
 
 const top_entry = rule("top_entry", or(

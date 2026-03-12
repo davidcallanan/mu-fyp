@@ -87,7 +87,7 @@ type MyService {};
 
 @Mod:my_getpid extern ccc "getpid" () -> (i32);
 
-create() -> { ; this comment works
+create extern ccc "main" () -> { ; this comment works
 	test := 10;
 	banana := u64 10;
 	str := "Hello, Universe!";

@@ -326,10 +326,20 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 		false
 	);
 	
+	bool is_extern_ccc = (true
+		&& !create_data.is_null()
+		&& create_data.contains("extern_ccc")
+		&& create_data["extern_ccc"].is_string()
+	);
+
+	std::string entrypoint_name = is_extern_ccc
+		? create_data["extern_ccc"].get<std::string>()
+		: "main";
+
 	llvm::Function* main_func = llvm::Function::Create(
 		main_type,
 		llvm::Function::ExternalLinkage,
-		"main",
+		entrypoint_name,
 		*module
 	);
 	
