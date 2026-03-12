@@ -191,13 +191,15 @@ Smooth evaluate_smooth(
 			field_smooths.push_back(sym_smooth);
 		}
 		
+		// llvm will error if setBody called twice.
 		bundle_map->opaque_struct_type->setBody(member_types);
 		bundle_map->opaque_flexi_struct_type->setBody(flexi_member_types);
 		llvm::StructType* struct_type = bundle_map->opaque_struct_type;
 		llvm::Value* struct_value = llvm::UndefValue::get(struct_type);
 		
 		for (size_t i = 0; i < member_values.size(); i++) {
-			struct_value = igc->builder->CreateInsertValue(struct_value, member_values[i], i);
+			llvm::Value* forced = force_identical_layout(igc, member_values[i], struct_type->getElementType(i));
+			struct_value = igc->builder->CreateInsertValue(struct_value, forced, i);
 		}
 		
 		return std::make_shared<SmoothStructval>(SmoothStructval{
