@@ -30,6 +30,7 @@ public:
 	void set(const std::string& name, const ValueSymbolTableEntry& entry);
 
 	std::optional<ValueSymbolTableEntry> get(const std::string& name);
+	std::optional<ValueSymbolTableEntry> get_exact(const std::string& name);
 	const std::string& scope_id() const;
 };
 

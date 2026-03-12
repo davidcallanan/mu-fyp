@@ -31,21 +31,28 @@ void ValueSymbolTable::set(const std::string& name, const ValueSymbolTableEntry&
 	_values[name] = entry;
 }
 
-std::optional<ValueSymbolTableEntry> ValueSymbolTable::get(const std::string& name) {
+std::optional<ValueSymbolTableEntry> ValueSymbolTable::get_exact(const std::string& name) {
 	auto it = _values.find(name);
 	
 	if (it == _values.end()) {
 		if (_parent == nullptr) {
-			if (name == "m_this") {
-				return get("m_mod");
-			}
 			return std::nullopt;
 		}
 		
-		return _parent->get(name);
+		return _parent->get_exact(name);
 	}
 	
 	return it->second;
+}
+
+std::optional<ValueSymbolTableEntry> ValueSymbolTable::get(const std::string& name) {
+	auto result = get_exact(name);
+	
+	if (!result.has_value() && name == "m_this") {
+		return get_exact("m_mod");
+	}
+	
+	return result;
 }
 
 const std::string& ValueSymbolTable::scope_id() const {
