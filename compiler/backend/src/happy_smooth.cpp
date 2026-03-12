@@ -95,15 +95,15 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			&& !is_type_singletonish(v_map->leaf_type.value())
 		) {
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_translated = better_leaf_agnostically_translate(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
-			Smooth field_happy = happy_smooth(igc, field_translated, v_map->leaf_type.value(), use_flexi_mode);
-			llvm::Value* field_happy_value = llvm_value(field_happy);
+			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
+			Smooth field_translated = better_leaf_agnostically_translate(igc, field_happy, v_map->leaf_type.value(), use_flexi_mode);
+			llvm::Value* field_happy_value = llvm_value(field_translated);
 
 			// new_member_types.push_back(field_happy_value->getType());
 			new_member_values.push_back(field_happy_value);
-			converted_field_smooths.push_back(field_happy);
+			converted_field_smooths.push_back(field_translated);
 			
-			brand_new_leaf = field_happy;
+			brand_new_leaf = field_translated;
 			
 			member_idx++;
 		}
@@ -114,13 +114,13 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			}
 
 			Smooth field_smooth = v_structval->field_smooths[member_idx];
-			Smooth field_translated = better_leaf_agnostically_translate(igc, field_smooth, *sym_type, use_flexi_mode);
-			Smooth field_happy = happy_smooth(igc, field_translated, *sym_type, use_flexi_mode);
-			llvm::Value* field_happy_value = llvm_value(field_happy);
-			
+			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type, use_flexi_mode);
+			Smooth field_translated = better_leaf_agnostically_translate(igc, field_happy, *sym_type, use_flexi_mode);
+			llvm::Value* field_happy_value = llvm_value(field_translated);
+
 			// new_member_types.push_back(field_happy_value->getType());
 			new_member_values.push_back(field_happy_value);
-			converted_field_smooths.push_back(field_happy);
+			converted_field_smooths.push_back(field_translated);
 			
 			member_idx++;
 		}
@@ -158,6 +158,19 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 		for (size_t i = 0; i < new_member_values.size(); i++) {
 			llvm::Type* what_we_really_want = fancy_type->getElementType(i);
 			llvm::Value* desired_value = force_identical_layout(igc, new_member_values[i], what_we_really_want);
+			
+			if (desired_value->getType() != what_we_really_want) {
+				fprintf(stderr, "leaf_agnostically_translate struggled with %zu\n", i);
+				fprintf(stderr, "WANTED:");
+				what_we_really_want->print(llvm::errs());
+				fprintf(stderr, "\nGHOT:");
+				desired_value->getType()->print(llvm::errs());
+				fprintf(stderr, "\n- target has leaf? %s\n", v_map->leaf_type.has_value() ? "true" : "false");
+				fprintf(stderr, "- num sym inputs: %zu\n", v_map->sym_inputs.size());
+				fprintf(stderr, "- use_flexi_mode: %s\n", use_flexi_mode ? "true" : "false");
+				exit(1);
+			}
+		
 			fancy_value = igc->builder->CreateInsertValue(fancy_value, desired_value, (unsigned) i);
 		}
 

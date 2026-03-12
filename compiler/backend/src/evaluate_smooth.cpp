@@ -37,7 +37,7 @@
 #include "happy_smooth.hpp"
 #include "create_dummy_igc.hpp"
 #include "destroy_dummy_igc.hpp"
-#include "leaf_agnostically_translate.hpp"
+#include "better_leaf_agnostically_translate.hpp"
 #include "llvm_flexi_type.hpp"
 #include "llvm_opaqued_flexi_type.hpp"
 #include "t_bundles.hpp"
@@ -607,7 +607,7 @@ Smooth evaluate_smooth(
 				llvm::Function* call_func = produce_call_func(igc, *actual_target_type);
 				llvm::Function* call_func_alwaysinline = produce_call_func(igc, *actual_target_type, true);
 
-				Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
+				Smooth translated = better_leaf_agnostically_translate(igc, upgraded, Type((*actual_target_type)->call_input_type), true);
 				llvm::StructType* the_type_it_should_be = llvm::cast<llvm::StructType>(call_func->getFunctionType()->getParamType(2));
 				llvm::Value* input_payload = force_identical_layout(igc, llvm_value(translated), the_type_it_should_be);
 				
@@ -703,7 +703,7 @@ Smooth evaluate_smooth(
 			llvm::Function* my_call_func = (*actual_target)->call_func();
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
 			
-			Smooth translated = leaf_agnostically_translate(igc, upgraded, (*actual_target_type)->call_input_type, true);
+			Smooth translated = better_leaf_agnostically_translate(igc, upgraded, Type((*actual_target_type)->call_input_type), true);
 			llvm::StructType* the_type_it_should_be = llvm::cast<llvm::StructType>(my_call_func->getFunctionType()->getParamType(2));
 			llvm::Value* input_payload = force_identical_layout(igc, llvm_value(translated), the_type_it_should_be);
 			

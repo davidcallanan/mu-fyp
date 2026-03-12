@@ -120,12 +120,31 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 		fprintf(stderr, "Opaque struct's body woke up dead.\n");
 		exit(1);
 	}
+	
+	if (translated_outcome_type->isOpaque()) {
+		fprintf(stderr, "struct still opaque %s.\n", use_flexi_mode ? "opaque_flexi_struct_type" : "opaque_struct_type");
+		exit(1);
+	}
 
 	llvm::Value* translated_outcome_value = llvm::UndefValue::get(translated_outcome_type);
 
 	for (size_t i = 0; i < new_member_values.size(); i++) {
 		llvm::Type* expected = translated_outcome_type->getElementType(i);
 		llvm::Value* desired = force_identical_layout(igc, new_member_values[i], expected);
+		
+		if (desired->getType() != expected) {
+			fprintf(stderr, "leaf_agnostically_translate struggled with %zu\n", i);
+			fprintf(stderr, "WANTED:");
+			expected->print(llvm::errs());
+			fprintf(stderr, "\nGHOT:");
+			desired->getType()->print(llvm::errs());
+			fprintf(stderr, "\n- target has leaf? %s\n", target_map->leaf_type.has_value() ? "true" : "false");
+			fprintf(stderr, "- num sym inputs: %zu\n", target_map->sym_inputs.size());
+			fprintf(stderr, "- use_flexi_mode: %s\n", use_flexi_mode ? "true" : "false");
+			fprintf(stderr, "Did you run the smooth through happy_smooth before calling leaf_agnostically_translate?\n");
+			exit(1);
+		}
+		
 		translated_outcome_value = igc->builder->CreateInsertValue(translated_outcome_value, desired, (unsigned) i);
 	}
 
