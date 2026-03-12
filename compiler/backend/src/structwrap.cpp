@@ -21,17 +21,19 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_pointer->type;
 
+		auto leaf_smooth = std::make_shared<SmoothPointer>(SmoothPointer{
+			v_pointer->type, // todo: is this the right type.
+			igc->builder->CreateExtractValue(struct_value, 0),
+		});
+
 		return std::make_shared<SmoothStructval>(SmoothStructval{
 			Type(v_map),
 			struct_value,
 			true,
-			std::make_shared<SmoothPointer>(SmoothPointer{
-				v_pointer->type, // todo: is this the right type.
-				igc->builder->CreateExtractValue(struct_value, 0),
-			}),
+			leaf_smooth,
 			{},
 			{},
-			{}, // todo
+			{ Smooth(leaf_smooth) },
 		});
 	}
 
@@ -45,17 +47,19 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_int->type;
 
+		auto leaf_smooth = std::make_shared<SmoothInt>(SmoothInt{
+			v_int->type,
+			igc->builder->CreateExtractValue(struct_value, 0),
+		});
+
 		return std::make_shared<SmoothStructval>(SmoothStructval{
 			Type(v_map),
 			struct_value,
 			true,
-			std::make_shared<SmoothInt>(SmoothInt{
-				v_int->type,
-				igc->builder->CreateExtractValue(struct_value, 0),
-			}),
+			leaf_smooth,
 			{},
 			{},
-			{}, // todo
+			{ Smooth(leaf_smooth) },
 		});
 	}
 
@@ -69,17 +73,19 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_float->type;
 
+		auto leaf_smooth = std::make_shared<SmoothFloat>(SmoothFloat{
+			v_float->type,
+			igc->builder->CreateExtractValue(struct_value, 0),
+		});
+
 		return std::make_shared<SmoothStructval>(SmoothStructval{
 			Type(v_map),
 			struct_value,
 			true,
-			std::make_shared<SmoothFloat>(SmoothFloat{
-				v_float->type,
-				igc->builder->CreateExtractValue(struct_value, 0),
-			}),
+			leaf_smooth,
 			{},
 			{},
-			{}, // todo
+			{ Smooth(leaf_smooth) },
 		});
 	}
 

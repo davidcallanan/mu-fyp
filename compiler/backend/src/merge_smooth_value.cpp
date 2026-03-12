@@ -35,6 +35,7 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 
 	llvm::Value* value_merged = structval_b->value;
 	std::optional<Smooth> smooth_leaf = std::nullopt;
+	std::vector<Smooth> uptodate_smooths;
 
 	if (structval_a->has_leaf && structval_b->has_leaf) {
 		if (is_type_singletonish(type_merged->leaf_type.value())) {
@@ -55,6 +56,7 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 
 		if (is_leaf_physical) {
 			field_types[0] = llvm_value(smooth_leaf.value())->getType();
+			uptodate_smooths.push_back(smooth_leaf.value());
 		}
 
 		llvm::StructType* struct_type_new = llvm::StructType::get(*igc->context, field_types);
@@ -69,6 +71,7 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		for (uint32_t i = is_leaf_physical ? 1 : 0; i < struct_type_orig->getNumElements(); i++) {
 			llvm::Value* element = igc->builder->CreateExtractValue(structval_b->value, i);
 			replaced_value = igc->builder->CreateInsertValue(replaced_value, element, i);
+			uptodate_smooths.push_back(structval_b->field_smooths[i]);
 		}
 
 		value_merged = replaced_value;
@@ -81,6 +84,6 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		smooth_leaf,
 		{}, // this is problematic.
 		{}, // todo
-		{}, // todo
+		uptodate_smooths,
 	});
 }

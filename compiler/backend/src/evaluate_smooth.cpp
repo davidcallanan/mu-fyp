@@ -646,15 +646,7 @@ Smooth evaluate_smooth(
 
 				Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
-				return std::make_shared<SmoothStructval>(SmoothStructval{
-					output_type,
-					output_value,
-					false,
-					std::nullopt, // problematic.
-					{}, // problematic.
-					{},
-					{}, // this needs be sorted evnetually
-				});
+				return llvm_to_smooth(igc, output_type, output_value);
 			}
 		}
 
@@ -749,17 +741,7 @@ Smooth evaluate_smooth(
 
 			Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
-			auto output_smooth = std::make_shared<SmoothStructval>(SmoothStructval{
-				output_type,
-				output_value,
-				false,
-				std::nullopt, // this is problematic.
-				{}, // this line is problematic.
-				{},
-				{}, // this all needs to be sorted properly.
-			});
-
-			return Smooth(output_smooth);
+			return llvm_to_smooth(igc, output_type, output_value);
 		} else {
 			fprintf(stderr, "currenty only sym calls and map calls are supported.\n");
 			exit(1);

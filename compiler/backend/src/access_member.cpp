@@ -77,17 +77,19 @@ Smooth access_member(
 				std::nullopt,
 			});
 
+			auto leaf_smooth = std::make_shared<SmoothPointer>(SmoothPointer{
+				unclear_type,
+				extracted,
+			});
+
 			return std::make_shared<SmoothStructval>(SmoothStructval{
 				actual_map,
 				final_pointer, // todo: is this the actual struct
 				true,
-				std::make_shared<SmoothPointer>(SmoothPointer{
-					unclear_type,
-					extracted,
-				}),
+				leaf_smooth,
 				{}, // this is problematic.
 				{},
-				{}, // todo
+				{ Smooth(leaf_smooth) },
 			});
 		}
 
