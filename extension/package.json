@@ -16,7 +16,8 @@
         "id": "essencec",
         "aliases": [
           "Essence C",
-          "essencec"
+          "essencec",
+          "ec"
         ],
         "extensions": [
           ".ec",
