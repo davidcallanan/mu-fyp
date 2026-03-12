@@ -35,5 +35,9 @@ maybe a kernel test case of writing characters to the screen (one by one) to sho
 New plan:
 - make mut keyword on maps switch to vtable approach
 - add with-phalloc-bypass ("phantom alloc")
+- implement more logical operations
+- implement map field mutation
+- implement returning something [use a named constraint to get it working for now, that'll suffice I think]
+- add parenthesis using "(: " regex (as down the road ":" will mean spreaded or leaf return)
 
 i was gonna say i should implement closures, but it is effecitvely already implemented, just use a map!

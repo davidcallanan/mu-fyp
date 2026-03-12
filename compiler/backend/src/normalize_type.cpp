@@ -648,6 +648,71 @@ Type normalize_type(
 		return v_expr_logical_or;
 	}
 	
+	if (type == "expr_not") {
+		auto v_expr_not = std::make_shared<TypeExprNot>();
+		
+		v_expr_not->operand = std::make_shared<Type>(normalize_type(toc, typeval["operand"]));
+		
+		return v_expr_not;
+	}
+
+	if (type == "expr_modulo") {
+		auto v = std::make_shared<TypeExprModulo>();
+		
+		v->operand_a = std::make_shared<Type>(normalize_type(toc, typeval["operand_a"]));
+		v->operand_b = std::make_shared<Type>(normalize_type(toc, typeval["operand_b"]));
+		
+		return v;
+	}
+
+	if (type == "expr_shift_right") {
+		auto v = std::make_shared<TypeExprShiftRight>();
+		
+		v->operand_a = std::make_shared<Type>(normalize_type(toc, typeval["operand_a"]));
+		v->operand_b = std::make_shared<Type>(normalize_type(toc, typeval["operand_b"]));
+		
+		return v;
+	}
+
+	if (type == "expr_shift_left") {
+		auto v = std::make_shared<TypeExprShiftLeft>();
+		
+		v->operand_a = std::make_shared<Type>(normalize_type(toc, typeval["operand_a"]));
+		v->operand_b = std::make_shared<Type>(normalize_type(toc, typeval["operand_b"]));
+		
+		return v;
+	}
+
+	if (type == "expr_bitwise_and") {
+		auto v_expr_bitwise_and = std::make_shared<TypeExprBitwiseAnd>();
+
+		for (const auto& op_data : typeval["ops"]) {
+			v_expr_bitwise_and->operands.push_back(std::make_shared<Type>(normalize_type(toc, op_data["operand"])));
+		}
+
+		if (v_expr_bitwise_and->operands.empty()) {
+			fprintf(stderr, "NO operands.\n");
+			exit(1);
+		}
+
+		return v_expr_bitwise_and;
+	}
+
+	if (type == "expr_bitwise_or") {
+		auto v_expr_bitwise_or = std::make_shared<TypeExprBitwiseOr>();
+
+		for (const auto& op_data : typeval["ops"]) {
+			v_expr_bitwise_or->operands.push_back(std::make_shared<Type>(normalize_type(toc, op_data["operand"])));
+		}
+
+		if (v_expr_bitwise_or->operands.empty()) {
+			fprintf(stderr, "NO operands.\n");
+			exit(1);
+		}
+
+		return v_expr_bitwise_or;
+	}
+
 	if (type == "expr_compare") {
 		auto v_compare = std::make_shared<TypeCompare>();
 

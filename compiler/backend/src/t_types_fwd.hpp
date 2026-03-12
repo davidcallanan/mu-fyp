@@ -34,6 +34,12 @@ struct TypeExternCcc;
 struct TypeMapReference;
 struct TypeTakeAddress;
 struct TypeSizeof;
+struct TypeExprNot;
+struct TypeExprShiftRight;
+struct TypeExprShiftLeft;
+struct TypeExprBitwiseAnd;
+struct TypeExprBitwiseOr;
+struct TypeExprModulo;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -60,7 +66,13 @@ using Type = std::variant<
 	std::shared_ptr<TypeExternCcc>,
 	std::shared_ptr<TypeMapReference>,
 	std::shared_ptr<TypeTakeAddress>,
-	std::shared_ptr<TypeSizeof>
+	std::shared_ptr<TypeSizeof>,
+	std::shared_ptr<TypeExprNot>,
+	std::shared_ptr<TypeExprShiftRight>,
+	std::shared_ptr<TypeExprShiftLeft>,
+	std::shared_ptr<TypeExprBitwiseAnd>,
+	std::shared_ptr<TypeExprBitwiseOr>,
+	std::shared_ptr<TypeExprModulo>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.

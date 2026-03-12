@@ -194,6 +194,72 @@ Type get_underlying_type(const Type& type) {
 		return get_underlying_type(*v_sizeof->underlying_type);
 	}
 	
+	if (auto p_v_expr_not = std::get_if<std::shared_ptr<TypeExprNot>>(&type)) {
+		const auto& v_expr_not = *p_v_expr_not;
+
+		if (v_expr_not->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprNot).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_not->underlying_type);
+	}
+
+	if (auto p_v_expr_shift_right = std::get_if<std::shared_ptr<TypeExprShiftRight>>(&type)) {
+		const auto& v_expr_shift_right = *p_v_expr_shift_right;
+
+		if (v_expr_shift_right->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprShiftRight).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_shift_right->underlying_type);
+	}
+
+	if (auto p_v_expr_shift_left = std::get_if<std::shared_ptr<TypeExprShiftLeft>>(&type)) {
+		const auto& v_expr_shift_left = *p_v_expr_shift_left;
+
+		if (v_expr_shift_left->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprShiftLeft).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_shift_left->underlying_type);
+	}
+
+	if (auto p_v_expr_bitwise_and = std::get_if<std::shared_ptr<TypeExprBitwiseAnd>>(&type)) {
+		const auto& v_expr_bitwise_and = *p_v_expr_bitwise_and;
+
+		if (v_expr_bitwise_and->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprBitwiseAnd).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_bitwise_and->underlying_type);
+	}
+
+	if (auto p_v_expr_bitwise_or = std::get_if<std::shared_ptr<TypeExprBitwiseOr>>(&type)) {
+		const auto& v_expr_bitwise_or = *p_v_expr_bitwise_or;
+
+		if (v_expr_bitwise_or->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprBitwiseOr).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_bitwise_or->underlying_type);
+	}
+
+	if (auto p_v_expr_modulo = std::get_if<std::shared_ptr<TypeExprModulo>>(&type)) {
+		const auto& v_expr_modulo = *p_v_expr_modulo;
+
+		if (v_expr_modulo->underlying_type == nullptr) {
+			fprintf(stderr, "Underlying type not populated (TypeExprModulo).\n");
+			exit(1);
+		}
+
+		return get_underlying_type(*v_expr_modulo->underlying_type);
+	}
+	
 	fprintf(stderr, "Currently no mechanism to determine the actual type of the expression.\n");
 	exit(1);
 }

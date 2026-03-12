@@ -43,6 +43,7 @@
 #include "t_bundles.hpp"
 #include "clone_type_map_for_mutation.hpp"
 #include "force_identical_layout.hpp"
+#include "preinstantiated_types.hpp"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -968,6 +969,208 @@ Smooth evaluate_smooth(
 			type,
 			result,
 		});
+	}
+
+	if (auto p_v_expr_modulo = std::get_if<std::shared_ptr<TypeExprModulo>>(&type)) {
+		const auto v_expr_modulo = *p_v_expr_modulo;
+
+		Smooth smooth_a = evaluate_smooth(igc, *v_expr_modulo->operand_a);
+		llvm::Value* value_a = llvm_value(extract_leaf(igc, smooth_a, true));
+		
+		Smooth smooth_b = evaluate_smooth(igc, *v_expr_modulo->operand_b);
+		llvm::Value* value_b = llvm_value(extract_leaf(igc, smooth_b, true));
+
+		uint32_t a_bits = value_a->getType()->getIntegerBitWidth();
+		uint32_t b_bits = value_b->getType()->getIntegerBitWidth();
+
+		if (a_bits < b_bits) {
+			value_a = igc->builder->CreateZExt(value_a, value_b->getType());
+		} else if (b_bits < a_bits) {
+			value_b = igc->builder->CreateZExt(value_b, value_a->getType());
+		}
+
+		llvm::Value* result;
+
+		result = igc->builder->CreateURem(value_a, value_b);
+
+		uint32_t actual_bits = result->getType()->getPrimitiveSizeInBits();
+		auto improved_rotten = std::make_shared<TypeRotten>();
+		improved_rotten->type_str = "u" + std::to_string(actual_bits);
+		(*p_v_expr_modulo)->underlying_type = std::make_shared<Type>(Type(improved_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			result,
+		});
+	}
+
+	if (auto p_v_expr_shift_right = std::get_if<std::shared_ptr<TypeExprShiftRight>>(&type)) {
+		const auto v_expr_shift_right = *p_v_expr_shift_right;
+
+		Smooth smooth_a = evaluate_smooth(igc, *v_expr_shift_right->operand_a);
+		llvm::Value* value_a = llvm_value(extract_leaf(igc, smooth_a, true));
+		
+		Smooth smooth_b = evaluate_smooth(igc, *v_expr_shift_right->operand_b);
+		llvm::Value* value_b = llvm_value(extract_leaf(igc, smooth_b, true));
+
+		uint32_t a_bits = value_a->getType()->getIntegerBitWidth();
+		uint32_t b_bits = value_b->getType()->getIntegerBitWidth();
+
+		if (a_bits < b_bits) {
+			value_a = igc->builder->CreateZExt(value_a, value_b->getType());
+		} else if (b_bits < a_bits) {
+			value_b = igc->builder->CreateZExt(value_b, value_a->getType());
+		}
+
+		llvm::Value* result = igc->builder->CreateLShr(value_a, value_b);
+
+		auto cool_rotten = std::make_shared<TypeRotten>();
+		cool_rotten->type_str = "u" + std::to_string(result->getType()->getIntegerBitWidth());
+		(*p_v_expr_shift_right)->underlying_type = std::make_shared<Type>(Type(cool_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			result,
+		});
+	}
+
+	if (auto p_v_expr_shift_left = std::get_if<std::shared_ptr<TypeExprShiftLeft>>(&type)) {
+		const auto v_expr_shift_left = *p_v_expr_shift_left;
+
+		Smooth smooth_a = evaluate_smooth(igc, *v_expr_shift_left->operand_a);
+		llvm::Value* value_a = llvm_value(extract_leaf(igc, smooth_a, true));
+		
+		Smooth smooth_b = evaluate_smooth(igc, *v_expr_shift_left->operand_b);
+		llvm::Value* value_b = llvm_value(extract_leaf(igc, smooth_b, true));
+		
+		uint32_t a_bits = value_a->getType()->getIntegerBitWidth();
+		uint32_t b_bits = value_b->getType()->getIntegerBitWidth();
+
+		if (a_bits < b_bits) {
+			value_a = igc->builder->CreateZExt(value_a, value_b->getType());
+		} else if (b_bits < a_bits) {
+			value_b = igc->builder->CreateZExt(value_b, value_a->getType());
+		}
+
+		llvm::Value* result = igc->builder->CreateShl(value_a, value_b);
+
+		auto generated_rotten = std::make_shared<TypeRotten>();
+		generated_rotten->type_str = "u" + std::to_string(result->getType()->getIntegerBitWidth());
+		(*p_v_expr_shift_left)->underlying_type = std::make_shared<Type>(Type(generated_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			result,
+		});
+	}
+
+	if (auto p_v_expr_bitwise_and = std::get_if<std::shared_ptr<TypeExprBitwiseAnd>>(&type)) {
+		const auto v_expr_bitwise_and = *p_v_expr_bitwise_and;
+		
+		llvm::Value* result = nullptr;
+
+		for (const auto& operand : v_expr_bitwise_and->operands) {
+			Smooth smooth = evaluate_smooth(igc, *operand);
+			Smooth leaf = extract_leaf(igc, smooth, true);
+
+			llvm::Value* value = llvm_value(leaf);
+
+			if (result == nullptr) {
+				result = value;
+				continue;
+			}
+
+			uint32_t result_bits = result->getType()->getIntegerBitWidth();
+			uint32_t value_bits = value->getType()->getIntegerBitWidth();
+
+			if (result_bits < value_bits) {
+				result = igc->builder->CreateZExt(result, value->getType());
+			} else if (value_bits < result_bits) {
+				value = igc->builder->CreateZExt(value, result->getType());
+			}
+
+			result = igc->builder->CreateAnd(result, value);
+		}
+
+		if (result == nullptr) {
+			fprintf(stderr, "no operations actually given\n");
+			exit(1);
+		}
+
+		uint32_t actual_bits = result->getType()->getPrimitiveSizeInBits();
+		auto new_rotten = std::make_shared<TypeRotten>();
+		new_rotten->type_str = "u" + std::to_string(actual_bits);
+		(*p_v_expr_bitwise_and)->underlying_type = std::make_shared<Type>(Type(new_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			result,
+		});
+	}
+
+	if (auto p_v_expr_bitwise_or = std::get_if<std::shared_ptr<TypeExprBitwiseOr>>(&type)) {
+		const auto v_expr_bitwise_or = *p_v_expr_bitwise_or;
+		
+		llvm::Value* result = nullptr;
+
+		for (const auto& operand : v_expr_bitwise_or->operands) {
+			Smooth smooth = evaluate_smooth(igc, *operand);
+			Smooth leaf = extract_leaf(igc, smooth, true);
+
+			llvm::Value* value = llvm_value(leaf);
+
+			if (result == nullptr) {
+				result = value;
+				continue;
+			}
+
+			uint32_t result_bits = result->getType()->getIntegerBitWidth();
+			uint32_t value_bits = value->getType()->getIntegerBitWidth();
+
+			if (result_bits < value_bits) {
+				result = igc->builder->CreateZExt(result, value->getType());
+			} else if (value_bits < result_bits) {
+				value = igc->builder->CreateZExt(value, result->getType());
+			}
+
+			result = igc->builder->CreateOr(result, value);
+		}
+
+		if (result == nullptr) {
+			fprintf(stderr, "no operations actually given\n");
+			exit(1);
+		}
+
+		uint32_t actual_bits = result->getType()->getPrimitiveSizeInBits();
+		auto new_rotten = std::make_shared<TypeRotten>();
+		new_rotten->type_str = "u" + std::to_string(actual_bits);
+		(*p_v_expr_bitwise_or)->underlying_type = std::make_shared<Type>(Type(new_rotten));
+
+		return std::make_shared<SmoothInt>(SmoothInt{
+			type,
+			result,
+		});
+	}
+
+	if (auto p_v_expr_not = std::get_if<std::shared_ptr<TypeExprNot>>(&type)) {
+		const auto& v_expr_not = *p_v_expr_not;
+
+		Smooth smooth = evaluate_smooth(igc, *v_expr_not->operand);
+		
+		auto p_v_enum = std::get_if<std::shared_ptr<SmoothEnum>>(&smooth);
+		
+		if (!p_v_enum) {
+			fprintf(stderr, "Must use not (!) on a boolean! ENUM\n");
+			exit(1);
+		}
+		
+		llvm::Value* value = llvm_value(smooth);
+
+		llvm::Value* result = igc->builder->CreateNot(value);
+
+		(*p_v_expr_not)->underlying_type = std::make_shared<Type>(Type(type_bool));
+		
+		return llvm_to_smooth_bool(igc, result);
 	}
 
 	if (auto p_v_compare = std::get_if<std::shared_ptr<TypeCompare>>(&type)) {

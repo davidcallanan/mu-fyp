@@ -133,6 +133,39 @@ struct TypeExprLogicalOr {
 	std::shared_ptr<Type> underlying_type;
 };
 
+struct TypeExprNot {
+	std::shared_ptr<Type> operand;
+	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeExprShiftRight {
+	std::shared_ptr<Type> operand_a;
+	std::shared_ptr<Type> operand_b;
+	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeExprShiftLeft {
+	std::shared_ptr<Type> operand_a;
+	std::shared_ptr<Type> operand_b;
+	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeExprBitwiseAnd {
+	std::vector<std::shared_ptr<Type>> operands;
+	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeExprBitwiseOr {
+	std::vector<std::shared_ptr<Type>> operands;
+	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeExprModulo {
+	std::shared_ptr<Type> operand_a;
+	std::shared_ptr<Type> operand_b;
+	std::shared_ptr<Type> underlying_type;
+};
+
 struct TypeExternCcc {
 	std::string function_name;
 	std::shared_ptr<TypeMap> call_input_type;

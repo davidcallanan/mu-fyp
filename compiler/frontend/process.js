@@ -101,6 +101,12 @@ const LTE = rule("LTE", withCarefulSkippers("<="));
 const GTE = rule("GTE", withCarefulSkippers(">="));
 const LT = rule("LT", withCarefulSkippers("<"));
 const GT = rule("GT", withCarefulSkippers(">"));
+const PERCENT = rule("PERCENT", withCarefulSkippers("%"));
+const LSHIFT = rule("LSHIFT", withCarefulSkippers("<<"));
+const RSHIFT = rule("RSHIFT", withCarefulSkippers(">>"));
+const BINAND = rule("BINAND", withCarefulSkippers("b&"));
+const BINOR = rule("BINOR", withCarefulSkippers("b|"));
+const NOT = rule("NOT", withCarefulSkippers("!"));
 
 // PARSER RULES
 
@@ -324,7 +330,7 @@ const expr25 = rule("expr25", or(
 	typeval_atom,
 ));
 
-const BAREBONES_AHEAD = rule("BAREBONES_AHEAD", /^(?![ \t\n]*[;+\-*\/&|])/);
+const BAREBONES_AHEAD = rule("BAREBONES_AHEAD", /^(?![ \t\n]*(?:[;+\-*\/|%]|b&|b\||&&|\|\|))/);
 
 const BAREBONES_AHEAD_with_debug = (input) => {
 	const outcome = BAREBONES_AHEAD(input);
@@ -336,13 +342,24 @@ const BAREBONES_AHEAD_with_debug = (input) => {
 	return outcome;
 };
 
-const expr27 = rule("expr27", mapData(join(
+const expr26 = rule("expr26", or(
+	mapData(
+		join(NOT, expr25),
+		(data) => ({
+			type: "expr_not",
+			operand: data[1],
+		}),
+	),
 	expr25,
+));
+
+const expr27 = rule("expr27", mapData(join(
+	expr26,
 	opt_multi(or(
 		mapData(SYMBOL_BARE, (data) => ({ mode: "sym", data })),
 		// no way , I forgot I had written a lookAhead function.
 		// this has saved me.
-		mapData(join(lookAhead(BAREBONES_AHEAD_with_debug), opt(KW_ALWAYSINLINE), expr25), (data) => ({
+		mapData(join(lookAhead(BAREBONES_AHEAD_with_debug), opt(KW_ALWAYSINLINE), expr26), (data) => ({
 			mode: "dynamic",
 			is_flag_alwaysinline: data[1] !== undefined,
 			data: data[2],
@@ -432,8 +449,38 @@ const expr45 = rule("expr45", or( // additive crystal
 	expr40,
 ));
 
+const expr455 = rule("expr425", mapData(
+	join(expr45, opt(join(PERCENT, expr45))),
+	(data) => {
+		if (data[1] === undefined) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_modulo",
+			operand_a: data[0],
+			operand_b: data[1][1],
+		});
+	},
+));
+
+const expr46 = rule("expr46", mapData(
+	join(expr455, opt(join(or(LSHIFT, RSHIFT), expr455))),
+	(data) => {
+		if (data[1] === undefined) {
+			return data[0];
+		}
+
+		return ({
+			type: data[1][0] === ">>" ? "expr_shift_right" : "expr_shift_left",
+			operand_a: data[0],
+			operand_b: data[1][1],
+		});
+	},
+));
+
 const expr47 = rule("expr47", mapData(
-	join(expr45, opt(join(or(EQ, NEQ, LTE, GTE, LT, GT), expr45))),
+	join(expr46, opt(join(or(EQ, NEQ, LTE, GTE, LT, GT), expr46))),
 	(data) => {
 		if (data[1] === undefined) {
 			return data[0];
@@ -448,8 +495,70 @@ const expr47 = rule("expr47", mapData(
 	},
 ));
 
+const expr48 = rule("expr48", mapData( // bitwise AND pistol
+	join(expr47, opt_multi(join(BINAND, expr47))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_bitwise_and",
+			ops: [{ operand: data[0] }, ...data[1].map(([_op, operand]) => ({ operand }))],
+		});
+	},
+));
+
+const expr485 = rule("expr485", or( // bitwise AND crystal
+	mapData(
+		multi(join(BINAND, expr47)), // in unary case we skip to expr47 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_bitwise_and",
+				ops: data.map(([_op, operand]) => ({ operand })),
+			});
+		},
+	),
+	expr48,
+));
+
+const expr49 = rule("expr49", mapData( // bitwise OR pistol
+	join(expr485, opt_multi(join(BINOR, expr485))),
+	(data) => {
+		if (data[1].length === 0) {
+			return data[0];
+		}
+
+		return ({
+			type: "expr_bitwise_or",
+			ops: [{ operand: data[0] }, ...data[1].map(([_op, operand]) => ({ operand }))],
+		});
+	},
+));
+
+const expr495 = rule("expr495", or( // bitwise OR crystal
+	mapData(
+		multi(join(BINOR, expr485)), // in unary case we skip to expr485 to ignore binary case
+		(data) => {
+			if (data.length === 1) {
+				return data[0][1];
+			}
+
+			return ({
+				type: "expr_bitwise_or",
+				ops: data.map(([_op, operand]) => ({ operand })),
+			});
+		},
+	),
+	expr49,
+));
+
 const expr50 = rule("expr50", mapData( // logical AND pistol
-	join(expr47, opt_multi(join(AND, expr47))),
+	join(expr495, opt_multi(join(AND, expr495))),
 	(data) => {
 		if (data[1].length === 0) {
 			return data[0];
@@ -464,7 +573,7 @@ const expr50 = rule("expr50", mapData( // logical AND pistol
 
 const expr55 = rule("expr55", or( // logical AND crystal
 	mapData(
-		multi(join(AND, expr47)), // in unary case, we skip to expr47 to ignore binary case
+		multi(join(AND, expr495)), // in unary case, we skip to expr495 to ignore binary case
 		(data) => {
 			if (data.length === 1) {
 				return data[0][1];
