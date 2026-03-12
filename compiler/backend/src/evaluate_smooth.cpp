@@ -553,8 +553,26 @@ Smooth evaluate_smooth(
 		}
 
 		auto modern_target_smooth = structwrap(igc, target_smooth);
-		
-		return access_member(igc, modern_target_smooth, v_call_with_sym->sym);
+		auto is_it_map = std::get_if<std::shared_ptr<TypeMap>>(&modern_target_smooth->type);
+
+		if (!is_it_map) {
+			fprintf(stderr, "bizarre situaiothpq!!\n");
+			exit(1);
+		}
+
+		llvm::Value* converting_to_reference = igc->builder->CreateAlloca(modern_target_smooth->value->getType(), nullptr, "sym_this_ref");
+		igc->builder->CreateStore(modern_target_smooth->value, converting_to_reference);
+
+		auto new_reference = std::make_shared<TypeMapReference>();
+		new_reference->target = *is_it_map;
+
+		Smooth member = access_member(igc, modern_target_smooth, v_call_with_sym->sym);
+
+		if (auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&member)) {
+			(*p_v_structval)->intended_this = converting_to_reference;
+		}
+
+		return member;
 	}
 
 	if (auto p_v_call_with_dynamic = std::get_if<std::shared_ptr<TypeCallWithDynamic>>(&type)) {
