@@ -391,13 +391,25 @@ mod:run {};
 
 ## Entry Point
 
-Every module must have exactly one `create` block. This is the entry point:
+Every module must have exactly one `create` block. This is the entry point. By default the compiled entry function is exported as `main`:
 
 ```ec
 create() -> {
 	; program starts here
 }
 ```
+
+### `extern ccc` on `create` — custom export symbol
+
+Use `extern ccc "symbol_name"` on the `create` block to export the entry point under a custom C-ABI symbol name instead of `main`. This is useful when the module is intended to be called from C or another language (e.g. a kernel entry point, a library initialiser, or a custom linker script symbol):
+
+```ec
+create extern ccc "kernel_main" () -> {
+	; exported as "kernel_main" via the C calling convention
+}
+```
+
+Without `extern ccc` the function is still exported as `main` and callable from C, but the `extern ccc` form makes the symbol name explicit.
 
 ---
 
@@ -589,6 +601,7 @@ create() -> {
 | `void fn(int a)` | `@Mod:fn input { :a i32; } -> { ... };` |
 | `extern int puts(const char*)` | `@Mod:puts extern ccc "puts" (*u8) -> (i32);` |
 | `puts("hi")` | `mod:puts("hi");` |
+| custom entry symbol (e.g. `_start`) | `create extern ccc "_start" () -> { ... }` |
 | `for (;;) { ... break; }` | `for { ... break; }` |
 | `if (c) { } else { }` | `if (c) { } else { }` |
 | `a && b` | `&& a && b` (crystal) or `a && b` (pistol) |
