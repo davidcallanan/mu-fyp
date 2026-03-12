@@ -21,6 +21,7 @@ struct TypeMap {
 	std::map<std::string, std::shared_ptr<Type>> sym_inputs;
 	std::vector<Instruction> execution_sequence;
 	std::optional<uint64_t> bundle_id;
+	std::shared_ptr<TypeMapReference> call_this_type;
 };
 
 struct TypePointer {

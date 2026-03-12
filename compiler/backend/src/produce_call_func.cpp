@@ -169,7 +169,22 @@ llvm::Function* produce_call_func(
 		
 		auto bundle_map = *p_bundle_map;
 		
-		llvm::Type* this_llvm_type = bundle_map->opaque_struct_type;
+		llvm::Type* this_llvm_type = [&]() -> llvm::Type* {
+			if (map->call_this_type == nullptr) {
+				return bundle_map->opaque_struct_type;
+			}
+			
+			Bundle* masterbundle = igc->toc->bundle_registry->get(map->call_this_type->target->bundle_id.value());
+			
+			auto p_bundle_map = std::get_if<std::shared_ptr<BundleMap>>(masterbundle);
+			
+			if (!p_bundle_map) {
+				fprintf(stderr, "Master map bundle gone.");
+				exit(1);
+			}
+			
+			return (*p_bundle_map)->opaque_struct_type;
+		}();
 
 		llvm::Type* opaque_pointer = llvm::PointerType::get(*enhanced_igc->context, 0);
 		

@@ -628,6 +628,14 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 			Type sym_type = normalize_type(toc, ext_case["typeval"]);
 			the_existing->sym_inputs[leaf_name] = std::make_shared<Type>(sym_type);
 
+			if (auto p_sym_map = std::get_if<std::shared_ptr<TypeMap>>(the_existing->sym_inputs[leaf_name].get())) {
+				if ((*p_sym_map)->call_input_type != nullptr) {
+					auto v_map_reference = std::make_shared<TypeMapReference>();
+					v_map_reference->target = *p_v_map;
+					(*p_sym_map)->call_this_type = v_map_reference;
+				}
+			}
+
 			auto v_sym = std::make_shared<InstructionSym>();
 			v_sym->name = leaf_name;
 			v_sym->typeval = the_existing->sym_inputs[leaf_name];
