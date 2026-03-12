@@ -538,7 +538,13 @@ Smooth evaluate_smooth(
 			
 			auto actual_target = std::get<std::shared_ptr<SmoothStructval>>(loaded_smooth);
 
-			return access_member(igc, actual_target, v_call_with_sym->sym);
+			Smooth member = access_member(igc, actual_target, v_call_with_sym->sym);
+			
+			if (auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&member)) {
+				(*p_v_structval)->intended_this = v_map_reference->value;
+			}
+			
+			return member;
 		}
 
 		if (!is_structwrappable(target_smooth)) {
@@ -715,9 +721,14 @@ Smooth evaluate_smooth(
 
 			llvm::Value* arg_mod = igc->builder->CreateLoad(opaque_pointer, o_entry_mod->alloca_ptr);
 
-			llvm::Value* reference_version = igc->builder->CreateAlloca((*actual_target)->value->getType(), nullptr, "this_target");
-			igc->builder->CreateStore((*actual_target)->value, reference_version);
-			llvm::Value* arg_this = igc->builder->PointerCast(reference_version, opaque_pointer);
+			llvm::Value* arg_this = [&]() -> llvm::Value* {
+				if ((*actual_target)->intended_this.has_value()) {
+					return igc->builder->CreateBitOrPointerCast((*actual_target)->intended_this.value(), opaque_pointer);
+				}
+				llvm::Value* reference_version = igc->builder->CreateAlloca((*actual_target)->value->getType(), nullptr);
+				igc->builder->CreateStore((*actual_target)->value, reference_version);
+				return igc->builder->CreatePointerCast(reference_version, opaque_pointer);
+			}();
 
 			llvm::CallInst* output_value = igc->builder->CreateCall(optimized_func, {
 				arg_mod,

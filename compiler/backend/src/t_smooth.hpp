@@ -16,6 +16,7 @@ struct SmoothStructval {
 	std::function<llvm::Function*()> call_func;
 	std::function<llvm::Function*()> call_func_alwaysinline;
 	std::vector<Smooth> field_smooths;
+	std::optional<llvm::Value*> intended_this;
 };
 
 struct SmoothPointer {
