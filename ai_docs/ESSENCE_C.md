@@ -150,11 +150,57 @@ total :=
 ;
 ```
 
+**Modulo**:
+
+```ec
+remainder := n % 4;
+```
+
+**Bit shifts** (right-hand operand is the shift amount):
+
+```ec
+left  := value << 3;
+right := value >> 2;
+; grouping is required when the left operand is a type-coercion expression
+shifted := (: u64 19) << 2;
+```
+
 Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=`.
 
 ```ec
 is_ten := x == 10;
 is_positive := x > 0;
+```
+
+---
+
+## Bitwise Operators
+
+Bitwise AND uses the token `b&`; bitwise OR uses `b|`. Both support crystal (multi-operand) and pistol (binary infix) forms, matching the same pattern as logical AND/OR.
+
+```ec
+; pistol (binary infix)
+mask  := flags b& 0xFF;
+combo := a b| b;
+
+; crystal (multi-operand)
+result :=
+	b& value_a
+	b& value_b
+	b& 0xF0
+;
+
+or_result :=
+	b| channel_a
+	b| channel_b
+;
+```
+
+**Logical NOT** is a unary prefix operator `!` applied to a `bool` value:
+
+```ec
+flag   := bool :true;
+neg    := !flag;      ; bool :false
 ```
 
 ---
@@ -245,9 +291,17 @@ product :=
 	* x
 	* y
 ;
+
+; Bitwise AND and OR follow the same crystal/pistol pattern
+mask :=
+	b& value_a
+	b& value_b
+;
+
+; Bitwise NOT does NOT exist — use logical NOT (!) on bool values only
 ```
 
-Precedence order (highest to lowest): multiplicative → additive → logical AND → logical OR.
+Precedence order (highest to lowest): multiplicative → additive → modulo → shifts → comparison → bitwise AND → bitwise OR → logical AND → logical OR.
 
 ---
 
@@ -364,26 +418,7 @@ A method that does not declare `mut` cannot modify `this` fields (the compiler w
 
 ### Named return type
 
-A callable can declare a named return type by placing a type name between `->` and the body braces. The named type must itself be a map type (typically a tuple alias declared with `type`). The body then populates that type's fields:
-
-```ec
-type Result (u64);   ; named return type — a tuple with one positional field
-
-@Mod:compute () -> Result {
-	:0 42;
-};
-```
-
-For multiple return values, define the tuple with more fields:
-
-```ec
-type Vec2 (f32, f32);
-
-@Mod:origin () -> Vec2 {
-	:0 f32 0.0;
-	:1 f32 0.0;
-};
-```
+A callable can declare a named return type by placing a type name between `->` and the body braces. The named type must itself be a map type declared with `type`. The body then populates that type's fields.
 
 A named return type is **required** to return data — anonymous return type inference is not currently supported. Use `-> { }` (empty body map) for callables that return nothing:
 
@@ -393,7 +428,56 @@ A named return type is **required** to return data — anonymous return type inf
 };
 ```
 
-Access return values via `:0`, `:1`, etc. on the call result (see **Accessing Return Values**).
+#### Positional (tuple-style) return
+
+Declare the return type as a tuple using parenthesised types. Fields are accessed via `:0`, `:1`, etc.:
+
+```ec
+type Result (u64);   ; single positional field
+
+@Mod:compute () -> Result {
+	:0 42;
+};
+
+type Vec2 (f32, f32);
+
+@Mod:origin () -> Vec2 {
+	:0 f32 0.0;
+	:1 f32 0.0;
+};
+```
+
+#### Named fields (factory-style) return
+
+When the return type is a map type with named sym fields (declared with `{}`), the callable body sets fields by name instead of position. This is the idiomatic pattern for factories:
+
+```ec
+type Person {};
+
+@Person:name *u8;
+@Person:age  u64;
+
+; factory: returns a fully-initialised Person by field name
+@Mod:make_person input {
+	:name *u8;
+	:age  u64;
+} -> Person {
+	:name input:name;
+	:age  input:age;
+};
+
+create() -> {
+	p := mod:make_person {
+		:name "Alice";
+		:age  u64 30;
+	};
+	log(p:name);
+}
+```
+
+The returned map inherits the type's sym layout, so callers access fields via `:name`, `:age`, etc. rather than `:0`, `:1`.
+
+Access positional return values via `:0`, `:1`, etc. on the call result (see **Accessing Return Values**).
 
 ---
 
@@ -765,6 +849,12 @@ create() -> {
 | `a && b` | `&& a && b` (crystal) or `a && b` (pistol) |
 | `a \|\| b` | `\|\| a \|\| b` (crystal) or `a \|\| b` (pistol) |
 | `(a && b) \|\| c` | `\|\| (: && a && b ) \|\| c` or use intermediate variable |
+| `!a` | `!a` (unary prefix, `bool` only) |
+| `a & b` (bitwise AND) | `a b& b` (pistol) or `b& a b& b` (crystal) |
+| `a \| b` (bitwise OR) | `a b\| b` (pistol) or `b\| a b\| b` (crystal) |
+| `a << n` | `a << n` |
+| `a >> n` | `a >> n` |
+| `a % n` | `a % n` |
 | `sizeof(x)` | `sizeof(x)` |
 | `__attribute__((always_inline))` | `alwaysinline` call flag |
 | `const int x = 5;` | `x := i32 5;` (immutable by default) |
