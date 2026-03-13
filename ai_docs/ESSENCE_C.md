@@ -362,6 +362,39 @@ The `mod` context is **always** mutable — module-level fields can be assigned 
 
 A method that does not declare `mut` cannot modify `this` fields (the compiler will reject the attempt).
 
+### Named return type
+
+A callable can declare a named return type by placing a type name between `->` and the body braces. The named type must itself be a map type (typically a tuple alias declared with `type`). The body then populates that type's fields:
+
+```ec
+type Result (u64);   ; named return type — a tuple with one positional field
+
+@Mod:compute () -> Result {
+	:0 42;
+};
+```
+
+For multiple return values, define the tuple with more fields:
+
+```ec
+type Vec2 (f32, f32);
+
+@Mod:origin () -> Vec2 {
+	:0 f32 0.0;
+	:1 f32 0.0;
+};
+```
+
+A named return type is **required** to return data — anonymous return type inference is not currently supported. Use `-> { }` (empty body map) for callables that return nothing:
+
+```ec
+@Mod:greet () -> {
+	log("hello");
+};
+```
+
+Access return values via `:0`, `:1`, etc. on the call result (see **Accessing Return Values**).
+
 ---
 
 ## `sizeof`
@@ -589,13 +622,33 @@ some_callable alwaysinline {
 
 ## Accessing Return Values
 
-Return values from extern (or any) calls are accessed positionally via `:0`, `:1`, etc. on the result map:
+Return values (from any callable or `extern ccc` function) are accessed positionally via `:0`, `:1`, etc. on the call result map:
 
 ```ec
 ret := mod:getpid();
 pid := ret:0;
 log_d(pid);
+
+; or inline, chaining the access directly on the call expression
+log_d(mod:getpid():0);
 ```
+
+When a callable uses a **named return type**, the result map is shaped by that type. Fields are still accessed positionally (or by name if the type defines named sym fields):
+
+```ec
+type Result (u64);
+
+@Mod:compute () -> Result {
+	:0 42;
+};
+
+create() -> {
+	res := mod:compute();
+	log_d(res:0);              ; 42
+
+	; or inline
+	log_d(mod:compute():0);
+}
 
 ---
 
