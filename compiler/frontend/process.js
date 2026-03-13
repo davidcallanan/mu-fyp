@@ -87,8 +87,8 @@ const IDENT_BB = rule("IDENT_BB", withBareboneSkippers(mapData(/^([a-zA-Z_][a-zA
 const WALRUS = rule("WALRUS", withCarefulSkippers(":="));
 const EQUALS = rule("EQUALS", withCarefulSkippers("="));
 const EXTAT = rule("EXTAT", withLeftSkippers("@"));
-const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
-const INTEGER_BB = rule("INTEGER_BB", withBareboneSkippers(mapData(/^[0-9]+/, data => BigInt(data.groups.all))));
+const INTEGER = rule("INTEGER", withCarefulSkippers(mapData(/^0x[0-9a-fA-F]+|^[0-9]+/, data => BigInt(data.groups.all))));
+const INTEGER_BB = rule("INTEGER_BB", withBareboneSkippers(mapData(/^0x[0-9a-fA-F]+|^[0-9]+/, data => BigInt(data.groups.all))));
 const FLOAT = rule("FLOAT", withCarefulSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
 const FLOAT_BB = rule("FLOAT_BB", withBareboneSkippers(mapData(/^[0-9]+\.[0-9]+/, data => data.groups.all)));
 const STRING = rule("STRING", withCarefulSkippers(mapData(/^"((?:[^"\\\r\n]|\\.)*)"/, data => deal_with_escapes(data.groups[0]))));
