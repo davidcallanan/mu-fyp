@@ -5,6 +5,7 @@
 #include "get_underlying_type.hpp"
 #include "t_types.hpp"
 #include "preinstantiated_types.hpp"
+#include "merge_underlying_type.hpp"
 
 // there are three scenarios:
 // a. the node is already the most underlying type: return the same
@@ -31,8 +32,14 @@ Type get_underlying_type(const Type& type) {
 		const auto& v_merged = *p_v_merged;
 
 		if (v_merged->underlying_type == nullptr) {
-			fprintf(stderr, "Underlying type not populated (TypeMerged).\n");
-			exit(1);
+			if (v_merged->types.size() != 2) {
+				fprintf(stderr, "Underlying type not populatable (for TypeMerged).\n");
+				exit(1);
+			}
+
+			Type result = merge_underlying_type(v_merged->types[0], v_merged->types[1]);
+			
+			v_merged->underlying_type = std::make_shared<Type>(result);
 		}
 
 		return get_underlying_type(*v_merged->underlying_type);
