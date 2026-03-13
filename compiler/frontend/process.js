@@ -64,6 +64,7 @@ const RPAREN = rule("RPAREN", withCarefulSkippers(")"));
 const ARROW = rule("ARROW", withCarefulSkippers("->"));
 const ASTERISK = rule("ASTERISK", withCarefulSkippers("*"));
 const AMPERSAND = rule("AMPERSAND", withCarefulSkippers("&"));
+const AMPERMUT = rule("AMPERMUT", withCarefulSkippers("&mut"));
 const COMMA = rule("COMMA", withCarefulSkippers(","));
 const PATH_OUTER_ROOT = rule("PATH_OUTER_ROOT", withCarefulSkippers(mapData(/^\/\/[a-z0-9_\/\.]*/, data => data.groups.all)));
 const PATH_MODULE_ROOT = rule("PATH_MODULE_ROOT", withCarefulSkippers(mapData(/^\/[a-z0-9_\/\.]*/, data => data.groups.all)));
@@ -320,6 +321,16 @@ const expr_var_assign = rule("expr_var_assign", mapData(
 		type: "expr_var_assign",
 		name: data[0],
 		typeval: data[2],
+	}),
+));
+
+const expr_sym_assign = rule("expr_sym_assign", mapData(
+	join(IDENT, SYMBOL_GRAND, EQUALS, typeval),
+	(data) => ({
+		type: "expr_sym_assign",
+		name: data[0],
+		trail: data[1],
+		typeval: data[3],
 	}),
 ));
 
@@ -634,6 +645,7 @@ const expr75 = rule("expr75", expr65);
 const expr85 = rule("expr85", or(
 	expr_var_walrus,
 	expr_var_assign,
+	expr_sym_assign,
 	expr75
 ));
 
@@ -1220,10 +1232,19 @@ const type_first = rule("type_first", or( // cannot include constraint_enum here
 
 typeval_atom.define(rule("typeval_atom", or(
 	mapData(
+		join(AMPERMUT, typeval_atom),
+		(data) => ({
+			type: "type_take_address",
+			target: data[1],
+			is_mutable: true,
+		}),
+	),
+	mapData(
 		join(AMPERSAND, typeval_atom), // in future will allow more expressions in here.
 		(data) => ({
 			type: "type_take_address",
 			target: data[1],
+			is_mutable: false,
 		}),
 	),
 	mapData(

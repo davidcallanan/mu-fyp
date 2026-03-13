@@ -44,6 +44,8 @@
 #include "clone_type_map_for_mutation.hpp"
 #include "force_identical_layout.hpp"
 #include "preinstantiated_types.hpp"
+#include "is_map_leaf_physical.hpp"
+#include "fresh_smooth.hpp"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -448,7 +450,136 @@ Smooth evaluate_smooth(
 		
 		return access_variable(igc, type);
 	}
-	
+
+	if (auto p_v_sym_assign = std::get_if<std::shared_ptr<TypeSymAssign>>(&type)) {
+		const auto& v_sym_assign = *p_v_sym_assign;
+
+		std::string map_var_name = "m_" + v_sym_assign->name;
+		std::optional<ValueSymbolTableEntry> o_entry = igc->value_table->get(map_var_name);
+
+		if (!o_entry.has_value()) {
+			fprintf(stderr, "While attempting to assign a symbol on a variable, the variable %s not found.\n", v_sym_assign->name.c_str());
+			exit(1);
+		}
+
+		const ValueSymbolTableEntry& entry = o_entry.value();
+
+		if (!entry.smooth.has_value()) {
+			fprintf(stderr, "Smooth went missing %s.\n", v_sym_assign->name.c_str());
+			exit(1);
+		}
+
+		auto p_smooth_map_reference = std::get_if<std::shared_ptr<SmoothMapReference>>(&entry.smooth.value());
+
+		if (!p_smooth_map_reference) {
+			fprintf(stderr, "Thing isn't a map reference, for now can only mutate map references - wrap it into a reference if you want to mutate it.... %s.\n", v_sym_assign->name.c_str());
+			exit(1);
+		}
+
+		const auto smooth_map_reference = *p_smooth_map_reference;
+		
+		auto underlying = get_underlying_type(smooth_map_reference->type);
+		
+		auto p_type_map_reference = std::get_if<std::shared_ptr<TypeMapReference>>(&underlying);
+
+		if (!p_type_map_reference) {
+			fprintf(stderr, "Glitch, was not TypeMapReferecne.\n");
+			exit(1);
+		}
+		
+		auto type_map_reference = *p_type_map_reference;
+
+		if (!type_map_reference->is_mutable) {
+			fprintf(stderr, "The %s was not mutable, make sure the variable is assigned to a mutable map reference (use &mut ...)\n", v_sym_assign->name.c_str());
+			exit(1);
+		}
+
+		std::shared_ptr<TypeMap> curr = type_map_reference->target;
+		llvm::Value* curr_alloca = smooth_map_reference->value;
+		llvm::Type* curr_type = smooth_map_reference->structval_type;
+
+		for (size_t i = 0; i < v_sym_assign->trail.size() - 1; i++) {
+			const std::string& segment_of_interest = ":" + v_sym_assign->trail[i];
+
+			if (curr->sym_inputs.find(segment_of_interest) == curr->sym_inputs.end()) {
+				fprintf(stderr, "The symbol %s did not exist along the path, when attempting to mutate some variable's data.\n", segment_of_interest.c_str());
+				exit(1);
+			}
+			
+			llvm::Value* loaded = igc->builder->CreateLoad(curr_type, curr_alloca);
+			Smooth smoothie = llvm_to_smooth(igc, Type(curr), loaded);
+			
+			auto p_smooth_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smoothie);
+
+			if (!p_smooth_structval) {
+				fprintf(stderr, "not struct.\n");
+				exit(1);
+			}
+
+			Smooth member = access_member(igc, *p_smooth_structval, v_sym_assign->trail[i]);
+			auto p_new_reference = std::get_if<std::shared_ptr<SmoothMapReference>>(&member);
+
+			if (!p_new_reference) {
+				fprintf(stderr, "not reference.\n");
+				exit(1);
+			}
+			
+			auto new_reference = *p_new_reference;
+
+			auto actualunderlying = get_underlying_type(new_reference->type);
+			auto p_actualunderlyingreference = std::get_if<std::shared_ptr<TypeMapReference>>(&actualunderlying);
+
+			if (!p_actualunderlyingreference) {
+				fprintf(stderr, "not reference again.\n");
+				exit(1);
+			}
+
+			curr = (*p_actualunderlyingreference)->target;
+			curr_alloca = new_reference->value;
+			curr_type = new_reference->structval_type;
+		}
+
+		const std::string& final_sym = ":" + v_sym_assign->trail.back();
+		
+		if (curr->sym_inputs.find(final_sym) == curr->sym_inputs.end()) {
+			fprintf(stderr, "final %s not found.\n", final_sym.c_str());
+			exit(1);
+		}
+
+		size_t field_idx = is_map_leaf_physical(curr) ? 1 : 0;
+
+		for (const auto& [sym_name, sym_type] : curr->sym_inputs) { // don't care about performance.
+			if (sym_name == final_sym) {
+				break;
+			}
+			
+			if (is_type_singletonish(*sym_type)) {
+				continue;
+			}
+			
+			field_idx++;
+		}
+
+		const Type& type_wanted = Type(*curr->sym_inputs.at(final_sym));
+
+		Smooth spectacular_smooth = evaluate_smooth(igc, *v_sym_assign->typeval);
+
+		if (is_structwrappable(spectacular_smooth)) {
+			spectacular_smooth = structwrap(igc, spectacular_smooth);
+		}
+
+		spectacular_smooth = happy_smooth(igc, spectacular_smooth, type_wanted, false);
+		spectacular_smooth = better_leaf_agnostically_translate(igc, spectacular_smooth, type_wanted, false);
+		
+		llvm::Value* answer = force_identical_layout(igc, llvm_value(spectacular_smooth), curr_type->getStructElementType((unsigned) field_idx));
+		
+		llvm::Value* pointer_to_exact_field = igc->builder->CreateStructGEP(curr_type, curr_alloca, (unsigned)field_idx);
+		
+		igc->builder->CreateStore(answer, pointer_to_exact_field);
+
+		return spectacular_smooth;
+	}
+
 	if (auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&type)) {
 		llvm::Value* void_value = smooth_void(igc, type)->value;
 
@@ -1498,7 +1629,7 @@ Smooth evaluate_smooth(
 
 		auto v_map_reference = std::make_shared<TypeMapReference>();
 		v_map_reference->target = *p_v_target_map;
-		v_map_reference->is_mutable = (*p_v_target_map)->is_this_mutable;
+		v_map_reference->is_mutable = v_take_address->is_mutable;
 
 		v_take_address->underlying_type = std::make_shared<Type>(Type(v_map_reference));
 

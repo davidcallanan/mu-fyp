@@ -471,6 +471,35 @@ Type normalize_type(
 		return v_var_assign;
 	}
 	
+	if (type == "expr_sym_assign") {
+		auto v_sym_assign = std::make_shared<TypeSymAssign>();
+
+		if (!typeval.contains("name")) {
+			fprintf(stderr, "There was no .name\n");
+			exit(1);
+		}
+
+		v_sym_assign->name = typeval["name"].get<std::string>();
+		
+		if (!typeval.contains("trail") || !typeval["trail"].is_array()) {
+			fprintf(stderr, "No symbol path given!\n");
+			exit(1);
+		}
+
+		for (const auto& seg : typeval["trail"]) {
+			v_sym_assign->trail.push_back(seg.get<std::string>());
+		}
+
+		if (!typeval.contains("typeval")) {
+			fprintf(stderr, "No actual expression to assign (.typeval)\n");
+			exit(1);
+		}
+
+		v_sym_assign->typeval = std::make_shared<Type>(normalize_type(toc, typeval["typeval"]));
+
+		return v_sym_assign;
+	}
+
 	if (type == "expr_log") {
 		auto v_log = std::make_shared<TypeLog>();
 		
@@ -932,8 +961,14 @@ Type normalize_type(
 		}
 
 		auto v_take_address = std::make_shared<TypeTakeAddress>();
-		
+	
 		v_take_address->target = std::make_shared<Type>(normalize_type(toc, typeval["target"]));
+		
+		v_take_address->is_mutable = (true
+			&& typeval.contains("is_mutable")
+			&& typeval["is_mutable"].is_boolean()
+			&& typeval["is_mutable"].get<bool>()
+		);
 
 		return v_take_address;
 	}

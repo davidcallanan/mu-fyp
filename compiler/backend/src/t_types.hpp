@@ -182,9 +182,16 @@ struct TypeMapReference {
 struct TypeTakeAddress {
 	std::shared_ptr<Type> target;
 	std::shared_ptr<Type> underlying_type;
+	bool is_mutable;
 };
 
 struct TypeSizeof {
 	std::shared_ptr<Type> target;
 	std::shared_ptr<Type> underlying_type;
+};
+
+struct TypeSymAssign {
+	std::string name;
+	std::vector<std::string> trail;
+	std::shared_ptr<Type> typeval;
 };

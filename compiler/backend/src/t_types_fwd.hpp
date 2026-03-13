@@ -40,6 +40,7 @@ struct TypeExprShiftLeft;
 struct TypeExprBitwiseAnd;
 struct TypeExprBitwiseOr;
 struct TypeExprModulo;
+struct TypeSymAssign;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -72,7 +73,8 @@ using Type = std::variant<
 	std::shared_ptr<TypeExprShiftLeft>,
 	std::shared_ptr<TypeExprBitwiseAnd>,
 	std::shared_ptr<TypeExprBitwiseOr>,
-	std::shared_ptr<TypeExprModulo>
+	std::shared_ptr<TypeExprModulo>,
+	std::shared_ptr<TypeSymAssign>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.

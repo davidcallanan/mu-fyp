@@ -614,6 +614,10 @@ Much of the snapshot testing was performed using the language's data logging fac
 
 With kernel development as the core case study for this project, the ability for LLMs to understand \textit{Essence C} was assessed by tasking an LLM agent with porting a portion of a previously-written PoC operating system kernel from \textit{C} to \textit{Essence C}. The original kernel was developed as part of my \href{https://www.youtube.com/watch?v=FkrpUaGThTQ&t=2s}{YouTube tutorial series}, and its latest source code is housed in a \href{https://github.com/davidcallanan/os-series}{separate repository here}. The ported version is included in this project's repository. It includes C, Essence C, NASM Assembly, and LLVM IR Assembly code living in unison, with build options to substitute different implementations of the source code.
 
+The LLM agent was first asked to generate documentation for the language, and subsequently to port some benchmarking code into \textit{Essence C}. The prompts and results can be found in Appendix X.
+
+Some slight guidance had to be given to the agent, but for the most part, it was well equipped to handle the task. This is promising as it shows that the agent took no issue with comprehending the unique language syntax and corresponding semantics (specifically, the notions of maps, symbols and modules). Note, however, that the build steps were all implemented manually as this is outside the scope of language comprehension.
+
 \section{Benchmarking}
 
 To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks. Four procedures were benchmarked across three different implementations.

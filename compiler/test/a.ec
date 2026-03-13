@@ -68,7 +68,7 @@ type MyService {};
 	log("I also know the module's description:");
 	log(mod:description);
 	log("My mutated description is:");
-	; this:description = "This is a mutated description.";
+	this:description = "This is a mutated description.";
 	log(this:description);
 };
 
