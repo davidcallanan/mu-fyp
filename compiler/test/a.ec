@@ -337,4 +337,16 @@ create extern ccc "main" () -> { ; this comment works
 	log("Testing return values:");
 	
 	log_d(mod:new_function():0);
+	
+	x := &mut {
+		:name "David";	
+	};
+	
+	log("Mutation test:");
+	
+	log(x:name);
+	
+	x:name = "John Doe";
+	
+	log(x:name);
 }
