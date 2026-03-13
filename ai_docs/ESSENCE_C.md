@@ -175,9 +175,16 @@ either :=
 ;
 ```
 
-Do not mix `&&` and `||` in one sequence; nest them by assigning an intermediate variable instead. **Parentheses are not yet supported.**
+Do not mix `&&` and `||` in one sequence; nest them using the grouping syntax `(: expr )` (see below) or an intermediate variable:
 
 ```ec
+; using (: ) grouping
+result :=
+	|| (: condition_a && condition_b )
+	|| condition_c
+;
+
+; equivalently, using an intermediate variable
 both :=
 	&& condition_a
 	&& condition_b
@@ -188,6 +195,28 @@ result :=
 	|| condition_c
 ;
 ```
+
+---
+
+## Grouping Expressions
+
+Wrap any expression in `(: ` and `)` to form a grouped sub-expression. The opening delimiter is `(:` (optionally with whitespace before the inner expression); the closing delimiter is `)`. This is the only parenthesis-grouping syntax in the language — plain `( expr )` is **not** valid for grouping.
+
+```ec
+; force evaluation order in arithmetic
+x := (: a + b ) * c;
+
+; group a logical sub-expression inline
+result :=
+	|| (: && condition_a && condition_b )
+	|| condition_c
+;
+
+; works anywhere an expression atom is valid
+flag := (: bool :true );
+```
+
+The `:` in the delimiter is intentional: it is reserved for a future "leaf return" feature, so plain `(` remains available for existing tuple/call syntax without ambiguity.
 
 ---
 
@@ -606,7 +635,7 @@ create() -> {
 | `if (c) { } else { }` | `if (c) { } else { }` |
 | `a && b` | `&& a && b` (crystal) or `a && b` (pistol) |
 | `a \|\| b` | `\|\| a \|\| b` (crystal) or `a \|\| b` (pistol) |
-| `(a && b) \|\| c` | `tmp := && a && b;` then `\|\| tmp \|\| c;` (no parentheses) |
+| `(a && b) \|\| c` | `\|\| (: && a && b ) \|\| c` or use intermediate variable |
 | `sizeof(x)` | `sizeof(x)` |
 | `__attribute__((always_inline))` | `alwaysinline` call flag |
 | `const int x = 5;` | `x := i32 5;` (immutable by default) |
