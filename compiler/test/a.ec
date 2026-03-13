@@ -61,12 +61,15 @@ type MyService {};
 
 @MyService:print_foo input {
 	:foo u64;
-} -> {
+} mut -> {
 	log_d(input:foo);
 	log("I also know my description:");
 	log(this:description);
 	log("I also know the module's description:");
 	log(mod:description);
+	log("My mutated description is:");
+	; this:description = "This is a mutated description.";
+	log(this:description);
 };
 
 @Mod:name "My Module";

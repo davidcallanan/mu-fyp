@@ -1264,24 +1264,25 @@ typeval_atom.define(rule("typeval_atom", or(
 )));
 
 type_callable.define(rule("type_callable", mapData(
-	join(opt(IDENT), typeval_atom, ARROW, typeval_atom),
+	join(opt(IDENT), typeval_atom, opt(KW_MUT), ARROW, typeval_atom),
 	(data) => {
 		const named = (true
-			&& data[3]?.type === "type_constrained"
+			&& data[4]?.type === "type_constrained"
 			&& (false
-				|| data[3].constraints[0]?.type === "type_named"
-				|| data[3].constraints[0]?.type === "type_ptr"
+				|| data[4].constraints[0]?.type === "type_named"
+				|| data[4].constraints[0]?.type === "type_ptr"
 			)
-		) ? data[3].constraints[0] : undefined;
+		) ? data[4].constraints[0] : undefined;
 
 		return {
 			type: "type_map",
 			leaf_type: undefined,
 			call_input_identifier: data[0],
 			call_input_type: data[1],
-			call_output_type: data[3],
+			call_output_type: data[4],
 			call_output_type_named: named,
 			sym_inputs: {},
+			is_this_mutable: data[2] !== undefined,
 		};
 	},
 )));

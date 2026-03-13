@@ -203,6 +203,12 @@ Type normalize_type(
 			return std::make_unique<TypeMap>(**p_v_map);
 		}();
 		
+		result.is_this_mutable = (true
+			&& typeval.contains("is_this_mutable")
+			&& typeval["is_this_mutable"].is_boolean()
+			&& typeval["is_this_mutable"].get<bool>()
+		);
+		
 		bool is_using_named_type = (true
 			&& typeval.contains("call_output_type_named")
 			&& !typeval["call_output_type_named"].is_null()

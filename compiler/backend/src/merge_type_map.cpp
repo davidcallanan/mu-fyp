@@ -44,6 +44,7 @@ std::shared_ptr<TypeMap> merge_type_map(std::shared_ptr<TypeMap> map_a, std::sha
 	
 	if (map_a->call_input_type != nullptr) {
 		merged->call_input_type = map_a->call_input_type;
+		merged->is_this_mutable = map_a->is_this_mutable;
 	}
 	
 	if (map_a->call_output_type != nullptr) {

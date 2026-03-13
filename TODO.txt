@@ -33,9 +33,8 @@ add evaluation
 maybe a kernel test case of writing characters to the screen (one by one) to show inlining performance diff of direct assembly execution? (or find some kernel-related thing that requires an assembly instruction).
 
 New plan:
+- implement map field mutation - need to keep track if a mapreference is mutable (based on variable) and if a function is mutable, mod will be assumed to always be mutable!
 - make mut keyword on maps switch to vtable approach
 - add with-phalloc-bypass ("phantom alloc")
-- implement returning something [use a named constraint to get it working for now, that'll suffice I think]
-- implement map field mutation - need to keep track if a mapreference is mutable (based on variable) and if a function is mutable, mod will be assumed to always be mutable!
 
 i was gonna say i should implement closures, but it is effecitvely already implemented, just use a map!
