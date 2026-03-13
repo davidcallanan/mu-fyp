@@ -90,7 +90,7 @@ type MyService {};
 type Return (u64);
 
 @Mod:new_function () -> Return {
-	:0 12;	
+	:0 12;
 };
 
 create extern ccc "main" () -> { ; this comment works
