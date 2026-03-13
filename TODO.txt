@@ -38,3 +38,8 @@ New plan:
 - add with-phalloc-bypass ("phantom alloc")
 
 i was gonna say i should implement closures, but it is effecitvely already implemented, just use a map!
+
+it doesnt make sense to make individual fields or functions in a map mutable.
+all maps are mutable subject to their type constraints, it is the description system that would decide.
+so if a string is only allowed one value, then its type must be a singleton.
+as the compiler does not have such a complicated type system for now, we assume everything is mutable if the instance of the map itself is declared mutable.

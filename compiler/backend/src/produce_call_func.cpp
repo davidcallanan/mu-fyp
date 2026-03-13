@@ -153,6 +153,7 @@ llvm::Function* produce_call_func(
 	{
 		auto p_v_map_reference = std::make_shared<TypeMapReference>();
 		p_v_map_reference->target = (map->call_this_type != nullptr) ? map->call_this_type->target : map;
+		p_v_map_reference->is_mutable = map->is_this_mutable;
 
 		Bundle* bundle = igc->toc->bundle_registry->get(map->bundle_id.value());
 		

@@ -428,6 +428,7 @@ void gen_module_binary(std::shared_ptr<TypeOrchCtx> toc, const json& create_data
 
 			auto p_v_map_reference = std::make_shared<TypeMapReference>();
 			p_v_map_reference->target = *p_v_map;
+			p_v_map_reference->is_mutable = true;
 
 			llvm::Type* opaque_pointer = llvm::PointerType::get(*context, 0);
 
@@ -642,6 +643,7 @@ static void populate_type_symbol_table(std::shared_ptr<TypeOrchCtx> toc, const j
 				if ((*p_sym_map)->call_input_type != nullptr) {
 					auto v_map_reference = std::make_shared<TypeMapReference>();
 					v_map_reference->target = *p_v_map;
+					v_map_reference->is_mutable = (*p_sym_map)->is_this_mutable;
 					(*p_sym_map)->call_this_type = v_map_reference;
 				}
 			}

@@ -566,6 +566,7 @@ Smooth evaluate_smooth(
 
 		auto new_reference = std::make_shared<TypeMapReference>();
 		new_reference->target = *is_it_map;
+		new_reference->is_mutable = (*is_it_map)->is_this_mutable;
 
 		Smooth member = access_member(igc, modern_target_smooth, v_call_with_sym->sym);
 
@@ -1497,6 +1498,7 @@ Smooth evaluate_smooth(
 
 		auto v_map_reference = std::make_shared<TypeMapReference>();
 		v_map_reference->target = *p_v_target_map;
+		v_map_reference->is_mutable = (*p_v_target_map)->is_this_mutable;
 
 		v_take_address->underlying_type = std::make_shared<Type>(Type(v_map_reference));
 

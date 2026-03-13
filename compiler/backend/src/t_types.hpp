@@ -176,6 +176,7 @@ struct TypeExternCcc {
 
 struct TypeMapReference {
 	std::shared_ptr<TypeMap> target;
+	bool is_mutable;
 };
 
 struct TypeTakeAddress {
