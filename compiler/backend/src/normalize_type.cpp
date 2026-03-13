@@ -219,15 +219,33 @@ Type normalize_type(
 		}();
 
 		if (result.call_output_type != nullptr) {
-			auto predicted_version = clone_type_map_for_mutation(toc, result.call_output_type);
-			// we have to clear, because the body only makes sense to execute in the context of where it is called.
-			// for now it is impossible to determine type information.
-			// but all our internal call funcs are void for now, so less relevant.
-			// i have no idea how i would fix this.
-			// like somehow pass in types instead of llvm::Value's, it is impossible in the current system.
-			// literally could be a 5k+ loc change.
-			predicted_version->execution_sequence.clear();
-			result.call_output_predicted_type = predicted_version;
+			bool is_using_named_type = (true
+				&& typeval.contains("call_output_type_named")
+				&& !typeval["call_output_type_named"].is_null()
+			);
+
+			if (is_using_named_type) {
+				Type named_version = normalize_type(toc, typeval["call_output_type_named"]);
+				
+				auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&named_version);
+
+				if (!p_v_map) {
+					fprintf(stderr, "The named type did not resovle to a map! Did you intend to return tuple with a single entry instead?\n");
+					exit(1);
+				}
+
+				result.call_output_predicted_type = *p_v_map;
+			} else {
+				auto predicted_version = clone_type_map_for_mutation(toc, result.call_output_type);
+				// we have to clear, because the body only makes sense to execute in the context of where it is called.
+				// for now it is impossible to determine type information.
+				// but all our internal call funcs are void for now, so less relevant.
+				// i have no idea how i would fix this.
+				// like somehow pass in types instead of llvm::Value's, it is impossible in the current system.
+				// literally could be a 5k+ loc change.
+				predicted_version->execution_sequence.clear();
+				result.call_output_predicted_type = predicted_version;
+			}
 		}
 
 		// bundles are now always assigned - we need them to keep track of the opaque struct type!

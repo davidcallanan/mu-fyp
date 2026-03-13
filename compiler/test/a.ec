@@ -87,6 +87,12 @@ type MyService {};
 
 @Mod:my_getpid extern ccc "getpid" () -> (i32);
 
+type Return (u64);
+
+; @Mod:new_function () -> Return {
+; 	:0 12;	
+; };
+
 create extern ccc "main" () -> { ; this comment works
 	test := 10;
 	banana := u64 10;
@@ -324,4 +330,8 @@ create extern ccc "main" () -> { ; this comment works
 	log_d(w2);
 	log_d(w3);
 	log_d(w4);
+	
+	log("Testing return values:");
+	
+	; log_d(mod:new_function());
 }

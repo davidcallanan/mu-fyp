@@ -700,6 +700,7 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 			call_input_identifier: callable?.data.callable.call_input_identifier,
 			call_input_type: callable?.data.callable.call_input_type,
 			call_output_type: callable?.data.callable.call_output_type,
+			call_output_type_named: callable?.data.callable.call_output_type_named,
 			sym_inputs,
 			instructions,
 		};
@@ -1264,14 +1265,25 @@ typeval_atom.define(rule("typeval_atom", or(
 
 type_callable.define(rule("type_callable", mapData(
 	join(opt(IDENT), typeval_atom, ARROW, typeval_atom),
-	(data) => ({
-		type: "type_map",
-		leaf_type: undefined,
-		call_input_identifier: data[0],
-		call_input_type: data[1],
-		call_output_type: data[3],
-		sym_inputs: {},
-	}),
+	(data) => {
+		const named = (true
+			&& data[3]?.type === "type_constrained"
+			&& (false
+				|| data[3].constraints[0]?.type === "type_named"
+				|| data[3].constraints[0]?.type === "type_ptr"
+			)
+		) ? data[3].constraints[0] : undefined;
+
+		return {
+			type: "type_map",
+			leaf_type: undefined,
+			call_input_identifier: data[0],
+			call_input_type: data[1],
+			call_output_type: data[3],
+			call_output_type_named: named,
+			sym_inputs: {},
+		};
+	},
 )));
 
 typeval.define(rule("typeval", or(
