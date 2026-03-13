@@ -29,25 +29,25 @@ type PortManager {};
 
 @PortManager:rtc_read_register input {
 	:reg u8;
-} -> {
+} -> U8Result {
 	this:outb(this:port_rtc_command, input:reg);
-	this:inb(this:port_rtc_data):0
+	:0 this:inb(this:port_rtc_data):0;
 };
 
 @PortManager:rtc_wait input {} -> {
 	for {
 		status := this:rtc_read_register(this:rtc_register_status_a):0;
-		still_updating := status & this:rtc_update_in_progress;
+		still_updating := status b& this:rtc_update_in_progress;
 		if (still_updating == u8 0) {
 			break;
 		}
 	}
 };
 
-@PortManager:rtc_seconds input {} -> {
+@PortManager:rtc_seconds input {} -> U8Result {
 	is_bcd_raw := this:rtc_read_register(this:rtc_register_status_b):0;
-	has_data_mode := is_bcd_raw & this:rtc_data_mode;
-	is_bcd := !has_data_mode;
+	has_data_mode := is_bcd_raw b& this:rtc_data_mode;
+	is_bcd := has_data_mode == u8 0;
 
 	mut seconds_a := u8 0;
 	mut seconds_b := u8 0;
@@ -63,14 +63,18 @@ type PortManager {};
 		}
 	}
 
+	mut result := u8 0;
+
 	if (is_bcd) {
-		low := seconds_b & u8 0x0F;
-		high_raw := seconds_b & u8 0xF0;
+		low := seconds_b b& u8 0x0F;
+		high_raw := seconds_b b& u8 0xF0;
 		high := high_raw >> u8 4;
-		low + high * u8 10
+		result = low + high * u8 10;
 	} else {
-		seconds_b
+		result = seconds_b;
 	}
+
+	:0 result;
 };
 
 @PortManager:io_wait input {} -> {
@@ -81,7 +85,7 @@ type PortManager {};
 	:pos u16;
 } -> {
 	pos_high := u8 input:pos >> u16 8;
-	pos_low := u8 input:pos & u16 0xFF;
+	pos_low := u8 input:pos b& u16 0xFF;
 	this:outb(this:port_vga_cursor_command, this:vga_cursor_high);
 	this:outb(this:port_vga_cursor_data, pos_high);
 	this:outb(this:port_vga_cursor_command, this:vga_cursor_low);
@@ -92,9 +96,9 @@ type PortManager {};
 
 @PortManager:inb input {
 	:port u16;
-} -> {
+} -> U8Result {
 	pc := mod:port_controller_create {};
-	pc:inb(input:port)
+	:0 pc:inb(input:port):0;
 };
 
 @PortManager:outb input {
@@ -105,6 +109,5 @@ type PortManager {};
 	pc:outb(input:port, input:data);
 };
 
-@Mod:port_manager_create input {} -> {
-	PortManager
+@Mod:port_manager_create input {} -> PortManager {
 };

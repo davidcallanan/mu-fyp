@@ -2,6 +2,8 @@
 
 type PortController {};
 
+type U8Result (u8);
+
 @Mod:port_inb extern ccc "port_inb" (u16) -> (u8);
 @Mod:port_outb extern ccc "port_outb" (u16, u8) -> ();
 
@@ -9,8 +11,8 @@ type PortController {};
 
 @PortController:inb input {
 	:port u16;
-} -> {
-	mod:port_inb(input:port):0
+} -> U8Result {
+	:0 mod:port_inb(input:port):0;
 };
 
 @PortController:outb input {
@@ -20,6 +22,5 @@ type PortController {};
 	mod:port_outb(input:port, input:data);
 };
 
-@Mod:port_controller_create input {} -> {
-	PortController
+@Mod:port_controller_create input {} -> PortController {
 };
