@@ -56,6 +56,8 @@ const KW_SIZEOF = rule("KW_SIZEOF", withCarefulSkippers("sizeof"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
+const LGROUP = rule("LGROUP", withCarefulSkippers(mapData(/^\(\s*:\s/, data => data.groups.all)));
+const RGROUP = rule("RGROUP", withCarefulSkippers(")"));
 const LPAREN = rule("LPAREN", withCarefulSkippers("("));
 const LPAREN_BB = rule("LPAREN_BB", withBareboneSkippers("("));
 const RPAREN = rule("RPAREN", withCarefulSkippers(")"));
@@ -179,6 +181,10 @@ const expr_log_dd = rule("expr_log_dd", mapData(
 
 hardval.define(rule("hardval", or(
 	mapData(
+		join(LGROUP, typeval, RGROUP),
+		(data) => data[1],
+	),
+	mapData(
 		FLOAT, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
 		(data) => ({
 			type: "type_map",
@@ -240,6 +246,10 @@ hardval.define(rule("hardval", or(
 )));
 
 hardval_bb.define(rule("hardval_bb", or(
+	mapData(
+		join(LGROUP, typeval, RGROUP),
+		(data) => data[1],
+	),
 	mapData(
 		FLOAT_BB, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
 		(data) => ({
