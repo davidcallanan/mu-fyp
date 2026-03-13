@@ -312,4 +312,18 @@ create extern ccc "main" () -> { ; this comment works
 	
 	log_d(sizeof(x));
 	log_d(sizeof(y));
+	
+	log("New operations:");
+	
+	w := 23 b& 41;
+	w1 := u64 19;
+	w2 := w1 << 2;
+	w3 := bool :true;
+	w4 := !w3;
+	
+	log_d(w);
+	log_d(w1);
+	log_d(w2);
+	log_d(w3);
+	log_d(w4);
 }
