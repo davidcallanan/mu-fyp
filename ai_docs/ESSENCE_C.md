@@ -345,6 +345,23 @@ greet("Alice");          ; calls with :0 = "Alice"
 add(10, 20);             ; calls with :0 = 10, :1 = 20
 ```
 
+### Mutable `this` context (`mut` on callable)
+
+By default, `this` inside a method body is immutable. Place `mut` between the input type and `->` to mark `this` as mutable, allowing field assignment inside the method:
+
+```ec
+@MyService:set_name input {
+	:new_name *u8;
+} mut -> {
+	; "this" is mutable here
+	this:name = input:new_name;
+};
+```
+
+The `mod` context is **always** mutable — module-level fields can be assigned from any method without needing `mut`.
+
+A method that does not declare `mut` cannot modify `this` fields (the compiler will reject the attempt).
+
 ---
 
 ## `sizeof`
@@ -358,13 +375,63 @@ log_d(s);
 
 ---
 
+## Map Field Mutation
+
+Fields of a map can be assigned using `variable:sym:... = value`. This is only legal when the map reference is mutable — obtained via `&mut`, a `mut` callable `this`, or the `mod` context.
+
+```ec
+; via &mut reference
+x := &mut {
+	:count u64 0;
+	:label "initial";
+};
+
+x:count = x:count + 1;
+x:label = "updated";
+
+; nested field
+x:inner:value = 42;
+```
+
+```ec
+; via mut this inside a method
+@Counter:increment input {} mut -> {
+	this:count = this:count + 1;
+};
+```
+
+```ec
+; mod fields are always mutable
+@Mod:count u64 0;
+
+@Mod:tick input {} -> {
+	mod:count = mod:count + 1;
+};
+```
+
+Attempting to assign a field through an immutable `&` reference or a non-`mut` `this` is a compile error.
+
+---
+
 ## Address-of
 
-`&expr` takes the address of an expression (returns a pointer):
+`&expr` takes an immutable address of an expression (returns a read-only map reference / pointer):
 
 ```ec
 ptr := &some_value;
 ```
+
+`&mut expr` takes a **mutable** address, returning a mutable map reference whose fields can be assigned:
+
+```ec
+x := &mut {
+	:name "David";
+};
+
+x:name = "John Doe";   ; field mutation via mutable reference
+```
+
+Only `&mut` references permit field assignment. `&` references are read-only.
 
 ---
 
@@ -565,6 +632,13 @@ mut counter := u64 0;   ; runtime-mutable; singletonish NOT applicable
 counter = counter + 1;
 ```
 
+Similarly, taking a **mutable address** (`&mut`) of a map prevents the singletonish optimization on that map, because the map's fields may be mutated through the reference. Taking an immutable address (`&`) preserves the optimization opportunity:
+
+```ec
+x := &some_map;      ; immutable reference — singletonish may still apply
+y := &mut some_map;  ; mutable reference — singletonish does NOT apply
+```
+
 For the *static dispatch* variant of a module, omitting `mut` on instance variables (combined with `alwaysinline` calls) is what allows the compiler to fully inline and eliminate indirection.
 
 ---
@@ -624,7 +698,9 @@ create() -> {
 | C concept | Essence C equivalent |
 |-----------|----------------------|
 | `int x = 5;` | `x := i32 5;` |
-| `int* p = &x;` | `p := &x;` |
+| `int* p = &x;` | `p := &x;` (immutable ref) |
+| `int* p = &x; *p = 5;` | `p := &mut x; p:field = 5;` (mutable ref) |
+| mutating struct field via method | `input { ... } mut -> { this:field = val; }` |
 | `typedef int MyInt;` | `type MyInt i32;` |
 | `struct Foo { int x; }` | `type Foo {};` then `@Foo:x i32;` |
 | `void fn(int a)` | `@Mod:fn input { :a i32; } -> { ... };` |
@@ -653,11 +729,17 @@ type MyType {};
 ; Inside a method body:
 ;   "input" refers to the call argument map
 ;   "this"  refers to the receiver instance (the MyType object)
-;   "mod"   refers to the current module (Mod)
-@MyType:field_name u64;
+;   "mod"   refers to the current module (Mod) — always mutable
+@MyType:field_name u64 0;
 @MyType:do_thing input { :x u64; } -> {
 	log_d(input:x);
 	log(this:field_name);   ; access receiver field
+};
+@MyType:set_field input { :x u64; } mut -> {
+	this:field_name = input:x;  ; mutation requires "mut" on the callable
+};
+@MyType:set_field input { :x u64; } mut -> {
+	this:field_name = input:x;  ; mutation requires "mut" on the callable
 };
 
 ; 3. Module-level externs
