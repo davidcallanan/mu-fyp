@@ -203,11 +203,22 @@ Type normalize_type(
 			return std::make_unique<TypeMap>(**p_v_map);
 		}();
 		
+		bool is_using_named_type = (true
+			&& typeval.contains("call_output_type_named")
+			&& !typeval["call_output_type_named"].is_null()
+		);
+		
 		result.call_output_type = (false
 			|| !typeval.contains("call_output_type")
 			|| typeval["call_output_type"].is_null()
 		) ? nullptr : [&]() {
-			Type t = normalize_type(toc, typeval["call_output_type"]);
+			// let's bypass the merge process for now and let the call site / function body deal with mismatches.
+			const json& useful_json = (true
+				&& is_using_named_type
+				&& typeval["call_output_type"].contains("constraints")
+			) ? typeval["call_output_type"]["constraints"][1] : typeval["call_output_type"];
+
+			Type t = normalize_type(toc, useful_json);
 			auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&t);
 			
 			if (!p_v_map) {
@@ -219,11 +230,6 @@ Type normalize_type(
 		}();
 
 		if (result.call_output_type != nullptr) {
-			bool is_using_named_type = (true
-				&& typeval.contains("call_output_type_named")
-				&& !typeval["call_output_type_named"].is_null()
-			);
-
 			if (is_using_named_type) {
 				Type named_version = normalize_type(toc, typeval["call_output_type_named"]);
 				
@@ -234,7 +240,12 @@ Type normalize_type(
 					exit(1);
 				}
 
-				result.call_output_predicted_type = *p_v_map;
+				auto predicted_version = clone_type_map_for_mutation(toc, *p_v_map);
+				// yeah the reason we have to clear execution sequence here too is that
+				// even a bare type will have execution sequence for the sym inputs.
+				// predicted_version->execution_sequence.clear();
+				// actually if we trust the user doesn't put nonense in there, we can keep that to determine inputs, so definitely DO NOT clear.
+				result.call_output_predicted_type = predicted_version;
 			} else {
 				auto predicted_version = clone_type_map_for_mutation(toc, result.call_output_type);
 				// we have to clear, because the body only makes sense to execute in the context of where it is called.

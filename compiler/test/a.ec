@@ -89,9 +89,9 @@ type MyService {};
 
 type Return (u64);
 
-; @Mod:new_function () -> Return {
-; 	:0 12;	
-; };
+@Mod:new_function () -> Return {
+	:0 12;	
+};
 
 create extern ccc "main" () -> { ; this comment works
 	test := 10;
@@ -333,5 +333,5 @@ create extern ccc "main" () -> { ; this comment works
 	
 	log("Testing return values:");
 	
-	; log_d(mod:new_function());
+	log_d(mod:new_function():0);
 }
