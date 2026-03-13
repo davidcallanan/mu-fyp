@@ -2,6 +2,8 @@
 
 type PortManager {};
 
+@PortManager:port_controller PortController;
+
 ; PIT constants
 @PortManager:port_pit_channel0 u16 0x40;
 @PortManager:port_pit_command u16 0x43;
@@ -22,16 +24,17 @@ type PortManager {};
 @PortManager:vga_cursor_low u8 0x0F;
 
 @PortManager:pit_read input {} -> {
-	this:outb(this:port_pit_command, u8 0x00);
-	this:inb(this:port_pit_channel0);
-	this:inb(this:port_pit_channel0);
+	this:port_controller:outb(this:port_pit_command, u8 0x00);
+	this:port_controller:inb(this:port_pit_channel0);
+	this:port_controller:inb(this:port_pit_channel0);
 };
 
 @PortManager:rtc_read_register input {
 	:reg u8;
 } -> U8Result {
-	this:outb(this:port_rtc_command, input:reg);
-	:0 this:inb(this:port_rtc_data):0;
+	this:port_controller:outb(this:port_rtc_command, input:reg);
+	result := this:port_controller:inb(this:port_rtc_data):0
+	:0 result;
 };
 
 @PortManager:rtc_wait input {} -> {
@@ -78,7 +81,7 @@ type PortManager {};
 };
 
 @PortManager:io_wait input {} -> {
-	this:inb(u16 0x80);
+	this:port_controller:inb(u16 0x80);
 };
 
 @PortManager:vga_cursor_update input {
@@ -86,28 +89,12 @@ type PortManager {};
 } -> {
 	pos_high := u8 input:pos >> u16 8;
 	pos_low := u8 input:pos b& u16 0xFF;
-	this:outb(this:port_vga_cursor_command, this:vga_cursor_high);
-	this:outb(this:port_vga_cursor_data, pos_high);
-	this:outb(this:port_vga_cursor_command, this:vga_cursor_low);
-	this:outb(this:port_vga_cursor_data, pos_low);
-};
-
-; Delegate port I/O to the underlying PortController
-
-@PortManager:inb input {
-	:port u16;
-} -> U8Result {
-	pc := mod:port_controller_create {};
-	:0 pc:inb(input:port):0;
-};
-
-@PortManager:outb input {
-	:port u16;
-	:data u8;
-} -> {
-	pc := mod:port_controller_create {};
-	pc:outb(input:port, input:data);
+	this:port_controller:outb(this:port_vga_cursor_command, this:vga_cursor_high);
+	this:port_controller:outb(this:port_vga_cursor_data, pos_high);
+	this:port_controller:outb(this:port_vga_cursor_command, this:vga_cursor_low);
+	this:port_controller:outb(this:port_vga_cursor_data, pos_low);
 };
 
 @Mod:port_manager_create input {} -> PortManager {
+	:port_controller mod:port_controller_create {};
 };
