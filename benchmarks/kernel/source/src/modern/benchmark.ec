@@ -1,20 +1,5 @@
 ; 2026-03-12: This file was AI-generated (Claude Sonnet 4.6) as part of LLM Comprehension Testing (see Evaluation section in thesis)
 
-; Print colour constants matching print.h enum values
-
-@Mod:print_str extern ccc "print_str" (*u8) -> ();
-@Mod:print_uint64_dec extern ccc "print_uint64_dec" (u64) -> ();
-@Mod:print_set_color extern ccc "print_set_color" (u8, u8) -> ();
-
-@Mod:print_color_black u8 0;
-@Mod:print_color_cyan u8 3;
-@Mod:print_color_light_gray u8 7;
-@Mod:print_color_yellow u8 14;
-@Mod:print_color_white u8 15;
-
-@Mod:benchmark_duration_seconds u64 5;
-@Mod:benchmark_clock_interval u64 100;
-
 @Mod:benchmark_wait_for_boundary input {} -> {
 	mut orig := mod:port_manager:rtc_seconds {}:0;
 	mut next := orig;
