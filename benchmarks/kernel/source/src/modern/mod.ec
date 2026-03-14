@@ -14,7 +14,7 @@ create extern ccc "run_benchmarks" () -> {
 	; mod:print_set_color(mod:print_color_light_gray, mod:print_color_black);
 	mod:print_str("\nBenchmarks: PIT, RTC, IO Wait, VGA Cursor");
 	mod:print_str("\nDuration per benchmark: ");
-	; mod:print_uint64_dec(mod:benchmark_duration_seconds);
+	mod:print_uint64_dec(mod:benchmark_duration_seconds);
 	mod:print_str("s");
 
 	; mod:benchmark_pit {};

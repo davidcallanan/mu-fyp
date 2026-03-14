@@ -677,6 +677,8 @@ Smooth evaluate_smooth(
 				(*p_v_structval)->intended_this = v_map_reference->value;
 			}
 			
+			v_call_with_sym->underlying_type = std::make_shared<Type>(smooth_type(member));
+			
 			return member;
 		}
 
@@ -706,6 +708,8 @@ Smooth evaluate_smooth(
 			(*p_v_structval)->intended_this = converting_to_reference;
 		}
 
+		v_call_with_sym->underlying_type = std::make_shared<Type>(smooth_type(member));
+		
 		return member;
 	}
 
