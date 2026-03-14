@@ -1403,6 +1403,13 @@ Smooth evaluate_smooth(
 
 			DummyIgc dummy = create_dummy_igc(igc);
 			Smooth sym_smooth = evaluate_smooth(dummy.igc, *p_sym_type);
+			
+			if (is_structwrappable(sym_smooth)) {
+				Smooth wrapped = structwrap(dummy.igc, sym_smooth);
+				Smooth leaf = extract_leaf(dummy.igc, wrapped);
+				sym_smooth = leaf;
+			}
+			
 			llvm::Type* type_in_context_of_function_call = llvm_flexi_type(sym_smooth);
 			destroy_dummy_igc(dummy);
 
