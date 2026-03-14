@@ -90,6 +90,8 @@ type MyService {};
 
 @Mod:my_getpid extern ccc "getpid" () -> (i32);
 
+@Mod:heap_alloc extern ccc "heap_alloc" (u64) -> {};
+
 type Return (u64);
 
 @Mod:nested_function () -> Return {

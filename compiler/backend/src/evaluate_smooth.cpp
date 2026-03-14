@@ -1496,6 +1496,7 @@ Smooth evaluate_smooth(
 			std::vector<llvm::Value*> arg_extraction;
 
 			unsigned field_index = 0;
+			unsigned c_abi_index = 0;
 
 			auto igc_actual_call = std::make_shared<IrGenCtx>(IrGenCtx{
 				igc->context,
@@ -1520,9 +1521,10 @@ Smooth evaluate_smooth(
 				Smooth wrapped_smooth = structwrap(igc_actual_call, field_smooth);
 				Smooth leaf_smooth = extract_leaf(igc_actual_call, wrapped_smooth);
 
-				arg_extraction.push_back(llvm_value(leaf_smooth));
+				arg_extraction.push_back(force_identical_layout(igc_actual_call, llvm_value(leaf_smooth), c_abi_parameter_types[c_abi_index]));
 
 				field_index++;
+				c_abi_index++;
 			}
 			
 			llvm::CallInst* call_to_extern = wrapper_builder->CreateCall(the_extern_callee, arg_extraction);
