@@ -2,3 +2,5 @@
 frontend.out.json
 frontend.trace.json
 frontend.trace.txt
+
+/test/hello.ll

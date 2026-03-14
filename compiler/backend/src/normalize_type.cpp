@@ -613,7 +613,7 @@ Type normalize_type(
 				auto v_merged = std::make_shared<TypeMerged>();
 				v_merged->types.push_back(target);
 				v_merged->types.push_back(v_enum_with_hardsym);
-				v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(target, Type(v_enum_with_hardsym)));
+				// v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(target, Type(v_enum_with_hardsym)));
 
 				return v_merged;
 			}
@@ -848,7 +848,7 @@ Type normalize_type(
 			
 			v_merged->types.push_back(constraint_1);
 			v_merged->types.push_back(constraint_2);
-			v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(constraint_1, constraint_2));
+			// v_merged->underlying_type = std::make_shared<Type>(merge_underlying_type(constraint_1, constraint_2));
 			
 			return v_merged;
 		}
