@@ -4,17 +4,18 @@ type PortController {};
 
 ; type PortControllerRef (&mut PortController);
 
-; type U8Result (u8);
+type U8Result (u8);
 
-; @Mod:port_inb extern ccc "port_inb" (u16) -> (u8);
-; @Mod:port_outb extern ccc "port_outb" (u16, u8) -> ();
+@Mod:port_inb extern ccc "port_inb" (u16) -> (u8);
+@Mod:port_outb extern ccc "port_outb" (u16, u8) -> ();
 
 ; @Mod:heap_alloc extern ccc "heap_alloc" (u64) -> (*void);
 
 ; @PortController:inb input {
-; 	:port u16;
+; 	; :port u16;
 ; } -> U8Result {
-; 	:0 mod:port_inb(input:port):0;
+; 	; :0 mod:port_inb(input:port):0;
+; 	:0 u8 123;
 ; };
 
 ; @PortController:outb input {

@@ -2,5 +2,9 @@
 	"type": "module",
 	"dependencies": {
 		"commander": "^14.0.2"
+	},
+	"scripts": {
+		"compile_test": "node ec.js compile test test",
+		"compile_benchmarks": "node ec.js compile ../benchmarks/kernel/source/src/modern ../benchmarks/kernel/source/src/modern"
 	}
 }
