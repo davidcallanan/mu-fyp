@@ -4,7 +4,7 @@
 ; We extend it here with a port_manager field so the rest of the benchmark
 ; code can reach hardware I/O through mod:port_manager.
 
-@Mod:port_manager PortManager;
+@Mod:port_manager &mut PortManager;
 
 create extern ccc "run_benchmarks" () -> {
 	mod:port_manager = mod:port_manager_create {};

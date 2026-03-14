@@ -2,7 +2,7 @@
 
 type PortManager {};
 
-@PortManager:port_controller PortController;
+@PortManager:port_controller &mut PortController;
 
 ; PIT constants
 @PortManager:port_pit_channel0 u16 0x40;
@@ -95,6 +95,9 @@ type PortManager {};
 	this:port_controller:outb(this:port_vga_cursor_data, pos_low);
 };
 
-@Mod:port_manager_create input {} -> PortManager {
-	:port_controller mod:port_controller_create {};
+@Mod:port_manager_create input {} -> &mut PortManager {
+	raw := mod:heap_alloc(sizeof(PortManager)):0;
+	pm := &mut PortManager raw;
+	pm:port_controller = mod:port_controller_create {};
+	:0 pm;
 };
