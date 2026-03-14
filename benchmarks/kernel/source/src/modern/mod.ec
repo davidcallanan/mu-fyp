@@ -19,10 +19,10 @@
 @Mod:benchmark_duration_seconds u64 5;
 @Mod:benchmark_clock_interval u64 100;
 
-@Mod:port_manager &mut PortManager;
+@Mod:port_manager PortManager;
 
 create extern ccc "run_benchmarks" () -> {
-	; mod:port_manager = mod:port_manager_create {};
+	mod:port_manager = mod:port_manager_create {};
 
 	mod:print_set_color(mod:print_color_white, mod:print_color_black);
 	mod:print_str("\n\n=== Port I/O Benchmark ===\n");

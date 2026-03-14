@@ -755,7 +755,11 @@ Smooth evaluate_smooth(
 				
 				auto resulting_smooth = std::get<std::shared_ptr<SmoothStructval>>(loaded_smooth);
 				
-				return access_member(igc, resulting_smooth, sym);
+				Smooth member_finale = access_member(igc, resulting_smooth, sym);
+				
+				v_call_with_dynamic->underlying_type = std::make_shared<Type>(smooth_type(member_finale));
+				
+				return member_finale;
 			} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
 				{ // this hack better fix the opaque type error.
 					DummyIgc dummy = create_dummy_igc(igc);
@@ -803,7 +807,11 @@ Smooth evaluate_smooth(
 
 				Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
-				return llvm_to_smooth(igc, output_type, output_value);
+				Smooth delicious_outcome = llvm_to_smooth(igc, output_type, output_value);
+				
+				v_call_with_dynamic->underlying_type = std::make_shared<Type>(smooth_type(delicious_outcome));
+				
+				return delicious_outcome;
 			}
 		}
 
@@ -829,7 +837,11 @@ Smooth evaluate_smooth(
 			
 			auto improved_smooth = structwrap(igc, target_smooth);
 			
-			return access_member(igc, improved_smooth, sym);
+			Smooth member_finale = access_member(igc, improved_smooth, sym);
+			
+			v_call_with_dynamic->underlying_type = std::make_shared<Type>(smooth_type(member_finale));
+			
+			return member_finale;
 		} else if (std::get_if<std::shared_ptr<SmoothStructval>>(&data_smooth)) {
 			auto actual_target = std::get_if<std::shared_ptr<SmoothStructval>>(&target_smooth);
 
@@ -899,7 +911,11 @@ Smooth evaluate_smooth(
 
 			Type output_type = Type((*actual_target_type)->call_output_predicted_type);
 
-			return llvm_to_smooth(igc, output_type, output_value);
+			Smooth delicious_outcome = llvm_to_smooth(igc, output_type, output_value);
+			
+			v_call_with_dynamic->underlying_type = std::make_shared<Type>(smooth_type(delicious_outcome));
+			
+			return delicious_outcome;
 		} else {
 			fprintf(stderr, "currenty only sym calls and map calls are supported.\n");
 			exit(1);
