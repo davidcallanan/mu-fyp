@@ -1246,6 +1246,62 @@ const type_first = rule("type_first", or( // cannot include constraint_enum here
 
 typeval_atom.define(rule("typeval_atom", or(
 	mapData(
+		join(AMPERMUT, type_first, hardval_bb),
+		(data) => ({
+			type: "type_constrained",
+			constraints: [
+				{
+					type: "type_void_map_reference",
+					target: data[1],
+					is_mutable: true,
+				},
+				data[2],
+			],
+		}),
+	),
+	mapData(
+		join(AMPERSAND, type_first, hardval_bb),
+		(data) => ({
+			type: "type_constrained",
+			constraints: [
+				{
+					type: "type_void_map_reference",
+					target: data[1],
+					is_mutable: false,
+				},
+				data[2],
+			],
+		}),
+	),
+	mapData(
+		join(AMPERMUT, type_first, constraint_map_bb),
+		(data) => ({
+			type: "type_constrained",
+			constraints: [
+				{
+					type: "type_void_map_reference",
+					target: data[1],
+					is_mutable: true,
+				},
+				data[2],
+			],
+		}),
+	),
+	mapData(
+		join(AMPERSAND, type_first, constraint_map_bb),
+		(data) => ({
+			type: "type_constrained",
+			constraints: [
+				{
+					type: "type_void_map_reference",
+					target: data[1],
+					is_mutable: false,
+				},
+				data[2],
+			],
+		}),
+	),
+	mapData(
 		join(AMPERMUT, type_first),
 		(data) => ({
 			type: "type_void_map_reference",
