@@ -26,6 +26,8 @@ x := 10; this is also a comment
 | `bool` | Boolean |
 | `*T` | Pointer to `T` |
 | `**T` | Pointer to pointer to `T` |
+| `*void` | Untyped pointer (`void*` in C) |
+| `nullptr` | Null pointer literal (type `*void`, zero address) |
 
 ---
 
@@ -552,6 +554,57 @@ Only `&mut` references permit field assignment. `&` references are read-only.
 
 ---
 
+## Pointers, Null, and Reference Casts
+
+### `nullptr` — null pointer literal
+
+`nullptr` is a keyword that evaluates to a null pointer. Its type is `*void` (an untyped pointer). Use `*void` as an explicit type annotation when passing null to functions that expect an untyped pointer:
+
+```ec
+ptr := *void nullptr;   ; typed null *void pointer
+```
+
+`nullptr` can also appear without an explicit type annotation where the surrounding context resolves the type:
+
+```ec
+; as an argument to an extern ccc function that expects *void
+mod:some_func(nullptr);
+```
+
+### `*void` — untyped pointer type
+
+`*void` is the Essence C equivalent of C's `void*`. It is used as a type in `extern ccc` bindings that deal with untyped memory (e.g. `malloc`, `free`, `memcpy`):
+
+```ec
+@Mod:malloc extern ccc "malloc" (usize) -> (*void);
+@Mod:free   extern ccc "free"   (*void) -> ();
+
+create() -> {
+	raw := mod:malloc(u64 1024);
+	mod:free(raw:0);
+}
+```
+
+Note that `*void` is a distinct type from typed pointers such as `*u8`. You cannot directly read fields through a `*void` pointer — you must first cast it to a typed reference.
+
+### Reference casts — `&TypeName ptr` and `&mut TypeName ptr`
+
+A `*void` pointer can be reinterpreted as a typed map reference using a **reference cast**. The syntax places `&TypeName` (or `&mut TypeName`) before the pointer value:
+
+```ec
+; immutable reference cast
+obj := &MyService ptr;
+
+; mutable reference cast
+obj_mut := &mut MyService ptr;
+```
+
+Where `ptr` is a `*void` value (for example, the return value of `malloc` or a pointer received from C). The cast tells the compiler to treat the raw pointer as a reference to a `MyService` map. No runtime conversion occurs — it is a purely type-level reinterpretation (equivalent to a C pointer cast).
+
+Mutability follows the same rules as ordinary references: `&TypeName` produces an immutable reference (read-only field access); `&mut TypeName` produces a mutable reference (field assignment permitted).
+
+---
+
 ## Top-level Type Extensions (`@`)
 
 Attach named members (including callables and extern functions) to a named type using `@TypeName:member_name value`:
@@ -837,6 +890,10 @@ create() -> {
 | `int x = 5;` | `x := i32 5;` |
 | `int* p = &x;` | `p := &x;` (immutable ref) |
 | `int* p = &x; *p = 5;` | `p := &mut x; p:field = 5;` (mutable ref) |
+| `void* p = NULL;` | `p := *void nullptr;` |
+| `void* p = malloc(n);` | `raw := mod:malloc(n); p := raw:0;` |
+| `(MyType*)ptr` | `&MyType ptr` (immutable ref cast from `*void`) |
+| `(MyType*)ptr` (mutable) | `&mut MyType ptr` (mutable ref cast from `*void`) |
 | mutating struct field via method | `input { ... } mut -> { this:field = val; }` |
 | `typedef int MyInt;` | `type MyInt i32;` |
 | `struct Foo { int x; }` | `type Foo {};` then `@Foo:x i32;` |
