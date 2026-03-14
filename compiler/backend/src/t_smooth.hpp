@@ -71,6 +71,7 @@ struct SmoothMapReference {
 struct SmoothVoidMapReference {
 	Type type;
 	llvm::Type* flexi_type;
+	llvm::Value* value;
 };
 
 struct SmoothVoidptr { // Voidptr with definitive value

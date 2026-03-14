@@ -157,6 +157,16 @@ Smooth llvm_to_smooth(std::shared_ptr<IrGenCtx> igc, const Type& type, llvm::Val
 			value,
 		});
 	}
+	
+	if (std::get_if<std::shared_ptr<TypeVoidMapReference>>(&underlying)) {
+		llvm::Type* flexi_type = llvm::PointerType::get(value->getContext(), 0);
+
+		return std::make_shared<SmoothVoidMapReference>(SmoothVoidMapReference{
+			type,
+			flexi_type,
+			value,
+		});
+	}
 
 	const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, type);
 	const char* name2 = std::visit([](auto&& v) { return typeid(*v).name(); }, underlying);

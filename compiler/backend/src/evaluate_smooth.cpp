@@ -1664,10 +1664,13 @@ Smooth evaluate_smooth(
 
 	if (std::get_if<std::shared_ptr<TypeVoidMapReference>>(&type)) {
 		llvm::Type* flexi_type = llvm::PointerType::get(*igc->context, 0);
+		
+		llvm::Value* void_value = smooth_void(igc, type)->value;
 
 		return std::make_shared<SmoothVoidMapReference>(SmoothVoidMapReference{
 			type,
 			flexi_type,
+			void_value,
 		});
 	}
 
