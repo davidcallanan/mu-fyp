@@ -1662,6 +1662,15 @@ Smooth evaluate_smooth(
 		});
 	}
 
+	if (std::get_if<std::shared_ptr<TypeVoidMapReference>>(&type)) {
+		llvm::Type* flexi_type = llvm::PointerType::get(*igc->context, 0);
+
+		return std::make_shared<SmoothVoidMapReference>(SmoothVoidMapReference{
+			type,
+			flexi_type,
+		});
+	}
+
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");
 	exit(1);
 }

@@ -23,6 +23,7 @@ const ignored_extensions = new Set([
 	".tex",
 	".ico",
 	".xcf",
+	".bib",
 ]);
 
 const escape_latex = (text) => {

@@ -357,5 +357,5 @@ create extern ccc "main" () -> { ; this comment works
 	
 	ptr := *void nullptr;
 	
-	; obj := &MyService ptr;
+	obj := &MyService ptr;
 }
