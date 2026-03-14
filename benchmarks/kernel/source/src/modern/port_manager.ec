@@ -2,6 +2,8 @@
 
 type PortManager {};
 
+type PortManagerRef (&mut PortManager);
+
 @PortManager:port_controller &mut PortController;
 
 ; PIT constants
@@ -38,9 +40,11 @@ type PortManager {};
 };
 
 @PortManager:rtc_wait input {} -> {
+	that := &PortManager this;
+	
 	for {
-		status := this:rtc_read_register(this:rtc_register_status_a):0;
-		still_updating := status b& this:rtc_update_in_progress;
+		status := that:rtc_read_register(that:rtc_register_status_a):0;
+		still_updating := status b& that:rtc_update_in_progress;
 		if (still_updating == u8 0) {
 			break;
 		}
@@ -48,18 +52,20 @@ type PortManager {};
 };
 
 @PortManager:rtc_seconds input {} -> U8Result {
-	is_bcd_raw := this:rtc_read_register(this:rtc_register_status_b):0;
-	has_data_mode := is_bcd_raw b& this:rtc_data_mode;
+	that := &PortManager this;
+	
+	is_bcd_raw := that:rtc_read_register(that:rtc_register_status_b):0;
+	has_data_mode := is_bcd_raw b& that:rtc_data_mode;
 	is_bcd := has_data_mode == u8 0;
 
 	mut seconds_a := u8 0;
 	mut seconds_b := u8 0;
 
 	for {
-		this:rtc_wait {};
-		seconds_a = this:rtc_read_register(this:rtc_register_seconds):0;
-		this:rtc_wait {};
-		seconds_b = this:rtc_read_register(this:rtc_register_seconds):0;
+		that:rtc_wait {};
+		seconds_a = that:rtc_read_register(that:rtc_register_seconds):0;
+		that:rtc_wait {};
+		seconds_b = that:rtc_read_register(that:rtc_register_seconds):0;
 
 		if (seconds_a == seconds_b) {
 			break;
@@ -95,9 +101,9 @@ type PortManager {};
 	this:port_controller:outb(this:port_vga_cursor_data, pos_low);
 };
 
-@Mod:port_manager_create input {} -> &mut PortManager {
-	raw := mod:heap_alloc(sizeof(PortManager)):0;
-	pm := &mut PortManager raw;
-	pm:port_controller = mod:port_controller_create {};
+@Mod:port_manager_create input {} -> PortManagerRef {
+	; raw := mod:heap_alloc(sizeof(PortManager)):0;
+	pm := &mut PortManager nullptr;
+	; pm:port_controller = mod:port_controller_create {};
 	:0 pm;
 };

@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { writeFile } from "fs/promises";
+import { writeFile, copyFile, readdir, mkdir } from "fs/promises";
 import { join } from "path";
 import { process as frontend_process } from "./frontend/process.js";
 import { spawn } from "child_process";
@@ -9,7 +9,7 @@ import { error_internal } from "./frontend/uoe/error_internal.js";
 
 const program = new Command();
 
-const backend_process = async (result) => {
+const backend_process = async (result, dest) => {
 	console.log("Launching backend...");
 
 	const [promise, resolve, reject] = create_promise();
@@ -34,7 +34,22 @@ const backend_process = async (result) => {
 		reject(err);
 	});
 
-	return promise;
+	await promise;
+
+	const out_dir = join(backend_dir, "out");
+	const out_files = await readdir(out_dir);
+	const ll_files = out_files.filter((f) => f.endsWith(".ll"));
+
+	await mkdir(dest, { recursive: true });
+
+	for (const ll_file of ll_files) {
+		const src_path = join(out_dir, ll_file);
+		const dest_path = join(dest, ll_file);
+		
+		await copyFile(src_path, dest_path);
+		
+		console.log("Copy went well: ", ll_file, "->", dest_path);
+	}
 };
 
 const compile_module = async (config) => {
@@ -60,7 +75,7 @@ const compile_module = async (config) => {
 
 	console.log("Frontend output dumped to", out_path);
 
-	await backend_process(result);
+	await backend_process(result, config.dest);
 };
 
 program

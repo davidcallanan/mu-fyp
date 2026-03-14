@@ -121,10 +121,36 @@
 			if (elapsed >= duration) {
 				break;
 			}
-		}
+		}	
 	}
 
 	mod:benchmark_dump("IO Wait", count);
+};
+		
+@Mod:benchmark_vga_cursor input {} -> {
+	mod:benchmark_head("\n\n>> VGA Cursor");
+	mod:benchmark_wait_for_boundary {};
+
+	start := mod:port_manager:rtc_seconds {}:0;
+	mut count := u64 0;
+
+	for {
+		mod:port_manager:vga_cursor_update(u16 0);
+		count = count + u64 1;
+
+		check := count % mod:benchmark_clock_interval;
+		if (check == u64 0) {
+			seconds := mod:port_manager:rtc_seconds {}:0;
+			diff := seconds - start;
+			elapsed := u8 diff;
+			duration := u8 mod:benchmark_duration_seconds;
+			if (elapsed >= duration) {
+				break;
+			}
+		}
+	}
+
+	mod:benchmark_dump("VGA Cursor", count);
 };
 
 @Mod:benchmark_vga_cursor input {} -> {

@@ -13,3 +13,8 @@ define void @port_outb(i16 %port, i8 %data) nounwind {
 	call void asm sideeffect "outb $0, $1", "{al},{dx}"(i8 %data, i16 %port)
 	ret void
 }
+
+; int puts(const char *s)
+define i32 @puts(i8* %s) nounwind {
+	ret i32 0
+}

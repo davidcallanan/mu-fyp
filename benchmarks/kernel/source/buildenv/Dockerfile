@@ -41,6 +41,7 @@ RUN apt-get install -y nasm
 RUN apt-get install -y xorriso
 RUN apt-get install -y grub-pc-bin
 RUN apt-get install -y grub-common
+RUN apt-get install -y llvm-15
 
 VOLUME /root/env
 WORKDIR /root/env

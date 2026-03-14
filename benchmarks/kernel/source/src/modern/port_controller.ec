@@ -2,6 +2,8 @@
 
 type PortController {};
 
+type PortControllerRef (&mut PortController);
+
 type U8Result (u8);
 
 @Mod:port_inb extern ccc "port_inb" (u16) -> (u8);
@@ -22,7 +24,7 @@ type U8Result (u8);
 	mod:port_outb(input:port, input:data);
 };
 
-@Mod:port_controller_create input {} -> &mut PortController {
+@Mod:port_controller_create input {} -> PortControllerRef {
 	raw := mod:heap_alloc(sizeof(PortController)):0;
 	:0 &mut PortController raw;
 };
