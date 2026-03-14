@@ -46,6 +46,7 @@
 #include "preinstantiated_types.hpp"
 #include "is_map_leaf_physical.hpp"
 #include "fresh_smooth.hpp"
+#include "leaf_surfacally_translate.hpp"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -848,7 +849,8 @@ Smooth evaluate_smooth(
 			}
 
 			Smooth wrapped_up = structwrap(igc, data_smooth);
-			Smooth upgraded = happy_smooth(igc, wrapped_up, Type((*actual_target_type)->call_input_type), true);
+			Smooth enhanced = leaf_surfacally_translate(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
+			Smooth upgraded = happy_smooth(igc, enhanced, Type((*actual_target_type)->call_input_type), true);
 			
 			llvm::Function* my_call_func = (*actual_target)->call_func();
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;

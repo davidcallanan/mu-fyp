@@ -73,6 +73,8 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 
 		if (!p_v_structval) {
 			fprintf(stderr, "Glitch.");
+			const char* mytypeid = std::visit([](auto&& v) { return typeid(*v).name(); }, smooth);
+			fprintf(stderr, "Actual smooth wass %s\n", mytypeid);
 			exit(1);
 		}
 		
