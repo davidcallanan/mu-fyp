@@ -94,11 +94,11 @@ type MyService {};
 
 type Return (u64);
 
-@Mod:nested_function () -> Return {
+@Mod:nested_function {} -> Return {
 	:0 12;
 };
 
-@Mod:new_function () -> Return {
+@Mod:new_function {} -> Return {
 	tmp := this:nested_function():0;
 	:0 tmp;
 };

@@ -24,7 +24,13 @@ Smooth access_member(
 		std::string sym_key = ":" + sym;
 		
 		if (v_map->sym_inputs.find(sym_key) == v_map->sym_inputs.end()) {
-			fprintf(stderr, "Symbol %s not really available here", sym.c_str());
+			fprintf(stderr, "Symbol '%s' not really available here", sym.c_str());
+			fprintf(stderr, "Available symbosl were:\n");
+			
+			for (const auto& [sym_name, sym_type] : v_map->sym_inputs) {
+				fprintf(stderr, "..%s\n", sym_name.c_str());
+			}
+			
 			exit(1);
 		}
 		

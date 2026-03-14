@@ -811,16 +811,19 @@ const constraint_map_braced_multiline_bb = rule("constraint_map_braced_multiline
 		LBRACE_BB,
 		MANDATORY_NEWLINE,
 		opt_multi(
-			join(
-				map_entry,
-				SEMI,
+			or(
+				mapData(
+					join(map_entry, SEMI),
+					(data) => data[0],
+				),
+				map_entry_semiless,
 			),
 		),
 		RBRACE,
 	),
 	(data) => {
-		const entries = data[2].map(entry => entry[0]);
-		
+		const entries = data[2];
+
 		const instructions = (entries
 			.filter(entry => entry.type === "instruction")
 			.map(entry => entry.data)
