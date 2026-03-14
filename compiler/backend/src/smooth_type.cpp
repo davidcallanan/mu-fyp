@@ -48,6 +48,14 @@ Type smooth_type(Smooth smooth) {
 		return (*p_v_map_reference)->type;
 	}
 
+	if (auto p_v_voidptr = std::get_if<std::shared_ptr<SmoothVoidptr>>(&smooth)) {
+		return (*p_v_voidptr)->type;
+	}
+
+	if (auto p_v_void_voidptr = std::get_if<std::shared_ptr<SmoothVoidVoidptr>>(&smooth)) {
+		return (*p_v_void_voidptr)->type;
+	}
+
 	fprintf(stderr, "The particular smooth does not have a type associated with it (programmer bug?)\n");
 	exit(1);
 }

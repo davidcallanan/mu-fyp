@@ -23,3 +23,6 @@ const std::shared_ptr<TypeEnum> type_true = [] {
 
 const std::shared_ptr<TypeVoid> type_void = std::make_shared<TypeVoid>();
 
+const std::shared_ptr<TypeNullptr> type_nullptr = std::make_shared<TypeNullptr>();
+
+const std::shared_ptr<TypeVoidptr> type_voidptr = std::make_shared<TypeVoidptr>();

@@ -1640,6 +1640,28 @@ Smooth evaluate_smooth(
 		});
 	}
 
+	if (std::get_if<std::shared_ptr<TypeNullptr>>(&type)) {
+		llvm::Type* opque = llvm::PointerType::get(*igc->context, 0);
+		llvm::Value* llNULL = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(opque));
+		
+		return std::make_shared<SmoothVoidptr>(SmoothVoidptr{
+			type,
+			llNULL,
+		});
+	}
+
+	if (std::get_if<std::shared_ptr<TypeVoidptr>>(&type)) {
+		llvm::Type* flexi_type = llvm::PointerType::get(*igc->context, 0);
+		
+		llvm::Value* void_value = smooth_void(igc, type)->value;
+		
+		return std::make_shared<SmoothVoidVoidptr>(SmoothVoidVoidptr{
+			type,
+			flexi_type,
+			void_value,
+		});
+	}
+
 	fprintf(stderr, "Unhandled scenario when handling evaluation\n");
 	exit(1);
 }

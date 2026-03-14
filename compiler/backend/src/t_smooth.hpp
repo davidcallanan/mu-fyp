@@ -56,7 +56,7 @@ struct SmoothVoidFloat {
 	llvm::Value* value;
 };
 
-struct SmoothVoidPointer {
+struct SmoothVoidPointer { // Pointer without definitive value (not to be confused with Voidptr)
 	Type type;
 	llvm::Type* flexi_type;
 	llvm::Value* value;
@@ -66,4 +66,20 @@ struct SmoothMapReference {
 	Type type;
 	llvm::Value* value;
 	llvm::Type* structval_type;
+};
+
+struct SmoothVoidMapReference {
+	Type type;
+	llvm::Type* flexi_type;
+};
+
+struct SmoothVoidptr { // Voidptr with definitive value
+	Type type;
+	llvm::Value* value;
+};
+
+struct SmoothVoidVoidptr { // Voidptr without definitive value
+	Type type;
+	llvm::Type* flexi_type;
+	llvm::Value* value;
 };

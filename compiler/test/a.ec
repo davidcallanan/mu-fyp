@@ -315,7 +315,7 @@ create extern ccc "main" () -> { ; this comment works
 	log("PID is:");
 	log_d(pid:0);
 	
-	y := &MyService;
+	y := & (: MyService);
 	
 	log(y:name);
 	log(y:description);
@@ -354,4 +354,8 @@ create extern ccc "main" () -> { ; this comment works
 	x:name = "John Doe";
 	
 	log(x:name);
+	
+	; ptr := *void nullptr;
+	
+	; obj := &MyService ptr;
 }

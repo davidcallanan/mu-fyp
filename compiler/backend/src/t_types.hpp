@@ -195,3 +195,14 @@ struct TypeSymAssign {
 	std::vector<std::string> trail;
 	std::shared_ptr<Type> typeval;
 };
+
+struct TypeNullptr {
+};
+
+struct TypeVoidptr {
+};
+
+struct TypeVoidMapReference {
+	std::shared_ptr<Type> target;
+	bool is_mutable;
+};

@@ -37,5 +37,9 @@ llvm::Type* llvm_flexi_type(const Smooth smooth) {
 		return (*p_v_void_pointer)->flexi_type;
 	}
 
+	if (auto p_v_void_voidptr = std::get_if<std::shared_ptr<SmoothVoidVoidptr>>(&smooth)) {
+		return (*p_v_void_voidptr)->flexi_type;
+	}
+
 	return llvm_value(smooth)->getType();
 }

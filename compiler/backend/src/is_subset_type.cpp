@@ -6,7 +6,7 @@
 #include "get_underlying_type.hpp"
 #include "t_types.hpp"
 
-bool is_subset_type(const Type& type_a, const Type& type_b) {
+bool is_subset_type(const Type& type_a, const Type& type_b) { // todo: i notice this function doesn't even handle underlying types.
 	const Type a = get_underlying_type(type_a);
 	const Type b = get_underlying_type(type_b);
 
@@ -43,6 +43,8 @@ bool is_subset_type(const Type& type_a, const Type& type_b) {
 		auto p_v_enum_b = std::get_if<std::shared_ptr<TypeEnum>>(&b);
 		return is_subset_type_enum(**p_v_enum_a, **p_v_enum_b);
 	}
+	
+	// explicit casting required for pointers, void pointers, null pointers, references!
 
 	// for now we pretend everything else is incompatible.
 	return false;

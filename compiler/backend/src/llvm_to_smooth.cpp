@@ -140,6 +140,23 @@ Smooth llvm_to_smooth(std::shared_ptr<IrGenCtx> igc, const Type& type, llvm::Val
 			field_smooths,
 		});
 	}
+	
+	if (std::get_if<std::shared_ptr<TypeVoidptr>>(&underlying)) {
+		if (value->getType()->isStructTy()) {
+			llvm::Type* flexi_type = llvm::PointerType::get(value->getContext(), 0);
+
+			return std::make_shared<SmoothVoidVoidptr>(SmoothVoidVoidptr{
+				type,
+				flexi_type,
+				value,
+			});
+		}
+
+		return std::make_shared<SmoothVoidptr>(SmoothVoidptr{
+			type,
+			value,
+		});
+	}
 
 	const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, type);
 	const char* name2 = std::visit([](auto&& v) { return typeid(*v).name(); }, underlying);

@@ -28,6 +28,10 @@ UnderlyingType promote_to_underlying(const Type& type) {
 		return *p;
 	}
 
+	if (auto p = std::get_if<std::shared_ptr<TypeVoidptr>>(&type)) {
+		return *p;
+	}
+
 	const char* name = std::visit([](auto&& v) { return typeid(*v).name(); }, type);
 	fprintf(stderr, "Did not encounter map/pointer/merged/rotten during promotion to underlying, received %s\n", name);
 	exit(1);

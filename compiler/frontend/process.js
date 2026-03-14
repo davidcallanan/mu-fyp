@@ -53,6 +53,7 @@ const KW_EXTERN = rule("KW_EXTERN", withCarefulSkippers("extern"));
 const KW_CCC = rule("KW_CCC", withCarefulSkippers("ccc"));
 const KW_ALWAYSINLINE = rule("KW_ALWAYSINLINE", withCarefulSkippers("alwaysinline"));
 const KW_SIZEOF = rule("KW_SIZEOF", withCarefulSkippers("sizeof"));
+const KW_NULLPTR = rule("KW_NULLPTR", withCarefulSkippers("nullptr"));
 const LBRACE = rule("LBRACE", withCarefulSkippers("{"));
 const LBRACE_BB = rule("LBRACE_BB", withBareboneSkippers("{"));
 const RBRACE = rule("RBRACE", withCarefulSkippers("}"));
@@ -110,6 +111,7 @@ const RSHIFT = rule("RSHIFT", withCarefulSkippers(">>"));
 const BINAND = rule("BINAND", withCarefulSkippers("b&"));
 const BINOR = rule("BINOR", withCarefulSkippers("b|"));
 const NOT = rule("NOT", withCarefulSkippers("!"));
+const VOIDPTR = rule("VOIDPTR", withCarefulSkippers("*void"));
 
 // PARSER RULES
 
@@ -186,6 +188,10 @@ hardval.define(rule("hardval", or(
 		(data) => data[1],
 	),
 	mapData(
+		KW_NULLPTR,
+		(_data) => ({ type: "type_nullptr" }),
+	),
+	mapData(
 		FLOAT, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
 		(data) => ({
 			type: "type_map",
@@ -250,6 +256,10 @@ hardval_bb.define(rule("hardval_bb", or(
 	mapData(
 		join(LGROUP, typeval, RGROUP),
 		(data) => data[1],
+	),
+	mapData(
+		KW_NULLPTR,
+		(_data) => ({ type: "type_nullptr" }),
 	),
 	mapData(
 		FLOAT_BB, // float must come before integer as integer is substring of float, due to lack of dedicated lexer.
@@ -1226,11 +1236,31 @@ constraint_enum.define(rule("constraint_enum", or(
 )));
 
 const type_first = rule("type_first", or( // cannot include constraint_enum here due to precedence reasons
+	mapData(
+		VOIDPTR,
+		(_data) => ({ type: "type_voidptr" }),
+	),
 	type_ptr_named,
 	type_named,
 ));
 
 typeval_atom.define(rule("typeval_atom", or(
+	mapData(
+		join(AMPERMUT, type_first),
+		(data) => ({
+			type: "type_void_map_reference",
+			target: data[1],
+			is_mutable: true,
+		}),
+	),
+	mapData(
+		join(AMPERSAND, type_first),
+		(data) => ({
+			type: "type_void_map_reference",
+			target: data[1],
+			is_mutable: false,
+		}),
+	),
 	mapData(
 		join(AMPERMUT, typeval_atom),
 		(data) => ({

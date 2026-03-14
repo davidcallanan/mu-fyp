@@ -926,8 +926,9 @@ Type normalize_type(
 
 			auto p_v_rotten = std::get_if<std::shared_ptr<TypeRotten>>(&field_underlying);
 			auto p_v_pointer = std::get_if<std::shared_ptr<TypePointer>>(&field_underlying);
+			auto p_v_voidptr = std::get_if<std::shared_ptr<TypeVoidptr>>(&field_underlying);
 
-			if (!p_v_rotten && !p_v_pointer) {
+			if (!p_v_rotten && !p_v_pointer && !p_v_voidptr) {
 				fprintf(stderr, "Only permitted return types due to C ABI reasons are numerical data types (int, float) up to 64 bit, or pointers. For complex structures, you must follow the C ABI approach of passing pointers!\n");
 				exit(1);
 			}
@@ -986,6 +987,33 @@ Type normalize_type(
 		v_sizeof->underlying_type = std::make_shared<Type>(Type(v_rotten));
 
 		return v_sizeof;
+	}
+
+	if (type == "type_nullptr") {
+		return type_nullptr;
+	}
+
+	if (type == "type_voidptr") {
+		return type_voidptr;
+	}
+
+	if (type == "type_void_map_reference") {
+		if (!typeval.contains("target")) {
+			fprintf(stderr, "The .target was not given.\n");
+			exit(1);
+		}
+
+		auto v_void_map_reference = std::make_shared<TypeVoidMapReference>();
+
+		v_void_map_reference->target = std::make_shared<Type>(normalize_type(toc, typeval["target"]));
+
+		v_void_map_reference->is_mutable = (true
+			&& typeval.contains("is_mutable")
+			&& typeval["is_mutable"].is_boolean()
+			&& typeval["is_mutable"].get<bool>()
+		);
+
+		return v_void_map_reference;
 	}
 
 	fprintf(stderr, "unhandled type, got %s\n", type.c_str());

@@ -56,7 +56,7 @@
 		},
 		{
 			"name": "storage.type.object.array.java",
-			"match": "\\b(i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128|bool)\\b"
+			"match": "\\b(i[1-9][0-9]{0,4}|u[1-9][0-9]{0,4}|f16|f32|f64|f128|bool|void)\\b"
 		},
 		{
 			"name": "entity.name.tag",
@@ -132,7 +132,7 @@
 				},
 				{
 					"name": "keyword.modifier.essencec",
-					"match": "\\b(instantiate|reset|types|type|pub|map|enum|mut|null\\-term)\\b"
+					"match": "\\b(instantiate|reset|types|type|pub|map|enum|nullptr|mut|null\\-term)\\b"
 				}
 			]
 		},

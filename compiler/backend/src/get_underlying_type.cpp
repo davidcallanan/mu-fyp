@@ -267,6 +267,18 @@ Type get_underlying_type(const Type& type) {
 		return get_underlying_type(*v_expr_modulo->underlying_type);
 	}
 	
+	if (std::holds_alternative<std::shared_ptr<TypeNullptr>>(type)) {
+		return type_voidptr;
+	}
+
+	if (std::holds_alternative<std::shared_ptr<TypeVoidptr>>(type)) {
+		return type_voidptr;
+	}
+	
+	if (std::holds_alternative<std::shared_ptr<TypeVoidMapReference>>(type)) {
+		return type;
+	}
+
 	fprintf(stderr, "Currently no mechanism to determine the actual type of the expression.\n");
 	exit(1);
 }

@@ -41,6 +41,9 @@ struct TypeExprBitwiseAnd;
 struct TypeExprBitwiseOr;
 struct TypeExprModulo;
 struct TypeSymAssign;
+struct TypeNullptr;
+struct TypeVoidptr;
+struct TypeVoidMapReference;
 
 // Forward declaration impossible without pointer indirection, typical C++.
 
@@ -74,7 +77,10 @@ using Type = std::variant<
 	std::shared_ptr<TypeExprBitwiseAnd>,
 	std::shared_ptr<TypeExprBitwiseOr>,
 	std::shared_ptr<TypeExprModulo>,
-	std::shared_ptr<TypeSymAssign>
+	std::shared_ptr<TypeSymAssign>,
+	std::shared_ptr<TypeNullptr>,
+	std::shared_ptr<TypeVoidptr>,
+	std::shared_ptr<TypeVoidMapReference>
 >;
 
 using UnderlyingType = std::variant< // an underlying type is kind of the eventual type after evaluation.
@@ -83,5 +89,7 @@ using UnderlyingType = std::variant< // an underlying type is kind of the eventu
 	std::shared_ptr<TypeMerged>,
 	std::shared_ptr<TypeRotten>,
 	std::shared_ptr<TypeEnum>,
-	std::shared_ptr<TypeMapReference>
+	std::shared_ptr<TypeMapReference>,
+	std::shared_ptr<TypeVoidptr>,
+	std::shared_ptr<TypeVoidMapReference>
 >;
