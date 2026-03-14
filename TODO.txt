@@ -36,6 +36,7 @@ New plan:
 - implement map field mutation - need to keep track if a mapreference is mutable (based on variable) and if a function is mutable, mod will be assumed to always be mutable!
 - make mut keyword on maps switch to vtable approach
 - add with-phalloc-bypass ("phantom alloc")
+- syntax will be "x := &MyTarget with-phalloc-bypass mod:heap_alloc(...)"
 
 i was gonna say i should implement closures, but it is effecitvely already implemented, just use a map!
 

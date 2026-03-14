@@ -45,6 +45,10 @@ Smooth merge_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth_a, Smooth smoot
 	}
 
 	if (auto p_void_voidptr_a = std::get_if<std::shared_ptr<SmoothVoidVoidptr>>(&smooth_a)) {
+		if (auto p_voidptr_b = std::get_if<std::shared_ptr<SmoothVoidptr>>(&smooth_b)) {
+			return smooth_b;
+		}
+
 		if (auto p_map_reference_b = std::get_if<std::shared_ptr<SmoothMapReference>>(&smooth_b)) {
 			return merge_smooth_void_voidptr_with_map_reference(igc, *p_void_voidptr_a, *p_map_reference_b);
 		}
