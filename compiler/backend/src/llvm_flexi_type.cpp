@@ -41,5 +41,9 @@ llvm::Type* llvm_flexi_type(const Smooth smooth) {
 		return (*p_v_void_voidptr)->flexi_type;
 	}
 
+	if (auto p_v_void_map_reference = std::get_if<std::shared_ptr<SmoothVoidMapReference>>(&smooth)) {
+		return (*p_v_void_map_reference)->flexi_type;
+	}
+
 	return llvm_value(smooth)->getType();
 }
