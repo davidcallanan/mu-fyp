@@ -12,6 +12,8 @@
 #include "produce_call_func.hpp"
 #include "is_structwrappable.hpp"
 #include "force_identical_layout.hpp"
+#include "structval_field_idx.hpp"
+#include "preinstantiated_smooths.hpp"
 
 Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth, std::shared_ptr<TypeMap> target_map, bool use_flexi_mode) {
 	auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth);
@@ -22,15 +24,13 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 
 	auto v_structval = *p_v_structval;
 
-	unsigned member_idx = 0;
-
 	// std::vector<llvm::Type*> new_member_types;
 	std::vector<llvm::Value*> new_member_values;
 	std::vector<Smooth> brand_new_smooths;
 	std::optional<Smooth> translated_leaf = std::nullopt;
 
 	if (target_map->leaf_type.has_value() && !is_type_singletonish(target_map->leaf_type.value())) {
-		Smooth field_smooth = v_structval->field_smooths[member_idx];
+		Smooth field_smooth = v_structval->field_smooths[0];
 
 		Type leaf_underlying = get_underlying_type(target_map->leaf_type.value());
 		auto p_leaf_as_map = std::get_if<std::shared_ptr<TypeMap>>(&leaf_underlying);
@@ -56,8 +56,6 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 		// new_member_types.push_back(translated_value->getType());
 		new_member_values.push_back(translated_value);
 		brand_new_smooths.push_back(translated_smooth);
-
-		member_idx++;
 	}
 
 	for (const auto& [sym_name, sym_type] : target_map->sym_inputs) {
@@ -65,7 +63,23 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 			continue;
 		}
 
-		Smooth field_smooth = v_structval->field_smooths[member_idx];
+		auto source_idx = structval_field_idx(v_structval, sym_name);
+
+		Smooth field_smooth = [&]() -> Smooth {
+			if (source_idx.has_value()) {
+				return v_structval->field_smooths[source_idx.value()];
+			}
+
+			Type intended_type = get_underlying_type(*sym_type);
+			auto intended_as_map = std::get_if<std::shared_ptr<TypeMap>>(&intended_type);
+
+			if (!intended_as_map) {
+				fprintf(stderr, "leaf_agnostically_translate: sym '%s' missing from source and target type is not a map\n", sym_name.c_str());
+				exit(1);
+			}
+
+			return leaf_agnostically_translate(igc, smooth_map_empty(igc), *intended_as_map, use_flexi_mode);
+		}();
 
 		Type sym_underlying = get_underlying_type(*sym_type);
 		auto p_sym_as_map = std::get_if<std::shared_ptr<TypeMap>>(&sym_underlying);
@@ -89,8 +103,6 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 		// new_member_types.push_back(translated_value->getType());
 		new_member_values.push_back(translated_value);
 		brand_new_smooths.push_back(translated_smooth);
-
-		member_idx++;
 	}
 
 	if (!target_map->bundle_id.has_value()) {

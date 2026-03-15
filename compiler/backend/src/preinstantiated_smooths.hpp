@@ -7,3 +7,4 @@
 #include "t_types_fwd.hpp"
 
 std::shared_ptr<SmoothVoid> smooth_void(std::shared_ptr<IrGenCtx> igc, std::optional<Type> type = std::nullopt);
+std::shared_ptr<SmoothStructval> smooth_map_empty(std::shared_ptr<IrGenCtx> igc);

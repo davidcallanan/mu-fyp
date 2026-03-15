@@ -22,7 +22,7 @@ type U8Result (u8);
 	:port u16;
 	:data u8;
 } -> {
-	mod:port_outb(input:port, input:data);
+	; mod:port_outb(input:port, input:data);
 };
 
 @Mod:port_controller_create input {} -> PortController {
