@@ -40,7 +40,7 @@ type PortManager {};
 };
 
 @PortManager:rtc_wait input {} -> {
-	that := &PortManager this;
+	that := this;
 	
 	for {
 		status := that:rtc_read_register(u8 0x0A):0; RTC_REGISTER_STATUS_A=0x0A
@@ -52,7 +52,7 @@ type PortManager {};
 };
 
 @PortManager:rtc_seconds input {} -> U8Result {
-	that := &PortManager this;
+	that := this;
 	
 	is_bcd_raw := that:rtc_read_register(u8 0x0B):0; RTC_REGISTER_STATUS_B=0x0B
 	has_data_mode := is_bcd_raw b& u8 4; RTC_DATA_MODE=4

@@ -30,6 +30,11 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 	std::optional<Smooth> translated_leaf = std::nullopt;
 
 	if (target_map->leaf_type.has_value() && !is_type_singletonish(target_map->leaf_type.value())) {
+		if (v_structval->field_smooths.empty()) {
+			fprintf(stderr, "Map reports itself as having leaf, but no leaf existed (field_smooths empty!).\n");
+			exit(1);
+		}
+		
 		Smooth field_smooth = v_structval->field_smooths[0];
 
 		Type leaf_underlying = get_underlying_type(target_map->leaf_type.value());

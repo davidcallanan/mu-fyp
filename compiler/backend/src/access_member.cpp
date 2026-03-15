@@ -13,7 +13,6 @@
 #include "evaluate_singletonish.hpp"
 #include "smooth_type.hpp"
 #include "is_structval_leaf_physical.hpp"
-#include "produce_call_func.hpp"
 
 Smooth access_member(
 	std::shared_ptr<IrGenCtx> igc,

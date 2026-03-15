@@ -1,7 +1,7 @@
 shopt -s nullglob
 
-#gdb -quiet -batch -ex run -ex "bt" --args /app/bin/backend || exit 1
-/app/bin/backend || exit 1
+gdb -quiet -batch -ex run -ex "bt" --args /app/bin/backend || exit 1
+#/app/bin/backend || exit 1
 
 if [ -f /app/out/hello.o ]; then
   echo "Shell script is linking..."

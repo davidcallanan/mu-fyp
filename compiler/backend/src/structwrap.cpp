@@ -5,6 +5,8 @@
 #include "structwrap.hpp"
 #include "t_smooth.hpp"
 #include "t_types.hpp"
+#include "t_bundles.hpp"
+#include "t_ctx.hpp"
 
 std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const Smooth& smooth) {
 	if (auto p_v_structval = std::get_if<std::shared_ptr<SmoothStructval>>(&smooth)) {
@@ -20,6 +22,13 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_pointer->type;
+
+		auto bundle_map = std::make_shared<BundleMap>();
+		
+		v_map->bundle_id = igc->toc->bundle_registry->install(Bundle(bundle_map));
+		
+		bundle_map->opaque_struct_type = struct_type;
+		bundle_map->opaque_flexi_struct_type = struct_type;
 
 		auto leaf_smooth = std::make_shared<SmoothPointer>(SmoothPointer{
 			v_pointer->type, // todo: is this the right type.
@@ -47,6 +56,13 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_int->type;
 
+		auto bundle_map = std::make_shared<BundleMap>();
+		
+		v_map->bundle_id = igc->toc->bundle_registry->install(Bundle(bundle_map));
+		
+		bundle_map->opaque_struct_type = struct_type;
+		bundle_map->opaque_flexi_struct_type = struct_type;
+		
 		auto leaf_smooth = std::make_shared<SmoothInt>(SmoothInt{
 			v_int->type,
 			igc->builder->CreateExtractValue(struct_value, 0),
@@ -72,6 +88,13 @@ std::shared_ptr<SmoothStructval> structwrap(std::shared_ptr<IrGenCtx> igc, const
 
 		auto v_map = std::make_shared<TypeMap>();
 		v_map->leaf_type = v_float->type;
+
+		auto bundle_map = std::make_shared<BundleMap>();
+		
+		v_map->bundle_id = igc->toc->bundle_registry->install(Bundle(bundle_map));
+		
+		bundle_map->opaque_struct_type = struct_type;
+		bundle_map->opaque_flexi_struct_type = struct_type;
 
 		auto leaf_smooth = std::make_shared<SmoothFloat>(SmoothFloat{
 			v_float->type,

@@ -12,6 +12,7 @@
 #include "better_leaf_agnostically_translate.hpp"
 #include "structval_field_idx.hpp"
 #include "preinstantiated_smooths.hpp"
+#include "leaf_agnostically_translate.hpp"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -133,7 +134,7 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 					exit(1);
 				}
 
-				return smooth_map_empty(igc);
+				return leaf_agnostically_translate(igc, smooth_map_empty(igc), *intended_as_map, use_flexi_mode);
 			}();
 
 			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type, use_flexi_mode);
