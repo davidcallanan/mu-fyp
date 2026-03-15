@@ -88,6 +88,18 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 				exit(1);
 			}
 
+			if ((*intended_as_map)->leaf_type.has_value()) {
+				fprintf(stderr, "Cannot implicitely poopulate lief field.\n", sym_name.c_str());
+				fprintf(stderr, "You have tried to instantiate a map without a leaf, and use it somewhere expecting a leaf\n");
+				fprintf(stderr, "Other syms:");
+				
+				for (const auto& [other, _] : (*intended_as_map)->sym_inputs) {
+					fprintf(stderr, "-- %s\n", other.c_str());
+				}
+				
+				exit(1);
+			}
+
 			return leaf_agnostically_translate(igc, smooth_map_empty(igc), *intended_as_map, use_flexi_mode);
 		}();
 

@@ -26,9 +26,9 @@ type PortManager {};
 ; @PortManager:vga_cursor_low u8 0x0F;
 
 @PortManager:pit_read input {} -> {
-	this:port_controller:outb(u16 0x43, u8 0x00); PORT_PIT_COMMAND=0x43
-	this:port_controller:inb(u16 0x40); PORT_PIT_CHANNEL0=0x40
-	this:port_controller:inb(u16 0x40); PORT_PIT_CHANNEL0=0x40
+	this:port_controller:outb { :port u16 0x43, :data u8 0x00 }; PORT_PIT_COMMAND=0x43
+	this:port_controller:inb { :port u16 0x40 }; PORT_PIT_CHANNEL0=0x40
+	this:port_controller:inb { :port u16 0x40 }; PORT_PIT_CHANNEL0=0x40
 };
 
 @PortManager:rtc_read_register input {
