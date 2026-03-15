@@ -621,17 +621,24 @@ With kernel development as the core case study for this project, the ability for
 
 The LLM agent was first asked to generate documentation for the language, and subsequently to port some benchmarking code into \textit{Essence C}. The prompts and results can be found in Appendix X.
 
-Some slight guidance had to be given to the agent, but for the most part, it was well equipped to handle the task. This is promising as it shows that the agent took no issue with comprehending the unique language syntax and corresponding semantics (specifically, the notions of maps, symbols and modules). Note, however, that the build steps were all implemented manually as this is outside the scope of language comprehension.
+Some slight guidance had to be given to the agent, but for the most part, it was well equipped to handle the task. This is promising as it shows that the agent took no issue with comprehending the unique language syntax and corresponding semantics (specifically, the notions of maps, symbols and modules). Note, however, that the build steps were all implemented manually as this was outside the scope of language comprehension.
 
 \section{Benchmarking}
 
-To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks. Four procedures were benchmarked across three different implementations.
+To kill two birds with one stone, benchmarking was performed on the actual kernel ported by the AI agent, instead of creating artificial benchmarks. Four procedures were benchmarked across two different implementations.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\textwidth]{diagrams/benchmark01.png}
+  \caption{This diagram compares the C benchmark (left) with the EC benchmark (right).}
+  \label{fig:closurestuff}
+\end{figure}
 
 Procedures:
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\begin{tabular}{|l|p{12cm}|}
+\begin{tabular}{|l|p{10cm}|}
 \hline
 \textbf{Benchmark} & \textbf{Description} \\
 \hline
@@ -650,21 +657,48 @@ VGA Cursor & Updates the VGA text-mode cursor position as frequently as possible
 
 Implementation Variants:
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
-\begin{tabular}{|p{2.25cm}|p{1.5cm}|p{11cm}|}
+\begin{tabular}{|p{2.75cm}|p{12cm}|}
 \hline
-\textbf{Language} & \textbf{Mode} & \textbf{Details} \\
+\textbf{Language} & \textbf{Details} \\
 \hline
-C + NASM Assembly & N/A & Baseline implementation. Compiled with GCC with separate compilation units, with limited link-time optimization available. Instances are passed as pointer arguments, and a vtable is implemented to enable implementation swapping. This reflects a real-world C codebase that is architected to be implementation-agnostic. \\
+\textbf{A.} C + NASM Assembly & Baseline implementation. Compiled with GCC with separate compilation units, with limited link-time optimization available. Instances are passed as pointer arguments. This reflects a real-world C codebase that is architected to be implementation-agnostic. \\
+% and a vtable is implemented to enable implementation swapping
 \hline
-Essence C + LLVM IR Assembly & Dynamic & Essence C implementation. Linked with LLVM. Instances are passed as pointer arguments, and the language uses a vtable internally to enable implementation swapping. This reflects how a programmer might architect their codebase to be implementation-agnostic. \\
-\hline
-Essence C + LLVM IR Assembly & Static & Same as above, but a custom ``alwaysinline'' flag is included, and a custom ``mut'' flag is excluded, signalling to the compiler to attempt to make instances static. The compiler succeeds without requiring the programmer to make any architectural changes to their codebase. (These optimizations could be automated at a later stage without requiring these flags).\\
+\textbf{B.} Essence C + LLVM IR Assembly & Essence C implementation. Linked with LLVM. Instances are passed as pointer arguments. This reflects how a programmer might architect their codebase to be implementation-agnostic. \\
+% \hline
+
+% Essence C + LLVM IR Assembly & Same as above, but a custom ``alwaysinline'' flag is included, and a custom ``mut'' flag is excluded, signalling to the compiler to attempt to make instances static. The compiler succeeds without requiring the programmer to make any architectural changes to their codebase. (These optimizations could be automated at a later stage without requiring these flags).\\
 \hline
 \end{tabular}
-\caption{The three implementation variants tested for each benchmark.}
+\caption{The two implementation variants tested for each benchmark.}
 \label{tab:implementations}
+\end{table}
+
+Ten separate 60 second benchmarks were performed for each procedure/variant pair. To prevent contamination of the benchmarks when the code checks the remaining time (a relatively-expensive operation), the time is only checked every 100 iterations. This is why all the figures end with two zeroes.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{cccccccc}
+\toprule
+\textbf{A: PIT} & \textbf{B: PIT} & \textbf{A: RTC} & \textbf{B: RTC} & \textbf{A: Wait} & \textbf{B: Wait} & \textbf{A: VGA} & \textbf{B: VGA} \\
+\midrule
+49163700 & 37108800 & 10623000 & 24012200 & 154751400 & 321763300 & 39006700 & 65824600 \\
+32232100 & 77806900 & 13767200 & 23249400 & 159377100 & 287924800 & 44255600 & 76507800 \\
+23710900 & 9941500 & 10144100 & 23354000 & 120183500 & 303820800 & 40318000 & 76798000 \\
+10881700 & 50743900 & 12396000 & 25870600 & 163299900 & 318400500 & 41454600 & 80639600 \\
+44196800 & 40544400 & 13327600 & 24965800 & 157758500 & 306523700 & 53536100 & 83223000 \\
+35658300 & 47949300 & 12964600 & 23079700 & 167298800 & 270913000 & 53156900 & 74050200 \\
+28627000 & 24032700 & 8971100 & 21560600 & 133652700 & 289277200 & 48901400 & 82686200 \\
+38259500 & 28140800 & 13359500 & 25708000 & 161642200 & 316938000 & 48509900 & 84997100 \\
+35749500 & 17049300 & 12203400 & 20770900 & 134500000 & 309212500 & 42772800 & 85976300 \\
+27882300 & 48174300 & 14333100 & 23185700 & 170489200 & 222781600 & 51832600 & 61198300 \\
+\bottomrule
+\end{tabular}
+\caption{Each cell is the number of iterations in 60 seconds. Each row is a separate run, and each column is a separate procedure/variant pair.}
+\label{tab:benchmark_results}
 \end{table}
 
 \section{Validation}
@@ -695,6 +729,7 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
   \item The prototype compiler does not yet support cross-compilation. This means a Windows executable cannot be built from within a Linux build environment, or vice versa. Thus, everything had to be kept to Linux/WSL for now.
   \item The parser does not produce helpful error messages. Thus, one must either use a pair of eyes to identify syntax errors, or use the bulky \textit{Parser Trace Explorer} to investigate more significant issues.
   \item With more time, the entire kernel could have been migrated from \textit{GCC} to \textit{Clang}. This would have offered more realistic benchmarks given \textit{Clang}'s superior link-time optimizations over \textit{GCC}. Nonetheless, the effort of such a migration reminds us of the struggles developers face when writing software in C today -- struggles that might be less prevalent in a language like \text{Essence C} that treats LLVM IR as a first-class citizen.
+  \item One could argue that the benchmarks are contrived. It is worth clarifying that no claim is made that \text{Essence C} is faster than \text{C} in general; this would be bizarre. No undergraduated student would be expected to optimize hardware better than the giants who's shoulders we march so comfortably on. Rather, the claim applies only when \textit{C} code is intentionally architected to be flexible instead of performant, a distinction that is intended to be made transparent in \textit{Essence C} due to its module system.
   
 \end{itemize}
 

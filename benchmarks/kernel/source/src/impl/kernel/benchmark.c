@@ -3,7 +3,7 @@
 #include "x86_64/mod.h"
 #include "print.h"
 
-#define BENCHMARK_DURATION_SECONDS 5
+#define BENCHMARK_DURATION_SECONDS 60
 #define BENCHMARK_CLOCK_INTERVAL 100
 
 static void benchmark_wait_for_boundary(struct Mod* mod) {

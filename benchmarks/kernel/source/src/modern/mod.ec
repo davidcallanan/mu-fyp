@@ -18,7 +18,7 @@
 @Mod:print_color_yellow u8 14;
 @Mod:print_color_white u8 15;
 
-@Mod:benchmark_duration_seconds u64 5;
+@Mod:benchmark_duration_seconds u64 60;
 @Mod:benchmark_clock_interval u64 100;
 
 @Mod:port_manager PortManager;
