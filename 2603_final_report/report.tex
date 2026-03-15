@@ -634,8 +634,6 @@ To kill two birds with one stone, benchmarking was performed on the actual kerne
   \label{fig:closurestuff}
 \end{figure}
 
-Procedures:
-
 \begin{table}[H]
 \centering
 \begin{tabular}{|l|p{10cm}|}
@@ -651,15 +649,13 @@ I/O Wait & Triggers the ``0x80'' hardware request as frequently as possible via 
 VGA Cursor & Updates the VGA text-mode cursor position as frequently as possible via the same interface. This cursor position controls where text would be printed on the screen when using the basic VGA text interface exposed by the hardware. \\
 \hline
 \end{tabular}
-\caption{The four kernel procedures that are benchmarked.}
+\caption{(Procedures) The four kernel procedures that are benchmarked.}
 \label{tab:benchmarks}
 \end{table}
 
-Implementation Variants:
-
 \begin{table}[H]
 \centering
-\begin{tabular}{|p{2.75cm}|p{12cm}|}
+\begin{tabular}{|p{4.75cm}|p{10cm}|}
 \hline
 \textbf{Language} & \textbf{Details} \\
 \hline
@@ -672,7 +668,7 @@ Implementation Variants:
 % Essence C + LLVM IR Assembly & Same as above, but a custom ``alwaysinline'' flag is included, and a custom ``mut'' flag is excluded, signalling to the compiler to attempt to make instances static. The compiler succeeds without requiring the programmer to make any architectural changes to their codebase. (These optimizations could be automated at a later stage without requiring these flags).\\
 \hline
 \end{tabular}
-\caption{The two implementation variants tested for each benchmark.}
+\caption{(Implementations) The two implementation variants tested for each benchmark.}
 \label{tab:implementations}
 \end{table}
 
@@ -701,7 +697,37 @@ Ten separate 60 second benchmarks were performed for each procedure/variant pair
 \label{tab:benchmark_results}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{diagrams/benchmarks_page1_raw}
+\caption{Benchmark results: Raw iteration counts per procedure and implementation.}
+\label{fig:benchmarks_raw}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{diagrams/benchmarks_page2_cv}
+\caption{Benchmark results: Coefficient of variation across runs.}
+\label{fig:benchmarks_cv}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{diagrams/benchmarks_page3_hypothesis}
+\caption{Benchmark results: Hypothesis testing between implementations.}
+\label{fig:benchmarks_hypothesis}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{diagrams/benchmarks_page4_forest}
+\caption{Benchmark results: Forest plot.}
+\label{fig:benchmarks_forest}
+\end{figure}
+
 \section{Validation}
+
+A successful language was designed and a compiler written such that an LLM agent was capable of porting some previously written x86 kernel code from \textit{C} to \textit{Essence C}, subject to some human intervention and mollycoddling. The benchmarks reveal a promising, statistically-significant performance gain in 3 out of 4 hardware operations. While the design of the language promotes module flexibility, the compiler itself is buggy, does not yet implement vtables, and the static analysis is limited, hinging significantly on LLVM's existing optimizations. Overall, the project is at its prime for future development and the prototype validates its long-term potential.
 
 \chapter{Conclusion (930)}
 
