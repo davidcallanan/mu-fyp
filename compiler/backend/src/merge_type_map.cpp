@@ -39,7 +39,13 @@ std::shared_ptr<TypeMap> merge_type_map(std::shared_ptr<TypeMap> map_a, std::sha
 		
 		merged->leaf_type = Type(new_merged_wrapper);
 	} else if (map_a->leaf_type.has_value()) {
-		merged->leaf_type = map_a->leaf_type;
+		fprintf(stderr, "One side has leaf (left side)...");
+		fprintf(stderr, "Expect buggy behaviour");
+		exit(1);
+	} else if (map_b->leaf_type.has_value()) {
+		fprintf(stderr, "One side has leaf (right sisde)...");
+		fprintf(stderr, "Expect buggy behaviour");
+		exit(1);
 	}
 	
 	if (map_a->call_input_type != nullptr) {
