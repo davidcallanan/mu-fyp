@@ -36,7 +36,7 @@
 };
 
 @Mod:benchmark_pit input {} -> {
-	mod:benchmark_head { :name "\n\n>> PIT" };
+	mod:benchmark_head { :name "PIT" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -64,7 +64,7 @@
 };
 
 @Mod:benchmark_rtc input {} -> {
-	mod:benchmark_head { :name "\n\n>> RTC" };
+	mod:benchmark_head { :name "RTC" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -91,7 +91,7 @@
 };
 
 @Mod:benchmark_io_wait input {} -> {
-	mod:benchmark_head { :name "\n\n>> IO Wait" };
+	mod:benchmark_head { :name "IO Wait" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -118,7 +118,7 @@
 };
 		
 @Mod:benchmark_vga_cursor input {} -> {
-	mod:benchmark_head { :name "\n\n>> VGA Cursor" };
+	mod:benchmark_head { :name "VGA Cursor" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
