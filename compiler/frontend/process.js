@@ -692,11 +692,11 @@ const constraint_map_braced_multiline = rule("constraint_map_braced_multiline", 
 		MANDATORY_NEWLINE,
 		opt_multi(
 			or(
+				map_entry_semiless,
 				mapData(
 					join(map_entry, SEMI),
 					(data) => data[0],
 				),
-				map_entry_semiless,
 			),
 		),
 		RBRACE,
@@ -812,11 +812,11 @@ const constraint_map_braced_multiline_bb = rule("constraint_map_braced_multiline
 		MANDATORY_NEWLINE,
 		opt_multi(
 			or(
+				map_entry_semiless,
 				mapData(
 					join(map_entry, SEMI),
 					(data) => data[0],
 				),
-				map_entry_semiless,
 			),
 		),
 		RBRACE,

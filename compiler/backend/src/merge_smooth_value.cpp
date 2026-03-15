@@ -75,6 +75,8 @@ std::shared_ptr<SmoothStructval> merge_smooth_structval(
 		}
 
 		value_merged = replaced_value;
+	} else {
+		uptodate_smooths = structval_b->field_smooths; // currently only using b value still!
 	}
 
 	return std::make_shared<SmoothStructval>(SmoothStructval{
