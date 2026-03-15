@@ -1,5 +1,7 @@
 #include "leaf_agnostically_translate.hpp"
 
+#define TMP_ALLOW_IMPLICIT_BIT_CHOPPING 1
+
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 #include "t_ctx.hpp"
@@ -167,6 +169,11 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 		llvm::Value* desired = force_identical_layout(igc, new_member_values[i], expected);
 		
 		if (desired->getType() != expected) {
+#if TMP_ALLOW_IMPLICIT_BIT_CHOPPING
+			if (desired->getType()->isIntegerTy() && expected->isIntegerTy()) {
+				desired = igc->builder->CreateTrunc(desired, expected);
+			} else {
+#endif
 			fprintf(stderr, "leaf_agnostically_translate struggled with %zu\n", i);
 			fprintf(stderr, "WANTED:");
 			expected->print(llvm::errs());
@@ -177,6 +184,9 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 			fprintf(stderr, "- use_flexi_mode: %s\n", use_flexi_mode ? "true" : "false");
 			fprintf(stderr, "Did you run the smooth through happy_smooth before calling leaf_agnostically_translate?\n");
 			exit(1);
+#if TMP_ALLOW_IMPLICIT_BIT_CHOPPING
+			}
+#endif
 		}
 		
 		translated_outcome_value = igc->builder->CreateInsertValue(translated_outcome_value, desired, (unsigned) i);

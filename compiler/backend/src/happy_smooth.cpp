@@ -1,4 +1,7 @@
 #include "happy_smooth.hpp"
+
+#define TMP_ALLOW_IMPLICIT_BIT_CHOPPING 1
+
 #include "t_smooth.hpp"
 #include "t_types.hpp"
 #include "t_ctx.hpp"
@@ -193,7 +196,12 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			llvm::Value* desired_value = force_identical_layout(igc, new_member_values[i], what_we_really_want);
 			
 			if (desired_value->getType() != what_we_really_want) {
-				fprintf(stderr, "leaf_agnostically_translate struggled with %zu\n", i);
+#if TMP_ALLOW_IMPLICIT_BIT_CHOPPING
+				if (desired_value->getType()->isIntegerTy() && what_we_really_want->isIntegerTy()) {
+					desired_value = igc->builder->CreateTrunc(desired_value, what_we_really_want);
+				} else {
+#endif
+				fprintf(stderr, "happy_smooth struggled with %zu\n", i);
 				fprintf(stderr, "WANTED:");
 				what_we_really_want->print(llvm::errs());
 				fprintf(stderr, "\nGHOT:");
@@ -202,6 +210,9 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 				fprintf(stderr, "- num sym inputs: %zu\n", v_map->sym_inputs.size());
 				fprintf(stderr, "- use_flexi_mode: %s\n", use_flexi_mode ? "true" : "false");
 				exit(1);
+#if TMP_ALLOW_IMPLICIT_BIT_CHOPPING
+				}
+#endif
 			}
 		
 			fancy_value = igc->builder->CreateInsertValue(fancy_value, desired_value, (unsigned) i);

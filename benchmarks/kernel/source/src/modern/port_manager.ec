@@ -93,12 +93,18 @@ type PortManager {};
 @PortManager:vga_cursor_update input {
 	:pos u16;
 } -> {
-	; pos_high := u8 input:pos >> u16 8;
-	; pos_low := u8 input:pos b& u16 0xFF;
-	; this:port_controller:outb(u16 0x3D4, u8 0x0E); PORT_VGA_CURSOR_COMMAND=0x3D4, VGA_CURSOR_HIGH=0x0E
-	; this:port_controller:outb(u16 0x3D5, pos_high); PORT_VGA_CURSOR_DATA=0x3D5
-	; this:port_controller:outb(u16 0x3D4, u8 0x0F); PORT_VGA_CURSOR_COMMAND=0x3D4, VGA_CURSOR_LOW=0x0F
-	; this:port_controller:outb(u16 0x3D5, pos_low); PORT_VGA_CURSOR_DATA=0x3D5
+	tmp := (: u16 8);
+	tmp2 := (: input:pos >> tmp);
+	pos_high := u8 tmp2; VGA_CURSOR_HIGH_BYTE
+	
+	tmp3 := (: u16 0xFF);
+	tmp4 := (: input:pos b& tmp3);
+	pos_low := u8 tmp4; VGA_CURSOR_LOW_BYTE
+	
+	this:port_controller:outb { :port u16 0x3D4, :data u8 0x0E }; PORT_VGA_CURSOR_COMMAND=0x3D4, VGA_CURSOR_HIGH=0x0E
+	this:port_controller:outb { :port u16 0x3D5, :data pos_high }; PORT_VGA_CURSOR_DATA=0x3D5
+	this:port_controller:outb { :port u16 0x3D4, :data u8 0x0F }; PORT_VGA_CURSOR_COMMAND=0x3D4, VGA_CURSOR_LOW=0x0F
+	this:port_controller:outb { :port u16 0x3D5, :data pos_low }; PORT_VGA_CURSOR_DATA=0x3D5
 };
 
 @Mod:port_manager_create input {} -> PortManager {
