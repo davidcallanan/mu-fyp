@@ -77,7 +77,8 @@ type PortManager {};
 		low := seconds_b b& (: u8 0x0F);
 	 	high_raw := seconds_b b& (: u8 0xF0);
 	 	high := high_raw >> (: u8 4);
-	 	; result = low + high * (: u8 10);
+		intermediate := high * (: u8 10);
+	 	result = low + intermediate;
 	} else {
 	 	result = seconds_b;
 	}
