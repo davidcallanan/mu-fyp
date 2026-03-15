@@ -11,6 +11,8 @@
 @Mod:print_set_color extern ccc "print_set_color" (u8, u8) -> ();
 
 @Mod:print_color_black u8 0;
+@Mod:print_color_blue u8 1;
+@Mod:print_color_red u8 4;
 @Mod:print_color_cyan u8 3;
 @Mod:print_color_light_gray u8 7;
 @Mod:print_color_yellow u8 14;
@@ -24,6 +26,8 @@
 create extern ccc "run_benchmarks" () -> {
 	mod:port_manager = mod:port_manager_create {};
 
+	mod:print_set_color(mod:print_color_white, mod:print_color_red);
+	mod:print_str("Benchmark Mode B - EC Version");
 	mod:print_set_color(mod:print_color_white, mod:print_color_black);
 	mod:print_str("\n\n=== Port I/O Benchmark ===\n");
 	mod:print_set_color(mod:print_color_light_gray, mod:print_color_black);

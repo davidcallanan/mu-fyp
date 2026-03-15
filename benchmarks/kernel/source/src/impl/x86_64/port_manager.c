@@ -7,10 +7,10 @@
 #define PORT_PIT_CHANNEL0 0x40
 #define PORT_PIT_COMMAND 0x43
 
-static void pit_read(struct PortManager* this) {
-	this->port_controller->vtable->outb(PORT_PIT_COMMAND, 0x00);
-	this->port_controller->vtable->inb(PORT_PIT_CHANNEL0);
-	this->port_controller->vtable->inb(PORT_PIT_CHANNEL0);
+void port_manager__pit_read(struct PortManager* this) {
+	port_controller__outb(this->port_controller, PORT_PIT_COMMAND, 0x00);
+	port_controller__inb(this->port_controller, PORT_PIT_CHANNEL0);
+	port_controller__inb(this->port_controller, PORT_PIT_CHANNEL0);
 }
 
 // Real-Time Clock
@@ -24,15 +24,15 @@ static void pit_read(struct PortManager* this) {
 #define RTC_DATA_MODE (1 << 2)
 
 static uint8_t rtc_read_register(struct PortManager* this, uint8_t reg) {
-	this->port_controller->vtable->outb(PORT_RTC_COMMAND, reg);
-	return this->port_controller->vtable->inb(PORT_RTC_DATA);
+	port_controller__outb(this->port_controller, PORT_RTC_COMMAND, reg);
+	return port_controller__inb(this->port_controller, PORT_RTC_DATA);
 }
 
 static void rtc_wait(struct PortManager* this) {
 	while (rtc_read_register(this, RTC_REGISTER_STATUS_A) & RTC_UPDATE_IN_PROGRESS);
 }
 
-static uint8_t rtc_seconds(struct PortManager* this) {
+uint8_t port_manager__rtc_seconds(struct PortManager* this) {
 	uint8_t seconds_a;
 	uint8_t seconds_b;
 	uint8_t is_bcd = !(rtc_read_register(this, RTC_REGISTER_STATUS_B) & RTC_DATA_MODE);
@@ -53,8 +53,8 @@ static uint8_t rtc_seconds(struct PortManager* this) {
 
 // IO Waiting
 
-static void io_wait(struct PortManager* this) {
-	this->port_controller->vtable->inb(0x80);
+void port_manager__io_wait(struct PortManager* this) {
+	port_controller__inb(this->port_controller, 0x80);
 }
 
 // VGA Stuff
@@ -64,11 +64,11 @@ static void io_wait(struct PortManager* this) {
 #define VGA_CURSOR_HIGH 0x0E
 #define VGA_CURSOR_LOW 0x0F
 
-static void vga_cursor_update(struct PortManager* this, uint16_t pos) {
-	this->port_controller->vtable->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_HIGH);
-	this->port_controller->vtable->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos >> 8));
-	this->port_controller->vtable->outb(PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_LOW);
-	this->port_controller->vtable->outb(PORT_VGA_CURSOR_DATA, (uint8_t)(pos & 0xFF));
+void port_manager__vga_cursor_update(struct PortManager* this, uint16_t pos) {
+	port_controller__outb(this->port_controller, PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_HIGH);
+	port_controller__outb(this->port_controller, PORT_VGA_CURSOR_DATA, (uint8_t)(pos >> 8));
+	port_controller__outb(this->port_controller, PORT_VGA_CURSOR_COMMAND, VGA_CURSOR_LOW);
+	port_controller__outb(this->port_controller, PORT_VGA_CURSOR_DATA, (uint8_t)(pos & 0xFF));
 }
 
 // Manager
@@ -78,14 +78,14 @@ struct PortManager* port_manager__create() {
 	
 	this->port_controller = port_controller__create();
 	
-	struct PortManagerVtable* vtable = heap_alloc(sizeof(struct PortManagerVtable));
+	// struct PortManagerVtable* vtable = heap_alloc(sizeof(struct PortManagerVtable));
 	
-	this->vtable = vtable;
+	// this->vtable = vtable;
 	
-	vtable->pit_read = pit_read;
-	vtable->rtc_seconds = rtc_seconds;
-	vtable->io_wait = io_wait;
-	vtable->vga_cursor_update = vga_cursor_update;
+	// vtable->pit_read = pit_read;
+	// vtable->rtc_seconds = rtc_seconds;
+	// vtable->io_wait = io_wait;
+	// vtable->vga_cursor_update = vga_cursor_update;
 
 	return this;
 }
