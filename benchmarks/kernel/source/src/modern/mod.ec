@@ -34,7 +34,7 @@ create extern ccc "run_benchmarks" () -> {
 
 	mod:benchmark_pit {};
 	mod:benchmark_rtc {};
-	; mod:benchmark_io_wait {};
+	mod:benchmark_io_wait {};
 	; mod:benchmark_vga_cursor {};
 
 	mod:print_set_color(mod:print_color_white, mod:print_color_black);

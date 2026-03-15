@@ -87,7 +87,7 @@ type PortManager {};
 };
 
 @PortManager:io_wait input {} -> {
-	; this:port_controller:inb(u16 0x80);
+	this:port_controller:inb { :port u16 0x80 }; PORT_IO_WAIT=0x80
 };
 
 @PortManager:vga_cursor_update input {
