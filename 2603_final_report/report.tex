@@ -707,6 +707,14 @@ Build times consistently exceeding 90 seconds. This is dreadful when debugging a
 
 \appendix
 
+\includepdf[
+    pages={1},
+    frame, 
+    scale=0.6, 
+    pagecommand={\thispagestyle{plain}
+\chapter{Record of Meetings} \vspace{175mm}}
+]{./appendix_meetings.pdf}
+
 \newpage
 
 \chapter{Screenshots}
@@ -728,7 +736,6 @@ Build artifacts and other uninteresting files have been omitted from this append
 \chapter{LLM Prompts}
 
 % \input{appendix_llm_prompts.tex}
-
 
 \includepdf[
     pages={1},

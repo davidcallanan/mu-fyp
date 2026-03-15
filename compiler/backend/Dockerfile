@@ -1,9 +1,8 @@
 FROM ubuntu:24.04
 
-RUN apt-get update
-
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y --fix-missing \
 	make \
+	gdb \
 	# LLVM toolchain
 	llvm-17 \
 	llvm-17-dev \

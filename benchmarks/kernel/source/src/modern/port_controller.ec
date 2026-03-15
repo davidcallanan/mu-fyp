@@ -18,12 +18,12 @@ type U8Result (u8);
 ; 	:0 u8 123;
 ; };
 
-; @PortController:outb input {
-; 	:port u16;
-; 	:data u8;
-; } -> {
-; 	mod:port_outb(input:port, input:data);
-; };
+@PortController:outb input {
+	:port u16;
+	:data u8;
+} -> {
+	mod:port_outb(input:port, input:data);
+};
 
 @Mod:port_controller_create input {} -> PortController {
 	; raw := mod:heap_alloc(sizeof(PortController)):0;

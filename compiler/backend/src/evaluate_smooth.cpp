@@ -868,6 +868,11 @@ Smooth evaluate_smooth(
 			Smooth enhanced = leaf_surfacally_translate(igc, wrapped_up, Type((*actual_target_type)->call_input_type));
 			Smooth upgraded = happy_smooth(igc, enhanced, Type((*actual_target_type)->call_input_type), true);
 			
+			if (!(*actual_target)->call_func) {
+				fprintf(stderr, "call_func was not set (TypeCallWithDynamic)\n");
+				exit(1);
+			}
+
 			llvm::Function* my_call_func = (*actual_target)->call_func();
 			llvm::Function* my_call_func_alwaysinline = (*actual_target)->call_func_alwaysinline ? (*actual_target)->call_func_alwaysinline() : nullptr;
 			
