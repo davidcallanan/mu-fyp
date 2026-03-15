@@ -5,7 +5,7 @@ MODE ?= MODE_A
 
 CC := x86_64-elf-gcc
 LD := x86_64-elf-ld
-LLC := llc-15
+LLC := llc-16
 
 kernel_source_files := $(shell find src/impl/kernel -name *.c)
 ifeq ($(MODE),MODE_B)

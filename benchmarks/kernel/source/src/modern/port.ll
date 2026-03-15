@@ -14,7 +14,12 @@ define void @port_outb(i16 %port, i8 %data) nounwind {
 	ret void
 }
 
+declare void @print_str(i8* %string)
+declare void @print_char(i8 %character)
+
 ; int puts(const char *s)
 define i32 @puts(i8* %s) nounwind {
+	call void @print_str(i8* %s)
+	call void @print_char(i8 10)
 	ret i32 0
 }
