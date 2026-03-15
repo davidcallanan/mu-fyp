@@ -33,7 +33,7 @@ create extern ccc "run_benchmarks" () -> {
 	mod:print_str("s");
 
 	mod:benchmark_pit {};
-	; mod:benchmark_rtc {};
+	mod:benchmark_rtc {};
 	; mod:benchmark_io_wait {};
 	; mod:benchmark_vga_cursor {};
 

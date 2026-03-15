@@ -7,10 +7,6 @@
 	for {
 		next = mod:port_manager:rtc_seconds {}:0;
 		
-		log("blah");
-		log_d(next);
-		log_d(orig);
-		
 		if (next != orig) {
 			break;
 		}
@@ -41,21 +37,16 @@
 
 @Mod:benchmark_pit input {} -> {
 	mod:benchmark_head { :name "\n\n>> PIT" };
-	log("waiting for boundary");
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
 	mut count := u64 0;
-	
-	log("started");
 
 	for {
 		mod:port_manager:pit_read {};
 		count = count + u64 1;
 
 		check := count % mod:benchmark_clock_interval;
-		
-		log_d(count);
 		
 		if (check == u64 0) {
 			seconds := mod:port_manager:rtc_seconds {}:0;
@@ -68,8 +59,6 @@
 			}
 		}
 	}
-	
-	log("finished");
 
 	mod:benchmark_dump { :name "PIT", :count count };
 };
@@ -81,23 +70,24 @@
 	start := mod:port_manager:rtc_seconds {}:0;
 	mut count := u64 0;
 
-	; for {
-	; 	mod:port_manager:rtc_seconds {};
-	; 	count = count + u64 1;
+	for {
+		mod:port_manager:rtc_seconds {};
+		count = count + u64 1;
 
-	; 	check := count % mod:benchmark_clock_interval;
-	; 	if (check == u64 0) {
-	; 		seconds := mod:port_manager:rtc_seconds {}:0;
-	; 		diff := seconds - start;
-	; 		elapsed := u8 diff;
-	; 		duration := u8 mod:benchmark_duration_seconds;
-	; 		if (elapsed >= duration) {
-	; 			break;
-	; 		}
-	; 	}
-	; }
+		check := count % mod:benchmark_clock_interval;
+		if (check == u64 0) {
+			seconds := mod:port_manager:rtc_seconds {}:0;
+			diff := seconds - start;
+			elapsed := u8 diff;
+			duration := u8 (: mod:benchmark_duration_seconds);
 
-	; mod:benchmark_dump { :name "RTC", :count count };
+			if (elapsed >= duration) {
+				break;
+			}
+		}
+	}
+
+	mod:benchmark_dump { :name "RTC", :count count };
 };
 
 @Mod:benchmark_io_wait input {} -> {
