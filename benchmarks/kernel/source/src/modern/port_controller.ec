@@ -11,18 +11,17 @@ type U8Result (u8);
 
 ; @Mod:heap_alloc extern ccc "heap_alloc" (u64) -> (*void);
 
-; @PortController:inb input {
-; 	; :port u16;
-; } -> U8Result {
-; 	; :0 mod:port_inb(input:port):0;
-; 	:0 u8 123;
-; };
+@PortController:inb input {
+	:port u16;
+} -> U8Result {
+	:0 mod:port_inb(input:port):0;
+};
 
 @PortController:outb input {
 	:port u16;
 	:data u8;
 } -> {
-	; mod:port_outb(input:port, input:data);
+	mod:port_outb(input:port, input:data);
 };
 
 @Mod:port_controller_create input {} -> PortController {

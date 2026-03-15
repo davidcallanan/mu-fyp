@@ -67,6 +67,8 @@ llvm::Function* produce_call_func(
 		return nullptr;
 	}
 
+	fprintf(stderr, "building call_func for bundle %d\n", map->bundle_id.value());
+
 	DummyIgc dummy1 = create_dummy_igc(igc);
 	// auto input_shell = clone_type_map_for_mutation(igc, map->call_input_type);
 	// we cannot clear, we need to process the syms to know what types they are.

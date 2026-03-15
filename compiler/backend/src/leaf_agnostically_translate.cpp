@@ -70,11 +70,16 @@ Smooth leaf_agnostically_translate(std::shared_ptr<IrGenCtx> igc, Smooth smooth,
 				return v_structval->field_smooths[source_idx.value()];
 			}
 
+			fprintf(stderr, "Implicitely populating missing field with {}");
+			
 			Type intended_type = get_underlying_type(*sym_type);
+			
 			auto intended_as_map = std::get_if<std::shared_ptr<TypeMap>>(&intended_type);
-
+			
 			if (!intended_as_map) {
-				fprintf(stderr, "leaf_agnostically_translate: sym '%s' missing from source and target type is not a map\n", sym_name.c_str());
+				fprintf(stderr, "Failed to implicitely populate missing field, because it wasn't a map. %s\n", sym_name.c_str());
+				fprintf(stderr, "Did you make a map, and force upon it a type, containing syms that you forgot the populate?");
+				fprintf(stderr, "Did you forget to populate '%s'?", sym_name.c_str());
 				exit(1);
 			}
 

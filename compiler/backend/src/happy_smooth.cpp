@@ -10,6 +10,8 @@
 #include "llvm_value.hpp"
 #include "force_identical_layout.hpp"
 #include "better_leaf_agnostically_translate.hpp"
+#include "structval_field_idx.hpp"
+#include "preinstantiated_smooths.hpp"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
@@ -85,8 +87,6 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			return smooth;
 		}
 
-		unsigned member_idx = 0;
-		
 		// std::vector<llvm::Type*> new_member_types;
 		std::vector<llvm::Value*> new_member_values;
 		std::vector<Smooth> converted_field_smooths;
@@ -96,7 +96,7 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			&& v_map->leaf_type.has_value()
 			&& !is_type_singletonish(v_map->leaf_type.value())
 		) {
-			Smooth field_smooth = v_structval->field_smooths[member_idx];
+			Smooth field_smooth = v_structval->field_smooths[0];
 			Smooth field_happy = happy_smooth(igc, field_smooth, v_map->leaf_type.value(), use_flexi_mode);
 			Smooth field_translated = better_leaf_agnostically_translate(igc, field_happy, v_map->leaf_type.value(), use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_translated);
@@ -106,8 +106,6 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			converted_field_smooths.push_back(field_translated);
 			
 			brand_new_leaf = field_translated;
-			
-			member_idx++;
 		}
 
 		for (const auto& [sym_name, sym_type] : v_map->sym_inputs) {
@@ -115,7 +113,29 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 				continue;
 			}
 
-			Smooth field_smooth = v_structval->field_smooths[member_idx];
+			auto source_idx = structval_field_idx(v_structval, sym_name);
+
+			Smooth field_smooth = [&]() -> Smooth {
+				if (source_idx.has_value()) {
+					return v_structval->field_smooths[source_idx.value()];
+				}
+
+				fprintf(stderr, "Implicitely populating missing field with {}");
+
+				Type intended_type = get_underlying_type(*sym_type);
+
+				auto intended_as_map = std::get_if<std::shared_ptr<TypeMap>>(&intended_type);
+
+				if (!intended_as_map) {
+					fprintf(stderr, "Failed to implicitely populate missing field, because it wasn't a map. %s\n", sym_name.c_str());
+					fprintf(stderr, "Did you make a map, and force upon it a type, containing syms that you forgot the populate?");
+					fprintf(stderr, "Did you forget to populate '%s'?", sym_name.c_str());
+					exit(1);
+				}
+
+				return smooth_map_empty(igc);
+			}();
+
 			Smooth field_happy = happy_smooth(igc, field_smooth, *sym_type, use_flexi_mode);
 			Smooth field_translated = better_leaf_agnostically_translate(igc, field_happy, *sym_type, use_flexi_mode);
 			llvm::Value* field_happy_value = llvm_value(field_translated);
@@ -123,8 +143,6 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 			// new_member_types.push_back(field_happy_value->getType());
 			new_member_values.push_back(field_happy_value);
 			converted_field_smooths.push_back(field_translated);
-			
-			member_idx++;
 		}
 
 		if (!v_map->bundle_id.has_value()) {
