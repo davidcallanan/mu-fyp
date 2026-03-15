@@ -6,12 +6,14 @@
 #include "access_member.hpp"
 #include "t_types.hpp"
 #include "t_smooth.hpp"
+#include "t_bundles.hpp"
 #include "get_underlying_type.hpp"
 #include "llvm_to_smooth.hpp"
 #include "is_type_singletonish.hpp"
 #include "evaluate_singletonish.hpp"
 #include "smooth_type.hpp"
 #include "is_structval_leaf_physical.hpp"
+#include "produce_call_func.hpp"
 
 Smooth access_member(
 	std::shared_ptr<IrGenCtx> igc,
@@ -82,6 +84,13 @@ Smooth access_member(
 				{},
 				std::nullopt,
 			});
+
+			auto bundle_map = std::make_shared<BundleMap>();
+			uint64_t bundle_id = igc->toc->bundle_registry->install(Bundle(bundle_map));
+			
+			actual_map->bundle_id = bundle_id;
+			bundle_map->opaque_struct_type = wrapped_pointer;
+			bundle_map->opaque_flexi_struct_type = wrapped_pointer;
 
 			auto leaf_smooth = std::make_shared<SmoothPointer>(SmoothPointer{
 				unclear_type,

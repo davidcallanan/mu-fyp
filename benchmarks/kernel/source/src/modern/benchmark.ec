@@ -35,7 +35,7 @@
 };
 
 @Mod:benchmark_pit input {} -> {
-	mod:benchmark_head("\n\n>> PIT");
+	mod:benchmark_head { :name "\n\n>> PIT" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -57,11 +57,11 @@
 		}
 	}
 
-	mod:benchmark_dump("PIT", count);
+	mod:benchmark_dump { :name "PIT", :count count };
 };
 
 @Mod:benchmark_rtc input {} -> {
-	mod:benchmark_head("\n\n>> RTC");
+	mod:benchmark_head { :name "\n\n>> RTC" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -83,11 +83,11 @@
 		}
 	}
 
-	mod:benchmark_dump("RTC", count);
+	mod:benchmark_dump { :name "RTC", :count count };
 };
 
 @Mod:benchmark_io_wait input {} -> {
-	mod:benchmark_head("\n\n>> IO Wait");
+	mod:benchmark_head { :name "\n\n>> IO Wait" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -109,11 +109,11 @@
 		}	
 	}
 
-	mod:benchmark_dump("IO Wait", count);
+	mod:benchmark_dump { :name "IO Wait", :count count };
 };
 		
 @Mod:benchmark_vga_cursor input {} -> {
-	mod:benchmark_head("\n\n>> VGA Cursor");
+	mod:benchmark_head { :name "\n\n>> VGA Cursor" };
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
@@ -161,5 +161,5 @@
 		}
 	}
 
-	mod:benchmark_dump("VGA Cursor", count);
+	mod:benchmark_dump { :name "VGA Cursor", :count count };
 };

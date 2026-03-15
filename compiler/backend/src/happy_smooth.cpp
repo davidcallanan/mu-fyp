@@ -120,7 +120,7 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 					return v_structval->field_smooths[source_idx.value()];
 				}
 
-				fprintf(stderr, "Implicitely populating missing field with {}");
+				fprintf(stderr, "Implicitely populating missing field with {}\n");
 
 				Type intended_type = get_underlying_type(*sym_type);
 
@@ -128,8 +128,8 @@ Smooth happy_smooth(std::shared_ptr<IrGenCtx> igc, Smooth smooth, const Type& ty
 
 				if (!intended_as_map) {
 					fprintf(stderr, "Failed to implicitely populate missing field, because it wasn't a map. %s\n", sym_name.c_str());
-					fprintf(stderr, "Did you make a map, and force upon it a type, containing syms that you forgot the populate?");
-					fprintf(stderr, "Did you forget to populate '%s'?", sym_name.c_str());
+					fprintf(stderr, "Did you make a map, and force upon it a type, containing syms that you forgot the populate?\n");
+					fprintf(stderr, "Did you forget to populate '%s'?\n", sym_name.c_str());
 					exit(1);
 				}
 
