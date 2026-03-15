@@ -4,12 +4,17 @@
 	mut orig := mod:port_manager:rtc_seconds {}:0;
 	mut next := orig;
 
-	; for {
-	; 	next = mod:port_manager:rtc_seconds {}:0;
-	; 	if (next != orig) {
-	; 		break;
-	; 	}
-	; }
+	for {
+		next = mod:port_manager:rtc_seconds {}:0;
+		
+		log("blah");
+		log_d(next);
+		log_d(orig);
+		
+		if (next != orig) {
+			break;
+		}
+	}
 };
 
 @Mod:benchmark_head input {
@@ -36,10 +41,13 @@
 
 @Mod:benchmark_pit input {} -> {
 	mod:benchmark_head { :name "\n\n>> PIT" };
+	log("waiting for boundary");
 	mod:benchmark_wait_for_boundary {};
 
 	start := mod:port_manager:rtc_seconds {}:0;
 	mut count := u64 0;
+	
+	log("started");
 
 	for {
 		mod:port_manager:pit_read {};
@@ -60,6 +68,8 @@
 			}
 		}
 	}
+	
+	log("finished");
 
 	mod:benchmark_dump { :name "PIT", :count count };
 };

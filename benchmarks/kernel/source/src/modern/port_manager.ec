@@ -34,58 +34,55 @@ type PortManager {};
 @PortManager:rtc_read_register input {
 	:reg u8;
 } -> U8Result {
-	; this:port_controller:outb(u16 0x70, input:reg); PORT_RTC_COMMAND=0x70
-	; result := this:port_controller:inb(u16 0x71):0; PORT_RTC_DATA=0x71
-	; :0 result;
+	this:port_controller:outb { :port u16 0x70, :data input:reg }; PORT_RTC_COMMAND=0x70
+	result := this:port_controller:inb { :port u16 0x71 }:0; PORT_RTC_DATA=0x71
+	:0 result;
 };
 
 @PortManager:rtc_wait input {} -> {
-	; that := this;
-	
-	; f;or {
-	; 	status := that:rtc_read_register(u8 0x0A):0; RTC_REGISTER_STATUS_A=0x0A
-	; 	still_updating := status b& u8 0x80; RTC_UPDATE_IN_PROGRESS=0x80
-	; 	if (still_updating == u8 0) {
-	; 		break;
-	; 	}
-	; }
+	that := this;
+
+	for {
+		status := that:rtc_read_register { :reg u8 0x0A }:0; RTC_REGISTER_STATUS_A=0x0A
+		still_updating := status b& u8 0x80; RTC_UPDATE_IN_PROGRESS=0x80
+		if (still_updating == u8 0) {
+			break;
+		}
+	}
 };
 
 @PortManager:rtc_seconds input {} -> U8Result {
-	; that := this;
-	
-	; is_bcd_raw := that:rtc_read_register(u8 0x0B):0; RTC_REGISTER_STATUS_B=0x0B
-	; has_data_mode := is_bcd_raw b& u8 4; RTC_DATA_MODE=4
-	; is_bcd := has_data_mode == u8 0;
+	that := this;
 
-	; mut seconds_a := u8 0;
-	; mut seconds_b := u8 0;
+	is_bcd_raw := that:rtc_read_register { :reg u8 0x0B }:0; RTC_REGISTER_STATUS_B=0x0B
+	has_data_mode := is_bcd_raw b& u8 4; RTC_DATA_MODE=4
+	is_bcd := has_data_mode == u8 0;
 
-	; f_or {
-	; 	that:rtc_wait {};
-	; 	seconds_a = that:rtc_read_register(u8 0x00):0; RTC_REGISTER_SECONDS=0x00
-	; 	that:rtc_wait {};
-	; 	seconds_b = that:rtc_read_register(u8 0x00):0; RTC_REGISTER_SECONDS=0x00
-		
-	; 	if (seconds_a == seconds_b) {
-	; 		break;
-	; 	}
-	; }
+	mut seconds_a := u8 0;
+	mut seconds_b := u8 0;
 
-	; mut result := u8 0;
+	for {
+	 	that:rtc_wait {};
+	 	seconds_a = that:rtc_read_register { :reg u8 0x00 }:0; RTC_REGISTER_SECONDS=0x00
+	 	that:rtc_wait {};
+	 	seconds_b = that:rtc_read_register { :reg u8 0x00 }:0; RTC_REGISTER_SECONDS=0x00
+	 	if (seconds_a == seconds_b) {
+	 		break;
+	 	}
+	}
 
-	; if (is_bcd) {
-	; 	low := seconds_b b& u8 0x0F;
-	; 	high_raw := seconds_b b& u8 0xF0;
-	; 	high := high_raw >> u8 4;
-	; 	result = low + high * u8 10;
-	; } else {
-	; 	result = seconds_b;
-	; }
+	mut result := u8 0;
 
-	; :0 result;
-	
-	:0 123;
+	if (is_bcd) {
+		low := seconds_b b& (: u8 0x0F);
+	 	high_raw := seconds_b b& (: u8 0xF0);
+	 	high := high_raw >> (: u8 4);
+	 	; result = low + high * (: u8 10);
+	} else {
+	 	result = seconds_b;
+	}
+
+	:0 result;
 };
 
 @PortManager:io_wait input {} -> {
