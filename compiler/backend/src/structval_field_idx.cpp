@@ -5,9 +5,11 @@
 #include "t_types.hpp"
 #include "t_smooth.hpp"
 #include "map_sym_idx.hpp"
+#include "get_underlying_type.hpp"
 
 std::optional<size_t> structval_field_idx(std::shared_ptr<SmoothStructval> structval, const std::string& sym_name) {
-	auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&structval->type);
+	Type underlying = get_underlying_type(structval->type);
+	auto p_v_map = std::get_if<std::shared_ptr<TypeMap>>(&underlying);
 
 	if (!p_v_map) {
 		fprintf(stderr, "Structval was not determined by a map - programmer bug.\n");
